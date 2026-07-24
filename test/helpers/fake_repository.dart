@@ -1,196 +1,285 @@
-import 'package:context_game/core/network/api_error.dart';
-import 'package:context_game/features/game/data/models/game_meta.dart';
-import 'package:context_game/features/game/data/models/guess_result.dart';
+import 'package:context_game/features/game/data/models/game_snapshot.dart';
+import 'package:context_game/features/game/data/models/guess_response.dart';
 import 'package:context_game/features/game/data/models/hint_result.dart';
+import 'package:context_game/features/game/data/models/languages_info.dart';
 import 'package:context_game/features/game/data/models/modes_info.dart';
-import 'package:context_game/features/game/data/models/reveal_result.dart';
 import 'package:context_game/features/game/data/models/word_suggestions.dart';
 import 'package:context_game/features/game/domain/repositories/game_repository.dart';
 
-/// Scripted in-memory backend mirroring the real API's semantics:
-/// canonical normalization (ال-prefix collapses), 400 on non-dictionary
-/// input, secret guess, hints with parseable text, and suggestions.
+/// Scripted in-memory backend mirroring the real `/api/context-game` schema:
+/// server-authoritative history, duplicate flagging (attempts unchanged),
+/// out-of-vocabulary rejection with suggestions, structured hints, and a
+/// secret-word reveal on solve.
 class FakeGameRepository implements GameRepository {
   static const secretWord = 'برمجة';
 
-  /// raw → (canonical, rank)
-  static const Map<String, (String, int)> vocab = {
-    'حاسوب': ('حاسوب', 2),
-    'كود': ('كود', 4),
-    'بيت': ('بيت', 50),
-    'البيت': ('بيت', 50), // dialect/orthographic alias → same canonical
-    'حرب': ('حرب', 152),
-    'شجرة': ('شجرة', 1200),
+  /// word → (rank, proximity, heat_level)
+  static const Map<String, (int, double, String)> vocab = {
+    'حاسوب': (2, 99.5, 'boiling'),
+    'كود': (4, 96.0, 'hot'),
+    'بيت': (18607, 17.5, 'freezing'),
+    'البيت': (18607, 17.5, 'freezing'), // alias → same canonical 'بيت'
+    'حرب': (152, 60.0, 'warm'),
   };
 
   int newGameCalls = 0;
+  final Map<String, List<Map<String, dynamic>>> _history = {};
+  final Map<String, List<Map<String, dynamic>>> _hints = {};
 
   @override
-  Future<ModesInfo> modes({required String lang}) async {
-    if (lang == 'en') {
-      return ModesInfo.fromJson(const {
-        'lang': 'en',
+  Future<bool> health() async => true;
+
+  @override
+  Future<LanguagesInfo> languages() async => LanguagesInfo.fromJson(const {
+    'languages': [
+      {
+        'code': 'ar',
+        'name': 'Arabic',
+        'native_name': 'العربية',
+        'dir': 'rtl',
+        'ready': true,
+      },
+      {
+        'code': 'en',
+        'name': 'English',
+        'native_name': 'English',
         'dir': 'ltr',
-        'languages': [
-          {'id': 'ar', 'label': 'العربية', 'dir': 'rtl'},
-          {'id': 'en', 'label': 'English', 'dir': 'ltr'},
-        ],
-        'groups': [
+        'ready': true,
+      },
+    ],
+  });
+
+  @override
+  Future<ModesInfo> modes({required String language}) async {
+    if (language == 'en') {
+      return ModesInfo.fromJson(const {
+        'language': 'en',
+        'modes': [
           {
-            'id': 'en_general',
+            'code': 'general',
             'label': 'General',
-            'categories': [
-              {'id': 'en_general', 'label': 'General'},
-              {'id': 'en_animals', 'label': 'Animals'},
-            ],
+            'label_ar': 'عام',
+            'word_count': 100,
+            'playable': true,
+          },
+          {
+            'code': 'animals',
+            'label': 'Animals',
+            'label_ar': 'الحيوانات',
+            'word_count': 50,
+            'playable': true,
           },
         ],
-        'default': 'en_general',
-        'difficulties': [
-          {'id': 'easy', 'label': 'Easy'},
-          {'id': 'medium', 'label': 'Medium'},
-          {'id': 'hard', 'label': 'Hard'},
-        ],
-        'defaultDifficulty': 'medium',
       });
     }
     return ModesInfo.fromJson(const {
-      'lang': 'ar',
-      'dir': 'rtl',
-      'languages': [
-        {'id': 'ar', 'label': 'العربية', 'dir': 'rtl'},
-        {'id': 'en', 'label': 'English', 'dir': 'ltr'},
-      ],
-      'groups': [
+      'language': 'ar',
+      'modes': [
         {
-          'id': 'general',
-          'label': 'عام',
-          'categories': [
-            {'id': 'general', 'label': 'متنوّع'},
-            {'id': 'animals', 'label': 'حيوانات'},
-          ],
+          'code': 'general',
+          'label': 'General',
+          'label_ar': 'عام',
+          'word_count': 22433,
+          'playable': true,
         },
         {
-          'id': 'football',
-          'label': 'كرة القدم',
-          'categories': [
-            {'id': 'football', 'label': 'كرة القدم'},
-          ],
+          'code': 'animals',
+          'label': 'Animals',
+          'label_ar': 'الحيوانات',
+          'word_count': 159,
+          'playable': true,
+        },
+        {
+          'code': 'sports',
+          'label': 'Sports',
+          'label_ar': 'الرياضة',
+          'word_count': 2155,
+          'playable': true,
         },
       ],
-      'default': 'general',
-      'difficulties': [
-        {'id': 'easy', 'label': 'سهل'},
-        {'id': 'medium', 'label': 'متوسط'},
-        {'id': 'hard', 'label': 'صعب'},
-      ],
-      'defaultDifficulty': 'medium',
     });
   }
 
-  GameMeta _meta(String mode, String difficulty) => GameMeta.fromJson({
-        'mode': mode,
-        'label': mode == 'general' ? 'متنوّع' : mode,
-        'lang': mode.startsWith('en_') ? 'en' : 'ar',
-        'difficulty': difficulty,
-        'gameId': 3,
-        'poolSize': 40,
-        'totalWords': 8000,
-      });
+  Map<String, dynamic> _entry(
+    int attempt,
+    String word,
+    int rank,
+    double prox,
+    String level, {
+    bool solved = false,
+  }) => {
+    'attempt': attempt,
+    'guess': word,
+    'word': word,
+    'original_differs': false,
+    'rank': rank,
+    'proximity': prox,
+    'heat_level': level,
+    'solved': solved,
+  };
 
   @override
-  Future<GameMeta> newGame(
-      {required String mode, required String difficulty}) async {
-    newGameCalls++;
-    return _meta(mode, difficulty);
-  }
-
-  @override
-  Future<GameMeta> gameInfo(
-          {required String mode,
-          required String difficulty,
-          required int gameId}) async =>
-      _meta(mode, difficulty);
-
-  @override
-  Future<GuessResult> guess({
-    required String word,
-    required String mode,
-    required String difficulty,
-    required int gameId,
+  Future<GameSnapshot> newGame({
+    required String language,
+    required String category,
+    String? mode,
   }) async {
-    if (word == secretWord) {
-      return GuessResult.fromJson(const {
-        'word': secretWord,
-        'rank': 1,
-        'totalWords': 8000,
-        'isSecret': true,
-        'inVocab': true,
-      });
-    }
-    if (word == 'مبرمج') {
-      // Root match win: server reveals the actual secret.
-      return GuessResult.fromJson(const {
-        'word': 'مبرمج',
-        'rank': 1,
-        'totalWords': 8000,
-        'isSecret': true,
-        'inVocab': true,
-        'rootMatch': true,
-        'secret': secretWord,
-      });
-    }
-    final entry = vocab[word];
-    if (entry == null) {
-      throw const ApiException(ApiErrorType.badRequest,
-          detail: 'يرجى إدخال كلمة عربية صحيحة واحدة.', statusCode: 400);
-    }
-    return GuessResult.fromJson({
-      'word': entry.$1,
-      'rank': entry.$2,
-      'totalWords': 8000,
-      'isSecret': false,
-      'inVocab': true,
+    newGameCalls++;
+    final id = 'game-$newGameCalls';
+    _history[id] = [];
+    _hints[id] = [];
+    return GameSnapshot.fromJson({
+      'game_id': id,
+      'language': language,
+      'dir': language == 'ar' ? 'rtl' : 'ltr',
+      'category': category,
+      'mode': mode ?? 'random',
+      'total_words': 22548,
+      'guess_count': 0,
+      'solved': false,
+      'best_rank': null,
+      'secret_word': null,
+      'previous_guesses': [],
+      'hints_used': 0,
+      'hints_remaining': 5,
+      'max_hints': 5,
+      'hints': [],
     });
   }
 
   @override
-  Future<HintResult> hint({
-    required String mode,
-    required String difficulty,
-    required int gameId,
-    required int level,
-  }) async =>
-      HintResult.fromJson({
-        'mode': mode,
-        'gameId': gameId,
-        'level': level,
-        'maxLevel': 5,
-        'text': 'كلمة قريبة من الكلمة السرية (ترتيبها 152): «حرب»',
-      });
+  Future<GameSnapshot> game({required String gameId}) async {
+    final hist = _history[gameId] ?? [];
+    return GameSnapshot.fromJson({
+      'game_id': gameId,
+      'language': 'ar',
+      'dir': 'rtl',
+      'category': 'general',
+      'mode': 'random',
+      'total_words': 22548,
+      'guess_count': hist.length,
+      'solved': hist.any((g) => g['solved'] == true),
+      'best_rank': hist.isEmpty
+          ? null
+          : hist.map((g) => g['rank'] as int).reduce((a, b) => a < b ? a : b),
+      'secret_word': null,
+      'previous_guesses': hist,
+      'hints_used': (_hints[gameId] ?? []).length,
+      'hints_remaining': 5 - (_hints[gameId] ?? []).length,
+      'max_hints': 5,
+      'hints': _hints[gameId] ?? [],
+    });
+  }
 
   @override
-  Future<RevealResult> giveUp(
-          {required String mode,
-          required String difficulty,
-          required int gameId}) async =>
-      RevealResult.fromJson(const {'secret': secretWord});
+  Future<GuessResponse> guess({
+    required String gameId,
+    required String guess,
+  }) async {
+    final hist = _history[gameId]!;
+    if (guess == secretWord) {
+      hist.add(
+        _entry(hist.length + 1, secretWord, 1, 100, 'boiling', solved: true),
+      );
+      return GuessResponse.fromJson({
+        'accepted': true,
+        'duplicate': false,
+        'already_guessed': false,
+        'solved': true,
+        'total_words': 22548,
+        'guess_number': hist.length,
+        'canonical_word': secretWord,
+        'original_guess': secretWord,
+        'rank': 1,
+        'proximity': 100,
+        'heat_level': 'boiling',
+        'secret_word': secretWord,
+        'previous_guesses': hist,
+        'hints': _hints[gameId] ?? [],
+      });
+    }
+    final v = vocab[guess];
+    if (v == null) {
+      return GuessResponse.fromJson({
+        'accepted': false,
+        'duplicate': false,
+        'already_guessed': false,
+        'reason': 'not_in_vocabulary',
+        'message': 'That word is not in the game\'s dictionary.',
+        'original_guess': guess,
+        'solved': false,
+        'total_words': 22548,
+        'guess_number': hist.length,
+        'suggestions': [
+          {'word': 'سيارة'},
+          {'word': 'السيارة'},
+          {'word': 'سيارات'},
+        ],
+        'previous_guesses': hist,
+        'hints': _hints[gameId] ?? [],
+      });
+    }
+    final canonical = guess == 'البيت' ? 'بيت' : guess;
+    final already = hist.any((g) => g['word'] == canonical);
+    if (!already) {
+      hist.add(_entry(hist.length + 1, canonical, v.$1, v.$2, v.$3));
+    }
+    return GuessResponse.fromJson({
+      'accepted': true,
+      'duplicate': already,
+      'already_guessed': already,
+      'reason': already ? 'duplicate_canonical_guess' : null,
+      'solved': false,
+      'total_words': 22548,
+      'guess_number': hist.length,
+      'canonical_word': canonical,
+      'original_guess': guess,
+      'rank': v.$1,
+      'proximity': v.$2,
+      'heat_level': v.$3,
+      'previous_guesses': hist,
+      'hints': _hints[gameId] ?? [],
+    });
+  }
+
+  @override
+  Future<HintResult> hint({required String gameId, String? difficulty}) async {
+    final hints = _hints[gameId]!;
+    final n = hints.length + 1;
+    hints.add({
+      'hint_number': n,
+      'difficulty': difficulty ?? 'medium',
+      'revealed_word': 'حرب',
+      'semantic_rank': 152,
+      'similarity_score': 0.64,
+    });
+    return HintResult.fromJson({
+      'ok': true,
+      'game_id': gameId,
+      'hint_number': n,
+      'difficulty': difficulty ?? 'medium',
+      'revealed_word': 'حرب',
+      'semantic_rank': 152,
+      'similarity_score': 0.64,
+      'hints_used': n,
+      'hints_remaining': 5 - n,
+      'max_hints': 5,
+    });
+  }
 
   @override
   Future<WordSuggestions> suggest({
+    required String language,
     required String query,
-    required String lang,
-    String? mode,
+    String? category,
     int limit = 8,
-  }) async =>
-      WordSuggestions.fromJson(const {
-        'total': 3,
-        'limit': 6,
-        'offset': 0,
-        'items': [
-          {'word': 'سيارة', 'idx': 10, 'modes': []},
-          {'word': 'السيارة', 'idx': 11, 'modes': []},
-          {'word': 'سيارات', 'idx': 12, 'modes': []},
-        ],
-      });
+  }) async => WordSuggestions.fromJson(const {
+    'language': 'ar',
+    'query': 'سيا',
+    'suggestions': [
+      {'word': 'سيارة'},
+      {'word': 'سياج'},
+      {'word': 'سياق'},
+    ],
+  });
 }

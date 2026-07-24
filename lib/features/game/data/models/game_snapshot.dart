@@ -45,26 +45,25 @@ class GameSnapshot {
   final String? model;
 
   factory GameSnapshot.fromJson(Map<String, dynamic> j) => GameSnapshot(
-        gameId: j['game_id'] as String,
-        language: j['language'] as String? ?? 'ar',
-        dir: j['dir'] as String? ?? 'rtl',
-        category: j['category'] as String? ?? 'general',
-        mode: j['mode'] as String? ?? 'random',
-        totalWords: (j['total_words'] as num?)?.toInt() ?? 0,
-        guessCount: (j['guess_count'] as num?)?.toInt() ?? 0,
-        solved: j['solved'] as bool? ?? false,
-        bestRank: (j['best_rank'] as num?)?.toInt(),
-        secretWord: j['secret_word'] as String?,
-        model: j['model'] as String?,
-        guesses: (j['previous_guesses'] as List<dynamic>? ?? const [])
-            .map((e) => Guess.fromEntry(e as Map<String, dynamic>))
-            .toList(),
-        hints: (j['hints'] as List<dynamic>? ?? const [])
-            .map((e) => HintResult.fromEntry(e as Map<String, dynamic>))
-            .toList(),
-        hintsUsed: (j['hints_used'] as num?)?.toInt() ?? 0,
-        hintsRemaining:
-            (j['hints_remaining'] as num?)?.toInt() ?? 5,
-        maxHints: (j['max_hints'] as num?)?.toInt() ?? 5,
-      );
+    gameId: j['game_id'] as String,
+    language: j['language'] as String? ?? 'ar',
+    dir: j['dir'] as String? ?? 'rtl',
+    category: j['category'] as String? ?? 'general',
+    mode: j['mode'] as String? ?? 'random',
+    totalWords: (j['total_words'] as num?)?.toInt() ?? 0,
+    guessCount: (j['guess_count'] as num?)?.toInt() ?? 0,
+    solved: j['solved'] as bool? ?? false,
+    bestRank: (j['best_rank'] as num?)?.toInt(),
+    secretWord: j['secret_word'] as String?,
+    model: j['model'] as String?,
+    guesses: (j['previous_guesses'] as List<dynamic>? ?? const [])
+        .map((e) => Guess.fromEntry(e as Map<String, dynamic>))
+        .toList(),
+    hints: (j['hints'] as List<dynamic>? ?? const [])
+        .map((e) => HintResult.fromEntry(e as Map<String, dynamic>))
+        .toList(),
+    hintsUsed: (j['hints_used'] as num?)?.toInt() ?? 0,
+    hintsRemaining: (j['hints_remaining'] as num?)?.toInt() ?? 5,
+    maxHints: (j['max_hints'] as num?)?.toInt() ?? 5,
+  );
 }

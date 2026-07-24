@@ -26,13 +26,12 @@ class AppSettings {
     bool? sound,
     bool? haptics,
     String? baseUrlOverride,
-  }) =>
-      AppSettings(
-        lang: lang ?? this.lang,
-        sound: sound ?? this.sound,
-        haptics: haptics ?? this.haptics,
-        baseUrlOverride: baseUrlOverride ?? this.baseUrlOverride,
-      );
+  }) => AppSettings(
+    lang: lang ?? this.lang,
+    sound: sound ?? this.sound,
+    haptics: haptics ?? this.haptics,
+    baseUrlOverride: baseUrlOverride ?? this.baseUrlOverride,
+  );
 }
 
 /// Loaded synchronously at startup (main.dart) and overridden in the scope.
@@ -84,7 +83,8 @@ class AppSettingsController extends Notifier<AppSettings> {
 
 final appSettingsProvider =
     NotifierProvider<AppSettingsController, AppSettings>(
-        AppSettingsController.new);
+      AppSettingsController.new,
+    );
 
 final localizationsProvider = Provider<AppLocalizations>(
   (ref) => AppLocalizations(ref.watch(appSettingsProvider).lang),

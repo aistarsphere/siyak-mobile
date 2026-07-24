@@ -58,8 +58,9 @@ class BestGuessCard extends StatelessWidget {
                         children: [
                           Text(
                             loc('bestGuess'),
-                            style: AppTypography.labelXs
-                                .copyWith(color: AppColors.onSurfaceVariant),
+                            style: AppTypography.labelXs.copyWith(
+                              color: AppColors.onSurfaceVariant,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -81,8 +82,9 @@ class BestGuessCard extends StatelessWidget {
                   children: [
                     Text(
                       '#${best.rank}',
-                      style: AppTypography.headlineLg
-                          .copyWith(color: AppColors.onSurface),
+                      style: AppTypography.headlineLg.copyWith(
+                        color: AppColors.onSurface,
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(

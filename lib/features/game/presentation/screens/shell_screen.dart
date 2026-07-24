@@ -27,11 +27,7 @@ class ShellScreen extends ConsumerWidget {
       body: AtmosphericBackground(
         child: IndexedStack(
           index: index,
-          children: const [
-            HomeScreen(),
-            GameScreen(),
-            SettingsScreen(),
-          ],
+          children: const [HomeScreen(), GameScreen(), SettingsScreen()],
         ),
       ),
       bottomNavigationBar: SiyaqBottomNav(

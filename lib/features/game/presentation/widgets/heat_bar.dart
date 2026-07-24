@@ -29,8 +29,7 @@ class HeatBar extends StatefulWidget {
   State<HeatBar> createState() => _HeatBarState();
 }
 
-class _HeatBarState extends State<HeatBar>
-    with SingleTickerProviderStateMixin {
+class _HeatBarState extends State<HeatBar> with SingleTickerProviderStateMixin {
   AnimationController? _shimmer;
 
   @override
@@ -70,11 +69,18 @@ class _HeatBarState extends State<HeatBar>
             ),
             child: Container(
               decoration: BoxDecoration(
-                color: widget.gradient ? null : (widget.color ?? AppColors.amber),
+                color: widget.gradient
+                    ? null
+                    : (widget.color ?? AppColors.amber),
                 gradient: widget.gradient ? AppColors.heatGradient : null,
                 borderRadius: BorderRadius.circular(999),
                 boxShadow: widget.glow
-                    ? [BoxShadow(color: AppColors.amberGlow(0.5), blurRadius: 10)]
+                    ? [
+                        BoxShadow(
+                          color: AppColors.amberGlow(0.5),
+                          blurRadius: 10,
+                        ),
+                      ]
                     : const [],
               ),
               child: widget.shimmer && _shimmer != null

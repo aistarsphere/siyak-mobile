@@ -6,7 +6,7 @@ import '../../../../core/config/app_config.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_motion.dart';
 import '../../../../core/theme/app_typography.dart';
-import '../../data/models/guess_result.dart';
+import '../../domain/entities/guess.dart';
 import '../../domain/entities/heat.dart';
 import '../controllers/app_settings_controller.dart';
 import '../controllers/game_controller.dart';
@@ -30,14 +30,17 @@ class SolvedScreen extends ConsumerStatefulWidget {
 class _SolvedScreenState extends ConsumerState<SolvedScreen>
     with TickerProviderStateMixin {
   late final AnimationController _bounce = AnimationController(
-      vsync: this, duration: AppMotion.bounce)
-    ..repeat();
+    vsync: this,
+    duration: AppMotion.bounce,
+  )..repeat();
   late final AnimationController _pulse = AnimationController(
-      vsync: this, duration: AppMotion.pulseGlow)
-    ..repeat(reverse: true);
+    vsync: this,
+    duration: AppMotion.pulseGlow,
+  )..repeat(reverse: true);
   late final AnimationController _shine = AnimationController(
-      vsync: this, duration: AppMotion.shine)
-    ..repeat();
+    vsync: this,
+    duration: AppMotion.shine,
+  )..repeat();
   bool _startingNew = false;
 
   @override
@@ -51,19 +54,26 @@ class _SolvedScreenState extends ConsumerState<SolvedScreen>
   Future<void> _newGame() async {
     if (_startingNew) return;
     final state = ref.read(gameControllerProvider);
-    final meta = state.meta;
-    if (meta == null) return;
+    if (!state.hasGame) return;
     setState(() => _startingNew = true);
     try {
-      await ref.read(gameControllerProvider.notifier).startNewGame(
-          mode: meta.mode, difficulty: meta.difficulty);
+      await ref
+          .read(gameControllerProvider.notifier)
+          .startNewGame(
+            language: state.language,
+            category: state.category,
+            categoryLabel: state.categoryLabel,
+            difficulty: state.difficulty,
+          );
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
         setState(() => _startingNew = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content:
-                Text(ref.read(localizationsProvider).errorMessage(e))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ref.read(localizationsProvider).errorMessage(e)),
+          ),
+        );
       }
     }
   }
@@ -72,14 +82,16 @@ class _SolvedScreenState extends ConsumerState<SolvedScreen>
     final loc = ref.read(localizationsProvider);
     final state = ref.read(gameControllerProvider);
     // Never reveal the secret word in the share text.
-    SharePlus.instance.share(ShareParams(
-      text: loc.shareText(
-        attempts: state.attempts,
-        bestRank: 1,
-        hintsUsed: state.hintsUsed,
-        maxHints: AppConfig.maxHints,
+    SharePlus.instance.share(
+      ShareParams(
+        text: loc.shareText(
+          attempts: state.attempts,
+          bestRank: 1,
+          hintsUsed: state.hintsUsed,
+          maxHints: AppConfig.maxHints,
+        ),
       ),
-    ));
+    );
   }
 
   @override
@@ -87,7 +99,8 @@ class _SolvedScreenState extends ConsumerState<SolvedScreen>
     final loc = ref.watch(localizationsProvider);
     final state = ref.watch(gameControllerProvider);
     final secretGuess = state.guesses.where((g) => g.isSecret).firstOrNull;
-    final secretWord = secretGuess?.answerWord ?? '';
+    // Prefer the server's revealed secret; fall back to the winning guess.
+    final secretWord = state.secretWord ?? secretGuess?.word ?? '';
     // Closest non-secret guesses, top 3 (as in the design).
     final closest = state.sortedGuesses
         .where((g) => !g.isSecret)
@@ -112,54 +125,63 @@ class _SolvedScreenState extends ConsumerState<SolvedScreen>
                           final t = _bounce.value;
                           // CSS `bounce`: dips twice per 2s cycle.
                           final phase = (t * 2) % 1;
-                          final dy =
-                              -8 * (1 - (2 * phase - 1).abs());
+                          final dy = -8 * (1 - (2 * phase - 1).abs());
                           return Transform.translate(
-                              offset: Offset(0, dy), child: child);
+                            offset: Offset(0, dy),
+                            child: child,
+                          );
                         },
-                        child: Column(children: [
-                          Container(
-                            width: 64,
-                            height: 64,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: AppColors.primaryContainer
-                                  .withValues(alpha: 0.20),
-                              border: Border.all(
-                                  color: AppColors.primary
-                                      .withValues(alpha: 0.30)),
-                              boxShadow: [
-                                BoxShadow(
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 64,
+                              height: 64,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppColors.primaryContainer.withValues(
+                                  alpha: 0.20,
+                                ),
+                                border: Border.all(
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.30,
+                                  ),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
                                     color: AppColors.amberGlow(0.4),
-                                    blurRadius: 20),
-                              ],
+                                    blurRadius: 20,
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.workspace_premium,
+                                color: AppColors.primary,
+                                size: 36,
+                              ),
                             ),
-                            child: const Icon(Icons.workspace_premium,
-                                color: AppColors.primary, size: 36),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            loc('solvedTitle'),
-                            textAlign: TextAlign.center,
-                            style: AppTypography.headlineMobile
-                                .copyWith(color: AppColors.onBackground),
-                          ),
-                        ]),
+                            const SizedBox(height: 8),
+                            Text(
+                              loc('solvedTitle'),
+                              textAlign: TextAlign.center,
+                              style: AppTypography.headlineMobile.copyWith(
+                                color: AppColors.onBackground,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 24),
                       // Secret word card with pulse-glow + shine sweep
                       AnimatedBuilder(
                         animation: _pulse,
                         builder: (context, child) {
-                          final t =
-                              Curves.easeInOut.transform(_pulse.value);
+                          final t = Curves.easeInOut.transform(_pulse.value);
                           return Container(
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppColors.amberGlow(
-                                      0.2 + 0.3 * t),
+                                  color: AppColors.amberGlow(0.2 + 0.3 * t),
                                   blurRadius: 15 + 15 * t,
                                 ),
                               ],
@@ -171,141 +193,164 @@ class _SolvedScreenState extends ConsumerState<SolvedScreen>
                           borderRadius: BorderRadius.circular(16),
                           // Passthrough so the glass card fills the full
                           // width instead of shrink-wrapping its text.
-                          child: Stack(fit: StackFit.passthrough, children: [
-                            GlassPanel(
-                              opacity: 0.40,
-                              blur: 24,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                  color: AppColors.primaryContainer
-                                      .withValues(alpha: 0.30)),
-                              padding: const EdgeInsets.all(32),
-                              child: Column(children: [
-                                Text(
-                                  loc('secretWordIs'),
-                                  style: AppTypography.labelMd.copyWith(
-                                    color: AppColors.primary
-                                        .withValues(alpha: 0.8),
-                                    letterSpacing: 2,
+                          child: Stack(
+                            fit: StackFit.passthrough,
+                            children: [
+                              GlassPanel(
+                                opacity: 0.40,
+                                blur: 24,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: AppColors.primaryContainer.withValues(
+                                    alpha: 0.30,
                                   ),
                                 ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  secretWord,
-                                  textAlign: TextAlign.center,
-                                  style:
-                                      AppTypography.secretWord.copyWith(
-                                    shadows: [
-                                      Shadow(
-                                          color: AppColors.amberGlow(0.6),
-                                          blurRadius: 15),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                // Decorative gradient underline
-                                Container(
-                                  height: 4,
-                                  width: 120,
-                                  decoration: BoxDecoration(
-                                    borderRadius:
-                                        BorderRadius.circular(999),
-                                    gradient: LinearGradient(colors: [
-                                      AppColors.primaryContainer
-                                          .withValues(alpha: 0),
-                                      AppColors.primaryContainer
-                                          .withValues(alpha: 0.5),
-                                      AppColors.primaryContainer
-                                          .withValues(alpha: 0),
-                                    ]),
-                                  ),
-                                ),
-                              ]),
-                            ),
-                            // Shine sweep
-                            Positioned.fill(
-                              child: IgnorePointer(
-                                child: AnimatedBuilder(
-                                  animation: _shine,
-                                  builder: (context, _) {
-                                    // CSS: sweeps during first 20% of a 3s loop.
-                                    final p =
-                                        (_shine.value / 0.2).clamp(0.0, 1.0);
-                                    return LayoutBuilder(
-                                        builder: (context, c) {
-                                      final x = (p * 2.5 - 1.5) * c.maxWidth;
-                                      return Transform.translate(
-                                        offset: Offset(x, 0),
-                                        child: Transform(
-                                          transform: Matrix4.skewX(-0.44),
-                                          child: Container(
-                                            width: c.maxWidth * 0.5,
-                                            decoration: BoxDecoration(
-                                              gradient: LinearGradient(
-                                                colors: [
-                                                  Colors.transparent,
-                                                  AppColors.primary
-                                                      .withValues(
-                                                          alpha: 0.10),
-                                                  Colors.transparent,
-                                                ],
-                                              ),
-                                            ),
-                                          ),
+                                padding: const EdgeInsets.all(32),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      loc('secretWordIs'),
+                                      style: AppTypography.labelMd.copyWith(
+                                        color: AppColors.primary.withValues(
+                                          alpha: 0.8,
                                         ),
-                                      );
-                                    });
-                                  },
+                                        letterSpacing: 2,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      secretWord,
+                                      textAlign: TextAlign.center,
+                                      style: AppTypography.secretWord.copyWith(
+                                        shadows: [
+                                          Shadow(
+                                            color: AppColors.amberGlow(0.6),
+                                            blurRadius: 15,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    // Decorative gradient underline
+                                    Container(
+                                      height: 4,
+                                      width: 120,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(
+                                          999,
+                                        ),
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            AppColors.primaryContainer
+                                                .withValues(alpha: 0),
+                                            AppColors.primaryContainer
+                                                .withValues(alpha: 0.5),
+                                            AppColors.primaryContainer
+                                                .withValues(alpha: 0),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ),
-                          ]),
+                              // Shine sweep
+                              Positioned.fill(
+                                child: IgnorePointer(
+                                  child: AnimatedBuilder(
+                                    animation: _shine,
+                                    builder: (context, _) {
+                                      // CSS: sweeps during first 20% of a 3s loop.
+                                      final p = (_shine.value / 0.2).clamp(
+                                        0.0,
+                                        1.0,
+                                      );
+                                      return LayoutBuilder(
+                                        builder: (context, c) {
+                                          final x =
+                                              (p * 2.5 - 1.5) * c.maxWidth;
+                                          return Transform.translate(
+                                            offset: Offset(x, 0),
+                                            child: Transform(
+                                              transform: Matrix4.skewX(-0.44),
+                                              child: Container(
+                                                width: c.maxWidth * 0.5,
+                                                decoration: BoxDecoration(
+                                                  gradient: LinearGradient(
+                                                    colors: [
+                                                      Colors.transparent,
+                                                      AppColors.primary
+                                                          .withValues(
+                                                            alpha: 0.10,
+                                                          ),
+                                                      Colors.transparent,
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(height: 32),
                       // Bento stats
-                      Row(children: [
-                        Expanded(
-                          child: _BentoStat(
-                            value: '${state.attempts}',
-                            label: loc('attemptsLabel'),
-                            icon: Icons.sync,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _BentoStat(
+                              value: '${state.attempts}',
+                              label: loc('attemptsLabel'),
+                              icon: Icons.sync,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _BentoStat(
-                            value: '#1',
-                            label: loc('rankLabel'),
-                            icon: Icons.emoji_events,
-                            color: AppColors.secondary,
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _BentoStat(
+                              value: '#1',
+                              label: loc('rankLabel'),
+                              icon: Icons.emoji_events,
+                              color: AppColors.secondary,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _BentoStat(
-                            value: '${state.hintsUsed}',
-                            label: loc('hintsLabel'),
-                            icon: Icons.lightbulb_outline,
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _BentoStat(
+                              value: '${state.hintsUsed}',
+                              label: loc('hintsLabel'),
+                              icon: Icons.lightbulb_outline,
+                            ),
                           ),
-                        ),
-                      ]),
+                        ],
+                      ),
                       const SizedBox(height: 32),
                       // Closest guesses
                       if (closest.isNotEmpty) ...[
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 8),
-                          child: Row(children: [
-                            const Icon(Icons.history,
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.history,
                                 size: 16,
-                                color: AppColors.onSurfaceVariant),
-                            const SizedBox(width: 8),
-                            Text(
-                              loc('closestGuesses'),
-                              style: AppTypography.labelMd.copyWith(
-                                  color: AppColors.onSurfaceVariant),
-                            ),
-                          ]),
+                                color: AppColors.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                loc('closestGuesses'),
+                                style: AppTypography.labelMd.copyWith(
+                                  color: AppColors.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 8),
                         for (final g in closest)
@@ -357,26 +402,30 @@ class _BentoStat extends StatelessWidget {
     return GlassPanel(
       opacity: 0.20,
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(
-          color: AppColors.onSurface.withValues(alpha: 0.05)),
+      border: Border.all(color: AppColors.onSurface.withValues(alpha: 0.05)),
       padding: const EdgeInsets.all(16),
-      child: Column(children: [
-        Text(value,
-            style: AppTypography.displaySm.copyWith(color: color)),
-        const SizedBox(height: 4),
-        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(icon, size: 14, color: AppColors.onSurfaceVariant),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              label,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.labelXs
-                  .copyWith(color: AppColors.onSurfaceVariant),
-            ),
+      child: Column(
+        children: [
+          Text(value, style: AppTypography.displaySm.copyWith(color: color)),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 14, color: AppColors.onSurfaceVariant),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.labelXs.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ]),
-      ]),
+        ],
+      ),
     );
   }
 }
@@ -386,16 +435,16 @@ class _BentoStat extends StatelessWidget {
 class _ClosestRow extends ConsumerWidget {
   const _ClosestRow({required this.guess, required this.loc});
 
-  final GuessResult guess;
+  final Guess guess;
   final dynamic loc;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tier = Heat.tierFor(guess.rank);
+    final tier = guess.tier;
     final accent = tier == HeatTier.blazing || tier == HeatTier.warm
         ? AppColors.secondary
         : AppColors.tertiary;
-    final fraction = Heat.closeness(guess.rank, guess.totalWords);
+    final fraction = Heat.fraction(guess.proximity);
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
       child: Container(
@@ -403,58 +452,67 @@ class _ClosestRow extends ConsumerWidget {
           color: AppColors.surfaceContainerHigh.withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-              color: AppColors.surfaceBright.withValues(alpha: 0.30)),
+            color: AppColors.surfaceBright.withValues(alpha: 0.30),
+          ),
         ),
-        child: Stack(children: [
-          // Closeness fill
-          Positioned.fill(
-            child: FractionallySizedBox(
-              alignment: AlignmentDirectional.centerStart,
-              widthFactor: fraction,
-              child: ColoredBox(
-                  color: accent.withValues(alpha: 0.08)),
+        child: Stack(
+          children: [
+            // Closeness fill
+            Positioned.fill(
+              child: FractionallySizedBox(
+                alignment: AlignmentDirectional.centerStart,
+                widthFactor: fraction,
+                child: ColoredBox(color: accent.withValues(alpha: 0.08)),
+              ),
             ),
-          ),
-          // Accent edge line (start edge)
-          PositionedDirectional(
-            start: 0,
-            top: 0,
-            bottom: 0,
-            child: Container(width: 4, color: accent),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(guess.word,
-                    style: AppTypography.bodySm
-                        .copyWith(color: AppColors.onSurface)),
-                Row(children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: accent.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      '${loc('rankNo')} ${guess.rank}',
-                      style:
-                          AppTypography.labelXs.copyWith(color: accent),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
+            // Accent edge line (start edge)
+            PositionedDirectional(
+              start: 0,
+              top: 0,
+              bottom: 0,
+              child: Container(width: 4, color: accent),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
                   Text(
-                    Heat.percentLabel(guess.rank, guess.totalWords),
-                    style: AppTypography.labelMd
-                        .copyWith(color: AppColors.onSurfaceVariant),
+                    guess.word,
+                    style: AppTypography.bodySm.copyWith(
+                      color: AppColors.onSurface,
+                    ),
                   ),
-                ]),
-              ],
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: accent.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '${loc('rankNo')} ${guess.rank}',
+                          style: AppTypography.labelXs.copyWith(color: accent),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        Heat.percentLabel(guess.proximity),
+                        style: AppTypography.labelMd.copyWith(
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ]),
+          ],
+        ),
       ),
     );
   }

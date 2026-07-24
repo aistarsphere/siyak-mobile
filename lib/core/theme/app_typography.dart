@@ -18,24 +18,31 @@ class AppTypography {
     required FontWeight weight,
     double letterSpacing = 0,
     Color color = AppColors.onSurface,
-  }) =>
-      TextStyle(
-        fontFamily: latinFamily,
-        fontFamilyFallback: arabicFallback,
-        fontSize: size,
-        height: height / size,
-        fontWeight: weight,
-        letterSpacing: letterSpacing,
-        color: color,
-      );
+  }) => TextStyle(
+    fontFamily: latinFamily,
+    fontFamilyFallback: arabicFallback,
+    fontSize: size,
+    height: height / size,
+    fontWeight: weight,
+    letterSpacing: letterSpacing,
+    color: color,
+  );
 
   /// display-lg: 32/40, -0.02em, 700
-  static TextStyle get displayLg =>
-      _sora(size: 32, height: 40, weight: FontWeight.w700, letterSpacing: -0.64);
+  static TextStyle get displayLg => _sora(
+    size: 32,
+    height: 40,
+    weight: FontWeight.w700,
+    letterSpacing: -0.64,
+  );
 
   /// display-sm: 24/32, -0.01em, 700
-  static TextStyle get displaySm =>
-      _sora(size: 24, height: 32, weight: FontWeight.w700, letterSpacing: -0.24);
+  static TextStyle get displaySm => _sora(
+    size: 24,
+    height: 32,
+    weight: FontWeight.w700,
+    letterSpacing: -0.24,
+  );
 
   /// headline-lg: 20/28, 600
   static TextStyle get headlineLg =>
@@ -63,13 +70,14 @@ class AppTypography {
 
   /// The giant secret word on the solved screen (`text-5xl`).
   static TextStyle get secretWord => _sora(
-      size: 48,
-      height: 56,
-      weight: FontWeight.w700,
-      color: AppColors.primaryContainer);
+    size: 48,
+    height: 56,
+    weight: FontWeight.w700,
+    color: AppColors.primaryContainer,
+  );
 
   /// Amber text glow: `text-shadow 0 0 10px rgba(255,191,0,0.6)`.
   static List<Shadow> get amberTextGlow => [
-        Shadow(color: AppColors.amberGlow(0.6), blurRadius: 10),
-      ];
+    Shadow(color: AppColors.amberGlow(0.6), blurRadius: 10),
+  ];
 }

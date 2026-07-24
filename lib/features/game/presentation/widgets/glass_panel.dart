@@ -35,14 +35,14 @@ class GlassPanel extends StatelessWidget {
         child: Container(
           padding: padding,
           decoration: BoxDecoration(
-            color: (color ?? AppColors.surfaceContainer)
-                .withValues(alpha: opacity),
+            color: (color ?? AppColors.surfaceContainer).withValues(
+              alpha: opacity,
+            ),
             borderRadius: borderRadius,
-            border: border ??
+            border:
+                border ??
                 Border(
-                  top: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.05),
-                  ),
+                  top: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
                 ),
           ),
           child: child,

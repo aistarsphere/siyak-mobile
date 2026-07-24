@@ -2,10 +2,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'app_colors.dart';
-import 'app_typography.dart';
+import 'siyag_theme.dart';
 
-/// Single dark "Amber Noir" theme — the Stitch design ships dark-only.
+/// Single dark theme — the Siyag charcoal system (Figma Make handoff).
 class AppTheme {
   AppTheme._();
 
@@ -13,75 +12,48 @@ class AppTheme {
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
     statusBarBrightness: Brightness.dark,
-    systemNavigationBarColor: AppColors.background,
+    systemNavigationBarColor: SC.bg,
     systemNavigationBarIconBrightness: Brightness.light,
   );
 
   static ThemeData get dark {
     const scheme = ColorScheme(
       brightness: Brightness.dark,
-      primary: AppColors.primary,
-      onPrimary: AppColors.onPrimary,
-      primaryContainer: AppColors.primaryContainer,
-      onPrimaryContainer: AppColors.onPrimaryContainer,
-      secondary: AppColors.secondary,
-      onSecondary: AppColors.onSecondary,
-      secondaryContainer: AppColors.secondaryContainer,
-      onSecondaryContainer: AppColors.onSecondaryContainer,
-      tertiary: AppColors.tertiary,
-      onTertiary: AppColors.onTertiary,
-      tertiaryContainer: AppColors.tertiaryContainer,
-      onTertiaryContainer: AppColors.onTertiary,
-      error: AppColors.error,
-      onError: AppColors.onError,
-      errorContainer: AppColors.errorContainer,
-      onErrorContainer: Color(0xFFFFDAD6),
-      surface: AppColors.surface,
-      onSurface: AppColors.onSurface,
-      onSurfaceVariant: AppColors.onSurfaceVariant,
-      surfaceContainerLowest: AppColors.surfaceContainerLowest,
-      surfaceContainerLow: AppColors.surfaceContainerLow,
-      surfaceContainer: AppColors.surfaceContainer,
-      surfaceContainerHigh: AppColors.surfaceContainerHigh,
-      surfaceContainerHighest: AppColors.surfaceContainerHighest,
-      surfaceBright: AppColors.surfaceBright,
-      surfaceDim: AppColors.surfaceDim,
-      outline: AppColors.outline,
-      outlineVariant: AppColors.outlineVariant,
-      inverseSurface: AppColors.inverseSurface,
-      onInverseSurface: AppColors.inverseOnSurface,
-      inversePrimary: Color(0xFF795900),
-      surfaceTint: AppColors.surfaceTint,
-      shadow: Colors.black,
-      scrim: Colors.black,
+      primary: SC.coral,
+      onPrimary: SC.bg,
+      secondary: SC.cyan,
+      onSecondary: SC.bg,
+      tertiary: SC.emerald,
+      onTertiary: SC.bg,
+      error: Color(0xFFFF4436),
+      onError: SC.bg,
+      surface: SC.bg,
+      onSurface: SC.text,
+      surfaceContainerHighest: SC.surfaceHi,
+      surfaceContainerHigh: SC.surfaceHi,
+      surfaceContainer: SC.surface,
+      surfaceContainerLow: SC.surface,
+      surfaceContainerLowest: SC.bg,
+      onSurfaceVariant: SC.textDim,
+      outline: SC.textFaint,
     );
 
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       colorScheme: scheme,
-      scaffoldBackgroundColor: AppColors.background,
+      scaffoldBackgroundColor: SC.bg,
+      fontFamily: SF.sys,
       splashFactory: InkSparkle.splashFactory,
-      textTheme: TextTheme(
-        displayLarge: AppTypography.displayLg,
-        displaySmall: AppTypography.displaySm,
-        headlineLarge: AppTypography.headlineLg,
-        headlineMedium: AppTypography.headlineMobile,
-        bodyLarge: AppTypography.bodyLg,
-        bodyMedium: AppTypography.bodySm,
-        labelMedium: AppTypography.labelMd,
-        labelSmall: AppTypography.labelXs,
-      ),
-      textSelectionTheme: TextSelectionThemeData(
-        cursorColor: AppColors.amber,
-        selectionColor: AppColors.amber.withValues(alpha: 0.3),
-        selectionHandleColor: AppColors.amber,
+      textSelectionTheme: const TextSelectionThemeData(
+        cursorColor: SC.coral,
+        selectionHandleColor: SC.coral,
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: AppColors.surfaceContainerHigh,
-        contentTextStyle: AppTypography.bodySm,
+        backgroundColor: SC.surfaceHi,
+        contentTextStyle: ST.ar(14, color: SC.text),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       pageTransitionsTheme: const PageTransitionsTheme(builders: {
         TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),

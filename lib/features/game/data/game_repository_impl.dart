@@ -23,8 +23,7 @@ class GameRepositoryImpl implements GameRepository {
     required String language,
     required String category,
     String? mode,
-  }) =>
-      _api.newGame(language: language, category: category, mode: mode);
+  }) => _api.newGame(language: language, category: category, mode: mode);
 
   @override
   Future<GameSnapshot> game({required String gameId}) => _api.game(gameId);
@@ -33,8 +32,7 @@ class GameRepositoryImpl implements GameRepository {
   Future<GuessResponse> guess({
     required String gameId,
     required String guess,
-  }) =>
-      _api.guess(gameId: gameId, guess: guess);
+  }) => _api.guess(gameId: gameId, guess: guess);
 
   @override
   Future<HintResult> hint({required String gameId, String? difficulty}) =>
@@ -46,8 +44,12 @@ class GameRepositoryImpl implements GameRepository {
     required String query,
     String? category,
     int limit = 8,
-  }) =>
-      _api.suggest(language: language, q: query, category: category, limit: limit);
+  }) => _api.suggest(
+    language: language,
+    q: query,
+    category: category,
+    limit: limit,
+  );
 
   @override
   Future<bool> health() async {

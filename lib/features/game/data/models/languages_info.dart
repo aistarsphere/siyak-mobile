@@ -16,12 +16,12 @@ class LanguageInfo {
   final bool ready;
 
   factory LanguageInfo.fromJson(Map<String, dynamic> j) => LanguageInfo(
-        code: j['code'] as String,
-        name: j['name'] as String,
-        nativeName: (j['native_name'] ?? j['name']) as String,
-        dir: j['dir'] as String? ?? 'ltr',
-        ready: j['ready'] as bool? ?? true,
-      );
+    code: j['code'] as String,
+    name: j['name'] as String,
+    nativeName: (j['native_name'] ?? j['name']) as String,
+    dir: j['dir'] as String? ?? 'ltr',
+    ready: j['ready'] as bool? ?? true,
+  );
 }
 
 class LanguagesInfo {
@@ -30,8 +30,8 @@ class LanguagesInfo {
   final List<LanguageInfo> languages;
 
   factory LanguagesInfo.fromJson(Map<String, dynamic> j) => LanguagesInfo(
-        (j['languages'] as List<dynamic>? ?? const [])
-            .map((e) => LanguageInfo.fromJson(e as Map<String, dynamic>))
-            .toList(),
-      );
+    (j['languages'] as List<dynamic>? ?? const [])
+        .map((e) => LanguageInfo.fromJson(e as Map<String, dynamic>))
+        .toList(),
+  );
 }

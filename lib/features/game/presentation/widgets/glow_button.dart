@@ -57,8 +57,9 @@ class GlowButton extends StatelessWidget {
               if (icon != null || busy) const SizedBox(width: 8),
               Text(
                 label,
-                style: AppTypography.headlineMobile
-                    .copyWith(color: AppColors.onPrimaryContainer),
+                style: AppTypography.headlineMobile.copyWith(
+                  color: AppColors.onPrimaryContainer,
+                ),
               ),
             ],
           ),
@@ -70,12 +71,7 @@ class GlowButton extends StatelessWidget {
 
 /// Secondary CTA: glass surface, outline border, amber text.
 class GlassButton extends StatelessWidget {
-  const GlassButton({
-    super.key,
-    required this.label,
-    this.icon,
-    this.onTap,
-  });
+  const GlassButton({super.key, required this.label, this.icon, this.onTap});
 
   final String label;
   final IconData? icon;
@@ -104,8 +100,9 @@ class GlassButton extends StatelessWidget {
                 ],
                 Text(
                   label,
-                  style: AppTypography.headlineMobile
-                      .copyWith(color: AppColors.primary),
+                  style: AppTypography.headlineMobile.copyWith(
+                    color: AppColors.primary,
+                  ),
                 ),
               ],
             ),

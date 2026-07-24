@@ -42,8 +42,9 @@ class HintPill extends StatelessWidget {
             child: Text(
               label,
               overflow: TextOverflow.ellipsis,
-              style: AppTypography.labelMd
-                  .copyWith(color: AppColors.onSurfaceVariant),
+              style: AppTypography.labelMd.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
             ),
           ),
         ],
@@ -55,8 +56,10 @@ class HintPill extends StatelessWidget {
         tween: Tween(begin: 0, end: 1),
         duration: AppMotion.hintPop,
         curve: AppMotion.pop,
-        builder: (context, t, child) =>
-            Transform.scale(scale: 0.6 + 0.4 * t, child: Opacity(opacity: t.clamp(0.0, 1.0), child: child)),
+        builder: (context, t, child) => Transform.scale(
+          scale: 0.6 + 0.4 * t,
+          child: Opacity(opacity: t.clamp(0.0, 1.0), child: child),
+        ),
         child: pill,
       );
     }

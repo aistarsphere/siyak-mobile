@@ -47,7 +47,12 @@ class SelectorChip extends StatelessWidget {
             color: selected ? accentColor : AppColors.outlineVariant,
           ),
           boxShadow: selected
-              ? [BoxShadow(color: accentColor.withValues(alpha: 0.25), blurRadius: 12)]
+              ? [
+                  BoxShadow(
+                    color: accentColor.withValues(alpha: 0.25),
+                    blurRadius: 12,
+                  ),
+                ]
               : const [],
         ),
         child: Text(

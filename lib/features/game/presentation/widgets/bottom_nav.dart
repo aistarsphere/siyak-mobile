@@ -63,7 +63,11 @@ class SiyaqBottomNav extends StatelessWidget {
 }
 
 class _NavButton extends StatelessWidget {
-  const _NavButton({required this.item, required this.active, required this.onTap});
+  const _NavButton({
+    required this.item,
+    required this.active,
+    required this.onTap,
+  });
 
   final SiyaqNavItem item;
   final bool active;
@@ -96,12 +100,14 @@ class _NavButton extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.primary,
                     borderRadius: const BorderRadius.vertical(
-                        bottom: Radius.circular(999)),
+                      bottom: Radius.circular(999),
+                    ),
                     boxShadow: [
                       BoxShadow(
-                          color: AppColors.amberGlow(0.8),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2)),
+                        color: AppColors.amberGlow(0.8),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
                     ],
                   ),
                 ),
@@ -112,13 +118,20 @@ class _NavButton extends StatelessWidget {
               children: [
                 DecoratedBox(
                   decoration: active
-                      ? BoxDecoration(boxShadow: [
-                          BoxShadow(
-                              color: AppColors.amberGlow(0.4), blurRadius: 10)
-                        ])
+                      ? BoxDecoration(
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.amberGlow(0.4),
+                              blurRadius: 10,
+                            ),
+                          ],
+                        )
                       : const BoxDecoration(),
-                  child: Icon(active ? item.filledIcon : item.icon,
-                      color: color, size: active ? 28 : 24),
+                  child: Icon(
+                    active ? item.filledIcon : item.icon,
+                    color: color,
+                    size: active ? 28 : 24,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(

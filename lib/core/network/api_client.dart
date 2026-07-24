@@ -7,14 +7,17 @@ import 'api_error.dart';
 /// retry for idempotent GETs that fail on transient network errors.
 class ApiClient {
   ApiClient({required String baseUrl, Dio? dio})
-      : _dio = dio ??
-            Dio(BaseOptions(
+    : _dio =
+          dio ??
+          Dio(
+            BaseOptions(
               baseUrl: baseUrl,
               connectTimeout: AppConfig.connectTimeout,
               receiveTimeout: AppConfig.receiveTimeout,
               headers: const {'Accept': 'application/json'},
               responseType: ResponseType.json,
-            ));
+            ),
+          );
 
   final Dio _dio;
 
@@ -27,21 +30,20 @@ class ApiClient {
   }) async {
     try {
       return await _requestJson(
-          () => _dio.get<dynamic>(path, queryParameters: query));
+        () => _dio.get<dynamic>(path, queryParameters: query),
+      );
     } on ApiException catch (e) {
       // One safe retry: GETs on this API are idempotent.
       if (e.type == ApiErrorType.network || e.type == ApiErrorType.timeout) {
         return _requestJson(
-            () => _dio.get<dynamic>(path, queryParameters: query));
+          () => _dio.get<dynamic>(path, queryParameters: query),
+        );
       }
       rethrow;
     }
   }
 
-  Future<Map<String, dynamic>> postJson(
-    String path, {
-    Object? body,
-  }) =>
+  Future<Map<String, dynamic>> postJson(String path, {Object? body}) =>
       _requestJson(() => _dio.post<dynamic>(path, data: body));
 
   Future<Map<String, dynamic>> _requestJson(
@@ -70,11 +72,17 @@ class ApiClient {
         final detail = _extractDetail(e.response?.data);
         // 400/422 = client-side validation (e.g. bad input) → badRequest.
         if (status == 400 || status == 422) {
-          return ApiException(ApiErrorType.badRequest,
-              detail: detail, statusCode: status);
+          return ApiException(
+            ApiErrorType.badRequest,
+            detail: detail,
+            statusCode: status,
+          );
         }
-        return ApiException(ApiErrorType.server,
-            detail: detail, statusCode: status);
+        return ApiException(
+          ApiErrorType.server,
+          detail: detail,
+          statusCode: status,
+        );
       case DioExceptionType.cancel:
       case DioExceptionType.badCertificate:
       case DioExceptionType.unknown:

@@ -9,11 +9,7 @@ import 'pressable.dart';
 /// horizontal scroll, `bg-surface-variant/50` pills with hairline border.
 /// Chips fade/slide in when the suggestion set changes.
 class SuggestionChips extends StatelessWidget {
-  const SuggestionChips({
-    super.key,
-    required this.words,
-    required this.onTap,
-  });
+  const SuggestionChips({super.key, required this.words, required this.onTap});
 
   final List<String> words;
   final ValueChanged<String> onTap;
@@ -46,7 +42,9 @@ class SuggestionChips extends StatelessWidget {
                   onTap: () => onTap(words[i]),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.surfaceVariant.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(999),
@@ -57,8 +55,9 @@ class SuggestionChips extends StatelessWidget {
                     child: Center(
                       child: Text(
                         words[i],
-                        style: AppTypography.labelMd
-                            .copyWith(color: AppColors.onSurface),
+                        style: AppTypography.labelMd.copyWith(
+                          color: AppColors.onSurface,
+                        ),
                       ),
                     ),
                   ),

@@ -5,10 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme/app_theme.dart';
 import 'features/game/presentation/controllers/app_settings_controller.dart';
-import 'features/game/presentation/screens/splash_screen.dart';
+import 'features/siyag/presentation/siyag_shell.dart';
 
-class SiyaqApp extends ConsumerWidget {
-  const SiyaqApp({super.key});
+class SiyagApp extends ConsumerWidget {
+  const SiyagApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -16,7 +16,7 @@ class SiyaqApp extends ConsumerWidget {
     SystemChrome.setSystemUIOverlayStyle(AppTheme.systemUiStyle);
 
     return MaterialApp(
-      title: 'لعبة السياق',
+      title: 'سياق',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
       locale: Locale(lang),
@@ -26,7 +26,7 @@ class SiyaqApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      home: const SplashScreen(),
+      home: const SiyagShell(),
     );
   }
 }

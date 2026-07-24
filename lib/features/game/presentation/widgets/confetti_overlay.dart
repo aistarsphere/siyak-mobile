@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_motion.dart';
 
 /// Faithful port of the Stitch solved-screen confetti JS:
@@ -10,25 +9,31 @@ import '../../../../core/theme/app_motion.dart';
 /// 4–12 px squares/circles, random opacity, fall past the bottom while
 /// rotating up to ±360°, 2–5 s each, cubic-bezier(.37,0,.63,1), then gone.
 class ConfettiOverlay extends StatefulWidget {
-  const ConfettiOverlay({super.key, this.pieceCount = 150});
+  const ConfettiOverlay({super.key, this.pieceCount = 150, this.colors});
 
   final int pieceCount;
+
+  /// Optional palette override (Siyag result uses coral/cyan/emerald).
+  final List<Color>? colors;
 
   @override
   State<ConfettiOverlay> createState() => _ConfettiOverlayState();
 }
 
 class _ConfettiPiece {
-  _ConfettiPiece(math.Random rng)
-      : x = rng.nextDouble(),
-        size = rng.nextDouble() * 8 + 4,
-        color = AppColors.confetti[rng.nextInt(AppColors.confetti.length)],
-        circle = rng.nextBool(),
-        opacity = rng.nextDouble(),
-        rotation = (rng.nextDouble() * 720 - 360) * math.pi / 180,
-        duration = AppMotion.confettiMin.inMilliseconds +
-            rng.nextInt(AppMotion.confettiMax.inMilliseconds -
-                AppMotion.confettiMin.inMilliseconds);
+  _ConfettiPiece(math.Random rng, List<Color> palette)
+    : x = rng.nextDouble(),
+      size = rng.nextDouble() * 8 + 4,
+      color = palette[rng.nextInt(palette.length)],
+      circle = rng.nextBool(),
+      opacity = rng.nextDouble(),
+      rotation = (rng.nextDouble() * 720 - 360) * math.pi / 180,
+      duration =
+          AppMotion.confettiMin.inMilliseconds +
+          rng.nextInt(
+            AppMotion.confettiMax.inMilliseconds -
+                AppMotion.confettiMin.inMilliseconds,
+          );
 
   final double x; // horizontal position, fraction of width
   final double size;
@@ -48,7 +53,15 @@ class _ConfettiOverlayState extends State<ConfettiOverlay>
   void initState() {
     super.initState();
     final rng = math.Random();
-    _pieces = List.generate(widget.pieceCount, (_) => _ConfettiPiece(rng));
+    final palette = widget.colors ??
+        const [
+          Color(0xFFFF6B4A), // coral
+          Color(0xFF2DD4E8), // cyan
+          Color(0xFF34D399), // emerald
+          Color(0xFFF1ECE3), // text
+        ];
+    _pieces =
+        List.generate(widget.pieceCount, (_) => _ConfettiPiece(rng, palette));
     _controller = AnimationController(
       vsync: this,
       duration: AppMotion.confettiMax,
@@ -102,12 +115,17 @@ class _ConfettiPainter extends CustomPainter {
       canvas.translate(x, y);
       canvas.rotate(p.rotation * eased);
       final rect = Rect.fromCenter(
-          center: Offset.zero, width: p.size, height: p.size);
+        center: Offset.zero,
+        width: p.size,
+        height: p.size,
+      );
       if (p.circle) {
         canvas.drawOval(rect, paint);
       } else {
         canvas.drawRRect(
-            RRect.fromRectAndRadius(rect, const Radius.circular(2)), paint);
+          RRect.fromRectAndRadius(rect, const Radius.circular(2)),
+          paint,
+        );
       }
       canvas.restore();
     }

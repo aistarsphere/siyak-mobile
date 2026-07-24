@@ -62,8 +62,7 @@ class _UnknownWordCardState extends State<UnknownWordCard>
         children: [
           const Padding(
             padding: EdgeInsets.only(top: 2),
-            child:
-                Icon(Icons.error_outline, size: 20, color: AppColors.error),
+            child: Icon(Icons.error_outline, size: 20, color: AppColors.error),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -72,8 +71,9 @@ class _UnknownWordCardState extends State<UnknownWordCard>
               children: [
                 Text(
                   loc('unknownWord'),
-                  style: AppTypography.bodySm
-                      .copyWith(color: AppColors.onSurface),
+                  style: AppTypography.bodySm.copyWith(
+                    color: AppColors.onSurface,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -90,7 +90,9 @@ class _UnknownWordCardState extends State<UnknownWordCard>
                     height: 18,
                     width: 18,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppColors.error),
+                      strokeWidth: 2,
+                      color: AppColors.error,
+                    ),
                   )
                 else
                   Wrap(
@@ -102,20 +104,24 @@ class _UnknownWordCardState extends State<UnknownWordCard>
                           onTap: () => widget.onSuggestionTap(w),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 6),
+                              horizontal: 16,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.surfaceContainerHighest
                                   .withValues(alpha: 0.6),
                               borderRadius: BorderRadius.circular(999),
                               border: Border.all(
-                                color: AppColors.outline
-                                    .withValues(alpha: 0.20),
+                                color: AppColors.outline.withValues(
+                                  alpha: 0.20,
+                                ),
                               ),
                             ),
                             child: Text(
                               w,
-                              style: AppTypography.labelMd
-                                  .copyWith(color: AppColors.primary),
+                              style: AppTypography.labelMd.copyWith(
+                                color: AppColors.primary,
+                              ),
                             ),
                           ),
                         ),

@@ -64,16 +64,20 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     // Duplicate canonical guess → transient snackbar, attempts unchanged.
     // Keyed on a monotonic sequence so every duplicate event notifies,
     // including re-submitting the same word.
-    ref.listen(gameControllerProvider.select((s) => s.duplicateSeq),
-        (prev, next) {
+    ref.listen(gameControllerProvider.select((s) => s.duplicateSeq), (
+      prev,
+      next,
+    ) {
       if (next > (prev ?? 0)) {
         final word = ref.read(gameControllerProvider).duplicateWord;
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(
-            content: Text('${loc('duplicateGuess')} · $word'),
-            duration: const Duration(seconds: 2),
-          ));
+          ..showSnackBar(
+            SnackBar(
+              content: Text('${loc('duplicateGuess')} · $word'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
       }
     });
 
@@ -99,7 +103,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               opacity: animation,
               child: ScaleTransition(
                 scale: Tween(begin: 0.96, end: 1.0).animate(
-                    CurvedAnimation(parent: animation, curve: AppMotion.easeOut)),
+                  CurvedAnimation(parent: animation, curve: AppMotion.easeOut),
+                ),
                 child: const SolvedScreen(),
               ),
             ),
@@ -114,12 +119,19 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       children: [
         SiyaqTopBar(
           title: loc('appTitle'),
-          onLanguageTap: () =>
-              ref.read(appSettingsProvider.notifier).toggleLang(),
+          // Gameplay language is LOCKED during an active game — no language
+          // switch on the active game screen (changing UI language must not
+          // change game content). Disabled whenever a game is in progress.
+          onLanguageTap: hasGame
+              ? null
+              : () => ref.read(appSettingsProvider.notifier).toggleLang(),
           trailing: Pressable(
             onTap: () => ref.read(shellTabProvider.notifier).state = 2,
-            child: const Icon(Icons.leaderboard_outlined,
-                size: 20, color: AppColors.onSurfaceVariant),
+            child: const Icon(
+              Icons.leaderboard_outlined,
+              size: 20,
+              color: AppColors.onSurfaceVariant,
+            ),
           ),
         ),
         if (!hasGame)
@@ -136,39 +148,68 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     opacity: 0.10,
                     borderRadius: BorderRadius.circular(8),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 10),
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(children: [
-                          const Icon(Icons.category_outlined,
-                              size: 16, color: AppColors.secondary),
-                          const SizedBox(width: 4),
-                          Text(state.categoryLabel,
-                              style: AppTypography.labelMd
-                                  .copyWith(color: AppColors.onSurface)),
-                        ]),
-                        Row(children: [
-                          Text(loc('attempts'),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.category_outlined,
+                              size: 16,
+                              color: AppColors.secondary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              state.categoryLabel,
                               style: AppTypography.labelMd.copyWith(
-                                  color: AppColors.onSurfaceVariant)),
-                          const SizedBox(width: 4),
-                          Text('${state.attempts}',
-                              style: AppTypography.bodySm
-                                  .copyWith(color: AppColors.onSurface)),
-                        ]),
-                        Row(children: [
-                          const Icon(Icons.emoji_events,
-                              size: 16, color: AppColors.primary),
-                          const SizedBox(width: 4),
-                          Text(loc('best'),
+                                color: AppColors.onSurface,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            Text(
+                              loc('attempts'),
                               style: AppTypography.labelMd.copyWith(
-                                  color: AppColors.onSurfaceVariant)),
-                          const SizedBox(width: 4),
-                          Text(state.bestRank == 0 ? '—' : '#${state.bestRank}',
-                              style: AppTypography.bodySm
-                                  .copyWith(color: AppColors.primary)),
-                        ]),
+                                color: AppColors.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${state.attempts}',
+                              style: AppTypography.bodySm.copyWith(
+                                color: AppColors.onSurface,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.emoji_events,
+                              size: 16,
+                              color: AppColors.primary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              loc('best'),
+                              style: AppTypography.labelMd.copyWith(
+                                color: AppColors.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              state.bestRank == 0 ? '—' : '#${state.bestRank}',
+                              style: AppTypography.bodySm.copyWith(
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -224,11 +265,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                         if (state.guesses.isNotEmpty) ...[
                           Padding(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 4, vertical: 4),
+                              horizontal: 4,
+                              vertical: 4,
+                            ),
                             child: Text(
                               '${loc('historyTitle')} (${state.attempts})',
                               style: AppTypography.labelMd.copyWith(
-                                  color: AppColors.onSurfaceVariant),
+                                color: AppColors.onSurfaceVariant,
+                              ),
                             ),
                           ),
                           for (final g in state.sortedGuesses)
@@ -267,14 +311,18 @@ class _NoGame extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.play_circle_outline,
-                size: 64, color: AppColors.primary.withValues(alpha: 0.5)),
+            Icon(
+              Icons.play_circle_outline,
+              size: 64,
+              color: AppColors.primary.withValues(alpha: 0.5),
+            ),
             const SizedBox(height: 16),
             Text(
               loc('tagline'),
               textAlign: TextAlign.center,
-              style: AppTypography.bodyLg
-                  .copyWith(color: AppColors.onSurfaceVariant),
+              style: AppTypography.bodyLg.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 24),
             GlowButton(
@@ -317,8 +365,8 @@ class _GuessInput extends StatelessWidget {
     final underline = error
         ? AppColors.error
         : focused
-            ? AppColors.amber
-            : Colors.transparent;
+        ? AppColors.amber
+        : Colors.transparent;
     return Stack(
       alignment: AlignmentDirectional.centerEnd,
       children: [
@@ -339,7 +387,8 @@ class _GuessInput extends StatelessWidget {
             onSubmitted: (_) => onSubmit(),
             textInputAction: TextInputAction.send,
             style: AppTypography.bodyLg.copyWith(
-                color: error ? AppColors.error : AppColors.onSurface),
+              color: error ? AppColors.error : AppColors.onSurface,
+            ),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: AppTypography.bodyLg.copyWith(
@@ -347,7 +396,11 @@ class _GuessInput extends StatelessWidget {
               ),
               border: InputBorder.none,
               contentPadding: const EdgeInsetsDirectional.only(
-                  start: 16, end: 64, top: 20, bottom: 20),
+                start: 16,
+                end: 64,
+                top: 20,
+                bottom: 20,
+              ),
             ),
           ),
         ),
@@ -366,7 +419,9 @@ class _GuessInput extends StatelessWidget {
                     ? const []
                     : [
                         BoxShadow(
-                            color: AppColors.amberGlow(0.4), blurRadius: 15),
+                          color: AppColors.amberGlow(0.4),
+                          blurRadius: 15,
+                        ),
                       ],
               ),
               child: busy
@@ -374,14 +429,17 @@ class _GuessInput extends StatelessWidget {
                       width: 22,
                       height: 22,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2.4,
-                          color: AppColors.onPrimaryContainer),
+                        strokeWidth: 2.4,
+                        color: AppColors.onPrimaryContainer,
+                      ),
                     )
-                  : Icon(Icons.send,
+                  : Icon(
+                      Icons.send,
                       size: 22,
                       color: error
                           ? AppColors.error
-                          : AppColors.onPrimaryContainer),
+                          : AppColors.onPrimaryContainer,
+                    ),
             ),
           ),
         ),
@@ -413,18 +471,17 @@ class _HintsRow extends StatelessWidget {
         Pressable(
           onTap: state.hintsExhausted || state.hintLoading || state.solved
               ? null
-              : () =>
-                  ref.read(gameControllerProvider.notifier).requestHint(),
+              : () => ref.read(gameControllerProvider.notifier).requestHint(),
           child: Opacity(
             opacity: state.hintsExhausted ? 0.45 : 1,
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: AppColors.secondary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(
-                    color: AppColors.secondary.withValues(alpha: 0.5)),
+                  color: AppColors.secondary.withValues(alpha: 0.5),
+                ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -434,18 +491,24 @@ class _HintsRow extends StatelessWidget {
                       width: 14,
                       height: 14,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: AppColors.secondary),
+                        strokeWidth: 2,
+                        color: AppColors.secondary,
+                      ),
                     )
                   else
-                    const Icon(Icons.lightbulb_outline,
-                        size: 14, color: AppColors.secondary),
+                    const Icon(
+                      Icons.lightbulb_outline,
+                      size: 14,
+                      color: AppColors.secondary,
+                    ),
                   const SizedBox(width: 4),
                   Text(
                     state.hintsExhausted
                         ? loc('noMoreHints')
                         : '${loc('hint')} ${state.hintsUsed}/5',
-                    style: AppTypography.labelMd
-                        .copyWith(color: AppColors.secondary),
+                    style: AppTypography.labelMd.copyWith(
+                      color: AppColors.secondary,
+                    ),
                   ),
                 ],
               ),

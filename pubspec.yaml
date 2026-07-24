@@ -40,6 +40,9 @@ dependencies:
   shared_preferences: ^2.5.5
   flutter_localizations:
     sdk: flutter
+  flutter_secure_storage: ^10.3.1
+  uuid: ^4.6.0
+  web_socket_channel: ^3.0.3
 
 dev_dependencies:
   flutter_test:
@@ -53,6 +56,7 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   integration_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -90,6 +94,35 @@ flutter:
         - asset: assets/fonts/NotoSansArabic-SemiBold.ttf
           weight: 600
         - asset: assets/fonts/NotoSansArabic-Bold.ttf
+          weight: 700
+    # Siyag redesign fonts (Figma Make handoff):
+    # Noto Naskh Arabic (Arabic content), DM Mono (ranks/labels),
+    # Plus Jakarta Sans (Latin/system).
+    - family: NotoNaskhArabic
+      fonts:
+        - asset: assets/fonts/siyag/NotoNaskhArabic-400.ttf
+          weight: 400
+        - asset: assets/fonts/siyag/NotoNaskhArabic-500.ttf
+          weight: 500
+        - asset: assets/fonts/siyag/NotoNaskhArabic-600.ttf
+          weight: 600
+        - asset: assets/fonts/siyag/NotoNaskhArabic-700.ttf
+          weight: 700
+    - family: DMMono
+      fonts:
+        - asset: assets/fonts/siyag/DMMono-400.ttf
+          weight: 400
+        - asset: assets/fonts/siyag/DMMono-500.ttf
+          weight: 500
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/fonts/siyag/PlusJakartaSans-400.ttf
+          weight: 400
+        - asset: assets/fonts/siyag/PlusJakartaSans-500.ttf
+          weight: 500
+        - asset: assets/fonts/siyag/PlusJakartaSans-600.ttf
+          weight: 600
+        - asset: assets/fonts/siyag/PlusJakartaSans-700.ttf
           weight: 700
 
   # To add assets to your application, add an assets section, like this:

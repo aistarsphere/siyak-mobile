@@ -22,13 +22,12 @@ class LocalStats {
     int? bestRank,
     int? gamesPlayed,
     int? gamesSolved,
-  }) =>
-      LocalStats(
-        totalAttempts: totalAttempts ?? this.totalAttempts,
-        bestRank: bestRank ?? this.bestRank,
-        gamesPlayed: gamesPlayed ?? this.gamesPlayed,
-        gamesSolved: gamesSolved ?? this.gamesSolved,
-      );
+  }) => LocalStats(
+    totalAttempts: totalAttempts ?? this.totalAttempts,
+    bestRank: bestRank ?? this.bestRank,
+    gamesPlayed: gamesPlayed ?? this.gamesPlayed,
+    gamesSolved: gamesSolved ?? this.gamesSolved,
+  );
 }
 
 class StatsController extends Notifier<LocalStats> {
@@ -57,7 +56,9 @@ class StatsController extends Notifier<LocalStats> {
   }
 
   void recordAttempt(int rank) {
-    final best = state.bestRank == 0 ? rank : (rank < state.bestRank ? rank : state.bestRank);
+    final best = state.bestRank == 0
+        ? rank
+        : (rank < state.bestRank ? rank : state.bestRank);
     state = state.copyWith(
       totalAttempts: state.totalAttempts + 1,
       bestRank: best,
@@ -76,5 +77,6 @@ class StatsController extends Notifier<LocalStats> {
   }
 }
 
-final statsProvider =
-    NotifierProvider<StatsController, LocalStats>(StatsController.new);
+final statsProvider = NotifierProvider<StatsController, LocalStats>(
+  StatsController.new,
+);

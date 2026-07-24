@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -9,6 +10,10 @@ import '../widgets/glass_panel.dart';
 import '../widgets/pressable.dart';
 import '../widgets/selector_chip.dart';
 import '../widgets/top_app_bar.dart';
+
+/// Set to true to request that Settings open with the developer server-URL
+/// field expanded (used by the backend-offline "Change Server URL" button).
+final openDevServerProvider = StateProvider<bool>((ref) => false);
 
 /// الإحصائيات tab: local stats bento (design language of the Home mini-bento)
 /// followed by settings — language, sound, haptics, and a developer-only
@@ -30,7 +35,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     // Must init eagerly: a lazy `late` field first touched in dispose()
     // would call ref.read on an unmounted widget.
     _urlController = TextEditingController(
-        text: ref.read(appSettingsProvider).baseUrlOverride);
+      text: ref.read(appSettingsProvider).baseUrlOverride,
+    );
+    // Honor a request (from the backend-offline screen) to open expanded.
+    if (ref.read(openDevServerProvider)) {
+      _devExpanded = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) ref.read(openDevServerProvider.notifier).state = false;
+      });
+    }
   }
 
   @override
@@ -45,6 +58,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final settings = ref.watch(appSettingsProvider);
     final stats = ref.watch(statsProvider);
 
+    // Expand the dev server field when asked (offline "Change Server URL").
+    ref.listen(openDevServerProvider, (prev, next) {
+      if (next && !_devExpanded) {
+        setState(() => _devExpanded = true);
+        ref.read(openDevServerProvider.notifier).state = false;
+      }
+    });
+
     return Column(
       children: [
         SiyaqTopBar(
@@ -56,62 +77,79 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 128),
             children: [
-              Text(loc('stats'),
-                  style: AppTypography.headlineMobile
-                      .copyWith(color: AppColors.onSurface)),
+              Text(
+                loc('stats'),
+                style: AppTypography.headlineMobile.copyWith(
+                  color: AppColors.onSurface,
+                ),
+              ),
               const SizedBox(height: 12),
-              Row(children: [
-                Expanded(
+              Row(
+                children: [
+                  Expanded(
                     child: _MiniStat(
-                        label: loc('gamesPlayed'),
-                        value: '${stats.gamesPlayed}')),
-                const SizedBox(width: 8),
-                Expanded(
+                      label: loc('gamesPlayed'),
+                      value: '${stats.gamesPlayed}',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
                     child: _MiniStat(
-                        label: loc('gamesSolved'),
-                        value: '${stats.gamesSolved}')),
-              ]),
+                      label: loc('gamesSolved'),
+                      value: '${stats.gamesSolved}',
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 8),
-              Row(children: [
-                Expanded(
+              Row(
+                children: [
+                  Expanded(
                     child: _MiniStat(
-                        label: loc('prevAttempts'),
-                        value: '${stats.totalAttempts}')),
-                const SizedBox(width: 8),
-                Expanded(
+                      label: loc('prevAttempts'),
+                      value: '${stats.totalAttempts}',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
                     child: _MiniStat(
-                        label: loc('bestScore'),
-                        value: stats.bestRank == 0
-                            ? '—'
-                            : '#${stats.bestRank}',
-                        amber: true)),
-              ]),
+                      label: loc('bestScore'),
+                      value: stats.bestRank == 0 ? '—' : '#${stats.bestRank}',
+                      amber: true,
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 32),
-              Text(loc('settings'),
-                  style: AppTypography.headlineMobile
-                      .copyWith(color: AppColors.onSurface)),
+              Text(
+                loc('settings'),
+                style: AppTypography.headlineMobile.copyWith(
+                  color: AppColors.onSurface,
+                ),
+              ),
               const SizedBox(height: 12),
               // Language
               _SettingsTile(
                 icon: Icons.language,
                 title: loc('language'),
-                trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                  SelectorChip(
-                    label: 'العربية',
-                    selected: settings.lang == 'ar',
-                    onTap: () => ref
-                        .read(appSettingsProvider.notifier)
-                        .setLang('ar'),
-                  ),
-                  const SizedBox(width: 8),
-                  SelectorChip(
-                    label: 'English',
-                    selected: settings.lang == 'en',
-                    onTap: () => ref
-                        .read(appSettingsProvider.notifier)
-                        .setLang('en'),
-                  ),
-                ]),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SelectorChip(
+                      label: 'العربية',
+                      selected: settings.lang == 'ar',
+                      onTap: () =>
+                          ref.read(appSettingsProvider.notifier).setLang('ar'),
+                    ),
+                    const SizedBox(width: 8),
+                    SelectorChip(
+                      label: 'English',
+                      selected: settings.lang == 'en',
+                      onTap: () =>
+                          ref.read(appSettingsProvider.notifier).setLang('en'),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 8),
               // Sound
@@ -163,21 +201,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         textDirection: TextDirection.ltr,
                         child: TextField(
                           controller: _urlController,
-                          style: AppTypography.bodySm
-                              .copyWith(color: AppColors.onSurface),
+                          style: AppTypography.bodySm.copyWith(
+                            color: AppColors.onSurface,
+                          ),
                           keyboardType: TextInputType.url,
                           decoration: InputDecoration(
                             hintText: 'https://…',
                             hintStyle: AppTypography.bodySm.copyWith(
-                                color: AppColors.onSurfaceVariant
-                                    .withValues(alpha: 0.5)),
+                              color: AppColors.onSurfaceVariant.withValues(
+                                alpha: 0.5,
+                              ),
+                            ),
                             enabledBorder: const UnderlineInputBorder(
                               borderSide: BorderSide(
-                                  color: AppColors.outlineVariant),
+                                color: AppColors.outlineVariant,
+                              ),
                             ),
                             focusedBorder: const UnderlineInputBorder(
-                              borderSide:
-                                  BorderSide(color: AppColors.amber),
+                              borderSide: BorderSide(color: AppColors.amber),
                             ),
                           ),
                           onSubmitted: (v) => ref
@@ -188,8 +229,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       const SizedBox(height: 8),
                       Text(
                         loc('devServerHint'),
-                        style: AppTypography.labelXs
-                            .copyWith(color: AppColors.onSurfaceVariant),
+                        style: AppTypography.labelXs.copyWith(
+                          color: AppColors.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
@@ -228,9 +270,12 @@ class _MiniStat extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: AppTypography.labelXs
-                  .copyWith(color: AppColors.onSurfaceVariant)),
+          Text(
+            label,
+            style: AppTypography.labelXs.copyWith(
+              color: AppColors.onSurfaceVariant,
+            ),
+          ),
           const SizedBox(height: 4),
           Text(
             value,
@@ -264,18 +309,22 @@ class _SettingsTile extends StatelessWidget {
       opacity: 0.20,
       borderRadius: BorderRadius.circular(12),
       border: Border.all(
-          color: AppColors.surfaceBright.withValues(alpha: 0.50)),
+        color: AppColors.surfaceBright.withValues(alpha: 0.50),
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(children: [
-        Icon(icon, size: 20, color: AppColors.primary.withValues(alpha: 0.7)),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(title,
-              style: AppTypography.bodySm
-                  .copyWith(color: AppColors.onSurface)),
-        ),
-        trailing,
-      ]),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: AppColors.primary.withValues(alpha: 0.7)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              title,
+              style: AppTypography.bodySm.copyWith(color: AppColors.onSurface),
+            ),
+          ),
+          trailing,
+        ],
+      ),
     );
     return onTap != null ? Pressable(onTap: onTap, child: tile) : tile;
   }

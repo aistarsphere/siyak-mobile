@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../../features/v2/domain/errors/v2_error.dart';
 import '../network/api_error.dart';
 import 'strings_ar.dart';
 import 'strings_en.dart';
@@ -21,7 +22,17 @@ class AppLocalizations {
   String call(String key) =>
       (isArabic ? stringsAr : stringsEn)[key] ?? stringsEn[key] ?? key;
 
+  /// Fill a `{placeholder}` template, e.g. canonicalDuplicate/sharedDuplicateBy.
+  String fill(String key, Map<String, String> values) {
+    var s = this(key);
+    values.forEach((k, v) => s = s.replaceAll('{$k}', v));
+    return s;
+  }
+
   String errorMessage(Object error) {
+    if (error is V2Exception) {
+      return this(error.messageKey);
+    }
     if (error is ApiException) {
       switch (error.type) {
         case ApiErrorType.network:
@@ -53,9 +64,9 @@ class AppLocalizations {
       '${this('appTitle')} 🎯',
       this('shareSolvedIn').replaceFirst('{n}', '$attempts'),
       this('shareBestRank').replaceFirst('{r}', '$bestRank'),
-      this('shareHints')
-          .replaceFirst('{h}', '$hintsUsed')
-          .replaceFirst('{max}', '$maxHints'),
+      this(
+        'shareHints',
+      ).replaceFirst('{h}', '$hintsUsed').replaceFirst('{max}', '$maxHints'),
     ];
     return lines.join('\n');
   }

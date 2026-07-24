@@ -23,11 +23,36 @@ class AppConfig {
   static const String _cgBase = String.fromEnvironment('CG_BASE');
   static const String _apiBaseUrl = String.fromEnvironment('API_BASE_URL');
 
+  /// Optional explicit V2 base (`--dart-define=CG_V2_BASE=...`). When empty,
+  /// the V2 base is derived from the V1 base (`<base>/v2`) so there is only
+  /// ONE URL to configure in the common case.
+  static const String _cgV2Base = String.fromEnvironment('CG_V2_BASE');
+
   static String get baseUrlFromEnv {
     if (_cgBase.isNotEmpty) return _cgBase;
     if (_apiBaseUrl.isNotEmpty) return _apiBaseUrl;
     return documentedPublicUrl;
   }
+
+  /// Resolve the effective V2 REST base URL. Order: explicit `CG_V2_BASE`
+  /// override → `<effective V1 base>/v2`.
+  static String resolveV2BaseUrl(String? runtimeOverride) {
+    if (_cgV2Base.isNotEmpty) return normalizeBaseUrl(_cgV2Base);
+    return '${resolveBaseUrl(runtimeOverride)}/v2';
+  }
+
+  /// WebSocket origin derived from the V2 base (http→ws, https→wss).
+  /// The concrete room path is appended by the realtime gateway once the V2
+  /// contract is known.
+  static String resolveV2SocketBase(String? runtimeOverride) {
+    final v2 = resolveV2BaseUrl(runtimeOverride);
+    if (v2.startsWith('https://')) return 'wss://${v2.substring(8)}';
+    if (v2.startsWith('http://')) return 'ws://${v2.substring(7)}';
+    return v2;
+  }
+
+  /// Documented capability-detection endpoint (relative to the V2 base).
+  static const String capabilitiesPath = '/capabilities';
 
   /// Normalizes a user/env supplied base URL (trims trailing slashes/spaces).
   static String normalizeBaseUrl(String url) {

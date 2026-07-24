@@ -74,7 +74,9 @@ class GuessResponse {
       word: (canonicalWord ?? originalGuess) ?? '',
       originalWord: originalGuess,
       originalDiffers:
-          originalGuess != null && canonicalWord != null && originalGuess != canonicalWord,
+          originalGuess != null &&
+          canonicalWord != null &&
+          originalGuess != canonicalWord,
       rank: rank!,
       proximity: prox,
       tier: Heat.fromLevel(heatLevel, prox),
@@ -83,29 +85,30 @@ class GuessResponse {
   }
 
   factory GuessResponse.fromJson(Map<String, dynamic> j) => GuessResponse(
-        accepted: j['accepted'] as bool? ?? false,
-        duplicate: j['duplicate'] as bool? ?? false,
-        alreadyGuessed: j['already_guessed'] as bool? ?? false,
-        solved: j['solved'] as bool? ?? false,
-        totalWords: (j['total_words'] as num?)?.toInt() ?? 0,
-        guessNumber: (j['guess_number'] as num?)?.toInt() ?? 0,
-        reason: j['reason'] as String?,
-        message: j['message'] as String?,
-        originalGuess: j['original_guess'] as String?,
-        canonicalWord: j['canonical_word'] as String? ?? j['matched_word'] as String?,
-        rank: (j['rank'] as num?)?.toInt(),
-        proximity: (j['proximity'] as num?)?.toDouble(),
-        heatLevel: j['heat_level'] as String?,
-        suggestions: WordSuggestions.parseList(j['suggestions']),
-        secretWord: j['secret_word'] as String?,
-        hintsUsed: (j['hints_used'] as num?)?.toInt(),
-        hintsRemaining: (j['hints_remaining'] as num?)?.toInt(),
-        maxHints: (j['max_hints'] as num?)?.toInt(),
-        previousGuesses: (j['previous_guesses'] as List<dynamic>? ?? const [])
-            .map((e) => Guess.fromEntry(e as Map<String, dynamic>))
-            .toList(),
-        hints: (j['hints'] as List<dynamic>? ?? const [])
-            .map((e) => HintResult.fromEntry(e as Map<String, dynamic>))
-            .toList(),
-      );
+    accepted: j['accepted'] as bool? ?? false,
+    duplicate: j['duplicate'] as bool? ?? false,
+    alreadyGuessed: j['already_guessed'] as bool? ?? false,
+    solved: j['solved'] as bool? ?? false,
+    totalWords: (j['total_words'] as num?)?.toInt() ?? 0,
+    guessNumber: (j['guess_number'] as num?)?.toInt() ?? 0,
+    reason: j['reason'] as String?,
+    message: j['message'] as String?,
+    originalGuess: j['original_guess'] as String?,
+    canonicalWord:
+        j['canonical_word'] as String? ?? j['matched_word'] as String?,
+    rank: (j['rank'] as num?)?.toInt(),
+    proximity: (j['proximity'] as num?)?.toDouble(),
+    heatLevel: j['heat_level'] as String?,
+    suggestions: WordSuggestions.parseList(j['suggestions']),
+    secretWord: j['secret_word'] as String?,
+    hintsUsed: (j['hints_used'] as num?)?.toInt(),
+    hintsRemaining: (j['hints_remaining'] as num?)?.toInt(),
+    maxHints: (j['max_hints'] as num?)?.toInt(),
+    previousGuesses: (j['previous_guesses'] as List<dynamic>? ?? const [])
+        .map((e) => Guess.fromEntry(e as Map<String, dynamic>))
+        .toList(),
+    hints: (j['hints'] as List<dynamic>? ?? const [])
+        .map((e) => HintResult.fromEntry(e as Map<String, dynamic>))
+        .toList(),
+  );
 }

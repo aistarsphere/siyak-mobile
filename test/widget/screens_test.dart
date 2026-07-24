@@ -15,10 +15,12 @@ import '../helpers/fake_repository.dart';
 Future<ProviderContainer> makeContainer({String lang = 'ar'}) async {
   SharedPreferences.setMockInitialValues({'siyaq.lang': lang});
   final prefs = await SharedPreferences.getInstance();
-  final container = ProviderContainer(overrides: [
-    sharedPreferencesProvider.overrideWithValue(prefs),
-    gameRepositoryProvider.overrideWithValue(FakeGameRepository()),
-  ]);
+  final container = ProviderContainer(
+    overrides: [
+      sharedPreferencesProvider.overrideWithValue(prefs),
+      gameRepositoryProvider.overrideWithValue(FakeGameRepository()),
+    ],
+  );
   addTearDown(container.dispose);
   return container;
 }
@@ -51,19 +53,19 @@ void main() {
       expect(find.text('التصنيف'), findsOneWidget);
       expect(find.text('الصعوبة'), findsOneWidget);
       // Category/difficulty chips from the (fake) backend catalogue:
-      expect(find.text('متنوّع'), findsOneWidget);
-      expect(find.text('حيوانات'), findsOneWidget);
+      expect(find.text('عام'), findsOneWidget);
+      expect(find.text('الحيوانات'), findsOneWidget);
       expect(find.text('متوسط'), findsOneWidget);
 
       final dir = Directionality.of(
-          tester.element(find.text('ابدأ لعبة جديدة')));
+        tester.element(find.text('ابدأ لعبة جديدة')),
+      );
       expect(dir, TextDirection.rtl);
     });
 
     testWidgets('renders English UI in LTR', (tester) async {
       final container = await makeContainer(lang: 'en');
-      await tester.pumpWidget(
-          host(container, const HomeScreen(), lang: 'en'));
+      await tester.pumpWidget(host(container, const HomeScreen(), lang: 'en'));
       await tester.pumpAndSettle();
 
       expect(find.text('Start New Game'), findsOneWidget);
@@ -71,17 +73,24 @@ void main() {
       expect(find.text('General'), findsOneWidget);
 
       final dir = Directionality.of(
-          tester.element(find.text('Start New Game')));
+        tester.element(find.text('Start New Game')),
+      );
       expect(dir, TextDirection.ltr);
     });
   });
 
   group('GameScreen', () {
-    testWidgets('renders input, history, best-guess card and hint pill',
-        (tester) async {
+    testWidgets('renders input, history, best-guess card and hint pill', (
+      tester,
+    ) async {
       final container = await makeContainer();
       final controller = container.read(gameControllerProvider.notifier);
-      await controller.startNewGame(mode: 'general', difficulty: 'medium');
+      await controller.startNewGame(
+        language: 'ar',
+        category: 'general',
+        categoryLabel: 'عام',
+        difficulty: 'medium',
+      );
       await controller.submitGuess('حاسوب');
       await controller.submitGuess('حرب');
       await controller.requestHint();
@@ -107,18 +116,23 @@ void main() {
       expect(find.text('تلميح 1 · حرب · #152'), findsOneWidget);
     });
 
-    testWidgets('unknown word shows the did-you-mean card with suggestions',
-        (tester) async {
+    testWidgets('unknown word shows the did-you-mean card with suggestions', (
+      tester,
+    ) async {
       final container = await makeContainer();
       final controller = container.read(gameControllerProvider.notifier);
-      await controller.startNewGame(mode: 'general', difficulty: 'medium');
+      await controller.startNewGame(
+        language: 'ar',
+        category: 'general',
+        categoryLabel: 'عام',
+        difficulty: 'medium',
+      );
       await controller.submitGuess('سيار');
 
       await tester.pumpWidget(host(container, const GameScreen()));
       await tester.pump(const Duration(milliseconds: 700));
 
-      expect(
-          find.text('هذه الكلمة غير موجودة في القاموس'), findsOneWidget);
+      expect(find.text('هذه الكلمة غير موجودة في القاموس'), findsOneWidget);
       expect(find.text('هل تقصد:'), findsOneWidget);
       expect(find.text('سيارة'), findsOneWidget);
       expect(find.text('السيارة'), findsOneWidget);
@@ -134,7 +148,12 @@ void main() {
       addTearDown(tester.view.reset);
       final container = await makeContainer();
       final controller = container.read(gameControllerProvider.notifier);
-      await controller.startNewGame(mode: 'general', difficulty: 'medium');
+      await controller.startNewGame(
+        language: 'ar',
+        category: 'general',
+        categoryLabel: 'عام',
+        difficulty: 'medium',
+      );
       await controller.submitGuess('حاسوب');
       await controller.submitGuess('كود');
       await controller.requestHint();

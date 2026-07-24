@@ -25,22 +25,22 @@ class HintResult {
   final int? maxHints;
 
   factory HintResult.fromJson(Map<String, dynamic> j) => HintResult(
-        number: (j['hint_number'] as num?)?.toInt() ?? 0,
-        word: j['revealed_word'] as String? ?? '',
-        rank: (j['semantic_rank'] as num?)?.toInt() ?? 0,
-        difficulty: j['difficulty'] as String?,
-        similarity: (j['similarity_score'] as num?)?.toDouble(),
-        hintsUsed: (j['hints_used'] as num?)?.toInt(),
-        hintsRemaining: (j['hints_remaining'] as num?)?.toInt(),
-        maxHints: (j['max_hints'] as num?)?.toInt(),
-      );
+    number: (j['hint_number'] as num?)?.toInt() ?? 0,
+    word: j['revealed_word'] as String? ?? '',
+    rank: (j['semantic_rank'] as num?)?.toInt() ?? 0,
+    difficulty: j['difficulty'] as String?,
+    similarity: (j['similarity_score'] as num?)?.toDouble(),
+    hintsUsed: (j['hints_used'] as num?)?.toInt(),
+    hintsRemaining: (j['hints_remaining'] as num?)?.toInt(),
+    maxHints: (j['max_hints'] as num?)?.toInt(),
+  );
 
   /// Parse an entry from a game's `hints[]` array.
   factory HintResult.fromEntry(Map<String, dynamic> j) => HintResult(
-        number: (j['hint_number'] as num?)?.toInt() ?? 0,
-        word: j['revealed_word'] as String? ?? '',
-        rank: (j['semantic_rank'] as num?)?.toInt() ?? 0,
-        difficulty: j['difficulty'] as String?,
-        similarity: (j['similarity_score'] as num?)?.toDouble(),
-      );
+    number: (j['hint_number'] as num?)?.toInt() ?? 0,
+    word: j['revealed_word'] as String? ?? '',
+    rank: (j['semantic_rank'] as num?)?.toInt() ?? 0,
+    difficulty: j['difficulty'] as String?,
+    similarity: (j['similarity_score'] as num?)?.toDouble(),
+  );
 }

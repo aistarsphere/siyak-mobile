@@ -94,8 +94,9 @@ class GameState {
   int get attempts => guesses.length;
   bool get hintsExhausted => hintsRemaining <= 0;
 
-  int get bestRank =>
-      guesses.isEmpty ? 0 : guesses.map((g) => g.rank).reduce((a, b) => a < b ? a : b);
+  int get bestRank => guesses.isEmpty
+      ? 0
+      : guesses.map((g) => g.rank).reduce((a, b) => a < b ? a : b);
 
   Guess? get bestGuess {
     Guess? best;
@@ -132,30 +133,29 @@ class GameState {
     List<String>? autocomplete,
     bool clearError = false,
     bool clearUnknown = false,
-  }) =>
-      GameState(
-        gameId: gameId ?? this.gameId,
-        language: language ?? this.language,
-        category: category ?? this.category,
-        categoryLabel: categoryLabel ?? this.categoryLabel,
-        difficulty: difficulty ?? this.difficulty,
-        totalWords: totalWords ?? this.totalWords,
-        guesses: guesses ?? this.guesses,
-        hints: hints ?? this.hints,
-        solved: solved ?? this.solved,
-        secretWord: secretWord ?? this.secretWord,
-        hintsUsed: hintsUsed ?? this.hintsUsed,
-        hintsRemaining: hintsRemaining ?? this.hintsRemaining,
-        maxHints: maxHints ?? this.maxHints,
-        lastGuessWord: lastGuessWord ?? this.lastGuessWord,
-        submitting: submitting ?? this.submitting,
-        hintLoading: hintLoading ?? this.hintLoading,
-        error: clearError ? null : (error ?? this.error),
-        duplicateWord: duplicateWord ?? this.duplicateWord,
-        duplicateSeq: duplicateSeq ?? this.duplicateSeq,
-        unknown: clearUnknown ? null : (unknown ?? this.unknown),
-        autocomplete: autocomplete ?? this.autocomplete,
-      );
+  }) => GameState(
+    gameId: gameId ?? this.gameId,
+    language: language ?? this.language,
+    category: category ?? this.category,
+    categoryLabel: categoryLabel ?? this.categoryLabel,
+    difficulty: difficulty ?? this.difficulty,
+    totalWords: totalWords ?? this.totalWords,
+    guesses: guesses ?? this.guesses,
+    hints: hints ?? this.hints,
+    solved: solved ?? this.solved,
+    secretWord: secretWord ?? this.secretWord,
+    hintsUsed: hintsUsed ?? this.hintsUsed,
+    hintsRemaining: hintsRemaining ?? this.hintsRemaining,
+    maxHints: maxHints ?? this.maxHints,
+    lastGuessWord: lastGuessWord ?? this.lastGuessWord,
+    submitting: submitting ?? this.submitting,
+    hintLoading: hintLoading ?? this.hintLoading,
+    error: clearError ? null : (error ?? this.error),
+    duplicateWord: duplicateWord ?? this.duplicateWord,
+    duplicateSeq: duplicateSeq ?? this.duplicateSeq,
+    unknown: clearUnknown ? null : (unknown ?? this.unknown),
+    autocomplete: autocomplete ?? this.autocomplete,
+  );
 }
 
 class GameController extends Notifier<GameState> {
@@ -211,22 +211,21 @@ class GameController extends Notifier<GameState> {
     GameSnapshot s, {
     required String categoryLabel,
     required String difficulty,
-  }) =>
-      GameState(
-        gameId: s.gameId,
-        language: s.language,
-        category: s.category,
-        categoryLabel: categoryLabel,
-        difficulty: difficulty,
-        totalWords: s.totalWords,
-        guesses: s.guesses,
-        hints: s.hints,
-        solved: s.solved,
-        secretWord: s.secretWord,
-        hintsUsed: s.hintsUsed,
-        hintsRemaining: s.hintsRemaining,
-        maxHints: s.maxHints,
-      );
+  }) => GameState(
+    gameId: s.gameId,
+    language: s.language,
+    category: s.category,
+    categoryLabel: categoryLabel,
+    difficulty: difficulty,
+    totalWords: s.totalWords,
+    guesses: s.guesses,
+    hints: s.hints,
+    solved: s.solved,
+    secretWord: s.secretWord,
+    hintsUsed: s.hintsUsed,
+    hintsRemaining: s.hintsRemaining,
+    maxHints: s.maxHints,
+  );
 
   // ---- game lifecycle -------------------------------------------------------
 
@@ -241,7 +240,11 @@ class GameController extends Notifier<GameState> {
     final snap = await ref
         .read(gameRepositoryProvider)
         .newGame(language: language, category: category);
-    state = _fromSnapshot(snap, categoryLabel: categoryLabel, difficulty: difficulty);
+    state = _fromSnapshot(
+      snap,
+      categoryLabel: categoryLabel,
+      difficulty: difficulty,
+    );
     ref.read(statsProvider.notifier).recordGameStarted();
     _persist();
   }
@@ -273,7 +276,10 @@ class GameController extends Notifier<GameState> {
 
   Future<void> submitGuess(String raw) async {
     final word = raw.trim();
-    if (word.isEmpty || state.gameId == null || state.submitting || state.solved) {
+    if (word.isEmpty ||
+        state.gameId == null ||
+        state.submitting ||
+        state.solved) {
       return;
     }
     state = state.copyWith(
@@ -323,16 +329,20 @@ class GameController extends Notifier<GameState> {
       } else if (!wasDuplicate) {
         // Only count genuinely new guesses locally (server dedups too).
         ref.read(statsProvider.notifier).recordAttempt(res.rank ?? 0);
-        _haptic((res.proximity ?? 0) >= 50
-            ? HapticFeedback.mediumImpact
-            : HapticFeedback.lightImpact);
+        _haptic(
+          (res.proximity ?? 0) >= 50
+              ? HapticFeedback.mediumImpact
+              : HapticFeedback.lightImpact,
+        );
       } else {
         _haptic(HapticFeedback.selectionClick);
       }
 
       state = state.copyWith(
         submitting: false,
-        guesses: res.previousGuesses.isNotEmpty ? res.previousGuesses : state.guesses,
+        guesses: res.previousGuesses.isNotEmpty
+            ? res.previousGuesses
+            : state.guesses,
         hints: res.hints.isNotEmpty ? res.hints : state.hints,
         solved: res.solved,
         secretWord: res.secretWord,
@@ -342,8 +352,9 @@ class GameController extends Notifier<GameState> {
         maxHints: res.maxHints ?? state.maxHints,
         lastGuessWord: res.canonicalWord ?? word,
         duplicateWord: wasDuplicate ? (res.canonicalWord ?? word) : null,
-        duplicateSeq:
-            wasDuplicate ? state.duplicateSeq + 1 : state.duplicateSeq,
+        duplicateSeq: wasDuplicate
+            ? state.duplicateSeq + 1
+            : state.duplicateSeq,
       );
       _persist();
     } on ApiException catch (e) {
@@ -356,7 +367,9 @@ class GameController extends Notifier<GameState> {
 
   Future<void> _loadUnknownSuggestions(String word) async {
     try {
-      final res = await ref.read(gameRepositoryProvider).suggest(
+      final res = await ref
+          .read(gameRepositoryProvider)
+          .suggest(
             query: suggestionQueryFor(word),
             language: state.language,
             limit: 6,
@@ -395,10 +408,9 @@ class GameController extends Notifier<GameState> {
     }
     state = state.copyWith(hintLoading: true, clearError: true);
     try {
-      final hint = await ref.read(gameRepositoryProvider).hint(
-            gameId: state.gameId!,
-            difficulty: state.difficulty,
-          );
+      final hint = await ref
+          .read(gameRepositoryProvider)
+          .hint(gameId: state.gameId!, difficulty: state.difficulty);
       _haptic(HapticFeedback.lightImpact);
       state = state.copyWith(
         hintLoading: false,
@@ -427,11 +439,9 @@ class GameController extends Notifier<GameState> {
     final seq = ++_autocompleteSeq;
     _debounce = Timer(AppConfig.autocompleteDebounce, () async {
       try {
-        final res = await ref.read(gameRepositoryProvider).suggest(
-              query: q,
-              language: state.language,
-              limit: 8,
-            );
+        final res = await ref
+            .read(gameRepositoryProvider)
+            .suggest(query: q, language: state.language, limit: 8);
         if (seq != _autocompleteSeq) return; // stale
         state = state.copyWith(autocomplete: res.words);
       } catch (_) {
@@ -445,5 +455,6 @@ class GameController extends Notifier<GameState> {
   }
 }
 
-final gameControllerProvider =
-    NotifierProvider<GameController, GameState>(GameController.new);
+final gameControllerProvider = NotifierProvider<GameController, GameState>(
+  GameController.new,
+);

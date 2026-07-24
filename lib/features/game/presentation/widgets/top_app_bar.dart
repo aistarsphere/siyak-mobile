@@ -30,14 +30,11 @@ class SiyaqTopBar extends StatelessWidget implements PreferredSizeWidget {
       blur: 24,
       borderRadius: BorderRadius.zero,
       border: Border(
-        bottom: BorderSide(
-          color: AppColors.onSurface.withValues(alpha: 0.05),
-        ),
+        bottom: BorderSide(color: AppColors.onSurface.withValues(alpha: 0.05)),
       ),
       child: Container(
         height: 64 + topPad,
-        padding: EdgeInsetsDirectional.only(
-            start: 16, end: 16, top: topPad),
+        padding: EdgeInsetsDirectional.only(start: 16, end: 16, top: topPad),
         child: Row(
           children: [
             Pressable(
@@ -46,8 +43,11 @@ class SiyaqTopBar extends StatelessWidget implements PreferredSizeWidget {
                 width: 40,
                 height: 40,
                 alignment: Alignment.center,
-                child: const Icon(Icons.language,
-                    size: 22, color: AppColors.onSurfaceVariant),
+                child: const Icon(
+                  Icons.language,
+                  size: 22,
+                  color: AppColors.onSurfaceVariant,
+                ),
               ),
             ),
             Expanded(

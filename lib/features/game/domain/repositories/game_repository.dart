@@ -18,15 +18,9 @@ abstract class GameRepository {
 
   Future<GameSnapshot> game({required String gameId});
 
-  Future<GuessResponse> guess({
-    required String gameId,
-    required String guess,
-  });
+  Future<GuessResponse> guess({required String gameId, required String guess});
 
-  Future<HintResult> hint({
-    required String gameId,
-    String? difficulty,
-  });
+  Future<HintResult> hint({required String gameId, String? difficulty});
 
   Future<WordSuggestions> suggest({
     required String language,

@@ -61,12 +61,16 @@ class AppColors {
   static const confettiRed = Color(0xFFEF4444);
 
   /// Confetti palette from the Stitch solved screen JS.
-  static const confetti = <Color>[amber, amberDeep, emerald, ivory, confettiRed];
+  static const confetti = <Color>[
+    amber,
+    amberDeep,
+    emerald,
+    ivory,
+    confettiRed,
+  ];
 
   /// `gradient-fill`: linear-gradient(90deg, #F59E0B, #FFBF00)
-  static const heatGradient = LinearGradient(
-    colors: [amberDeep, amber],
-  );
+  static const heatGradient = LinearGradient(colors: [amberDeep, amber]);
 
   static Color amberGlow(double opacity) => amber.withValues(alpha: opacity);
 }

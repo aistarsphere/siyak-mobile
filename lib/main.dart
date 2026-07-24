@@ -14,12 +14,14 @@ Future<void> main() async {
   // saved override, or the documented default).
   if (kDebugMode) {
     final override = prefs.getString('siyaq.baseUrlOverride');
-    debugPrint('[Siyaq] effective CG_BASE = ${AppConfig.resolveBaseUrl(override)}');
+    debugPrint(
+      '[Siyaq] effective CG_BASE = ${AppConfig.resolveBaseUrl(override)}',
+    );
   }
   runApp(
     ProviderScope(
       overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-      child: const SiyaqApp(),
+      child: const SiyagApp(),
     ),
   );
 }

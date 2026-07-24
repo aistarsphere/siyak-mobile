@@ -1,184 +1,256 @@
-import 'package:context_game/features/game/data/models/game_meta.dart';
-import 'package:context_game/features/game/data/models/guess_result.dart';
+import 'package:context_game/features/game/data/models/game_snapshot.dart';
+import 'package:context_game/features/game/data/models/guess_response.dart';
 import 'package:context_game/features/game/data/models/hint_result.dart';
+import 'package:context_game/features/game/data/models/languages_info.dart';
 import 'package:context_game/features/game/data/models/modes_info.dart';
-import 'package:context_game/features/game/data/models/reveal_result.dart';
 import 'package:context_game/features/game/data/models/word_suggestions.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('ModesInfo', () {
-    test('parses the real /api/modes shape', () {
-      final info = ModesInfo.fromJson({
-        'lang': 'ar',
-        'dir': 'rtl',
+  group('LanguagesInfo', () {
+    test('parses /languages', () {
+      final l = LanguagesInfo.fromJson(const {
         'languages': [
-          {'id': 'ar', 'label': 'العربية', 'dir': 'rtl'},
-          {'id': 'en', 'label': 'English', 'dir': 'ltr'},
-        ],
-        'groups': [
           {
-            'id': 'general',
-            'label': 'عام',
-            'categories': [
-              {'id': 'general', 'label': 'متنوّع'},
-              {'id': 'animals', 'label': 'حيوانات'},
-            ],
+            'code': 'ar',
+            'name': 'Arabic',
+            'native_name': 'العربية',
+            'dir': 'rtl',
+            'ready': true,
+          },
+          {
+            'code': 'en',
+            'name': 'English',
+            'native_name': 'English',
+            'dir': 'ltr',
+            'ready': true,
           },
         ],
-        'default': 'general',
-        'difficulties': [
-          {'id': 'easy', 'label': 'سهل'},
-          {'id': 'medium', 'label': 'متوسط'},
+      });
+      expect(l.languages, hasLength(2));
+      expect(l.languages.first.code, 'ar');
+      expect(l.languages.first.nativeName, 'العربية');
+      expect(l.languages.first.dir, 'rtl');
+    });
+  });
+
+  group('ModesInfo', () {
+    test('parses /modes and keeps localized labels + playable filter', () {
+      final m = ModesInfo.fromJson(const {
+        'language': 'ar',
+        'modes': [
+          {
+            'code': 'general',
+            'label': 'General',
+            'label_ar': 'عام',
+            'word_count': 22433,
+            'playable': true,
+          },
+          {
+            'code': 'animals',
+            'label': 'Animals',
+            'label_ar': 'الحيوانات',
+            'word_count': 159,
+            'playable': true,
+          },
+          {
+            'code': 'locked',
+            'label': 'Locked',
+            'label_ar': 'مقفل',
+            'word_count': 0,
+            'playable': false,
+          },
         ],
-        'defaultDifficulty': 'medium',
       });
-      expect(info.lang, 'ar');
-      expect(info.dir, 'rtl');
-      expect(info.languages, hasLength(2));
-      expect(info.groups.single.categories, hasLength(2));
-      expect(info.defaultMode, 'general');
-      expect(info.defaultDifficulty, 'medium');
-      expect(info.allCategories.map((c) => c.id), ['general', 'animals']);
+      expect(m.language, 'ar');
+      expect(m.categories, hasLength(3));
+      expect(m.playable, hasLength(2));
+      final general = m.categories.first;
+      expect(general.labelFor('ar'), 'عام');
+      expect(general.labelFor('en'), 'General');
+      expect(general.wordCount, 22433);
     });
   });
 
-  group('GameMeta', () {
-    test('parses /api/new response and round-trips toJson', () {
-      final meta = GameMeta.fromJson({
-        'mode': 'general',
-        'label': 'متنوّع',
-        'lang': 'ar',
-        'difficulty': 'medium',
-        'gameId': 17,
-        'poolSize': 40,
-        'totalWords': 8000,
+  group('GameSnapshot', () {
+    test('parses /new-game and hides the secret word', () {
+      final s = GameSnapshot.fromJson(const {
+        'game_id': 'abc123',
+        'language': 'ar',
+        'dir': 'rtl',
+        'category': 'general',
+        'mode': 'random',
+        'total_words': 22548,
+        'guess_count': 0,
+        'solved': false,
+        'best_rank': null,
+        'secret_word': null,
+        'previous_guesses': [],
+        'hints_used': 0,
+        'hints_remaining': 5,
+        'max_hints': 5,
+        'hints': [],
       });
-      expect(meta.gameId, 17);
-      expect(meta.totalWords, 8000);
-      expect(GameMeta.fromJson(meta.toJson()).gameId, 17);
+      expect(s.gameId, 'abc123');
+      expect(s.dir, 'rtl');
+      expect(s.totalWords, 22548);
+      expect(s.solved, isFalse);
+      expect(s.secretWord, isNull);
+      expect(s.hintsRemaining, 5);
+      expect(s.guesses, isEmpty);
+    });
+
+    test('parses previous_guesses into scored Guess entities', () {
+      final s = GameSnapshot.fromJson(const {
+        'game_id': 'g',
+        'language': 'ar',
+        'total_words': 22548,
+        'guess_count': 1,
+        'solved': false,
+        'best_rank': 18607,
+        'previous_guesses': [
+          {
+            'attempt': 1,
+            'guess': 'بيت',
+            'word': 'بيت',
+            'rank': 18607,
+            'proximity': 17.5,
+            'heat_level': 'freezing',
+            'solved': false,
+          },
+        ],
+        'hints': [],
+      });
+      expect(s.guesses.single.word, 'بيت');
+      expect(s.guesses.single.rank, 18607);
+      expect(s.guesses.single.proximity, 17.5);
     });
   });
 
-  group('GuessResult', () {
-    test('parses an in-vocab guess', () {
-      final g = GuessResult.fromJson({
-        'word': 'بيت',
-        'rank': 42,
-        'totalWords': 8000,
-        'isSecret': false,
-        'inVocab': true,
+  group('GuessResponse', () {
+    test('parses an accepted scored guess', () {
+      final g = GuessResponse.fromJson(const {
+        'accepted': true,
+        'duplicate': false,
+        'already_guessed': false,
+        'solved': false,
+        'total_words': 22548,
+        'guess_number': 1,
+        'original_guess': 'بيت',
+        'canonical_word': 'بيت',
+        'rank': 18607,
+        'proximity': 17.5,
+        'heat_level': 'freezing',
+        'previous_guesses': [],
+        'hints': [],
       });
-      expect(g.word, 'بيت');
-      expect(g.rank, 42);
-      expect(g.isSecret, isFalse);
-      expect(g.inVocab, isTrue);
-      expect(g.answerWord, 'بيت');
+      expect(g.accepted, isTrue);
+      expect(g.unknownWord, isFalse);
+      expect(g.guess!.word, 'بيت');
+      expect(g.guess!.rank, 18607);
+      expect(g.guess!.proximity, 17.5);
     });
 
-    test('parses an out-of-vocab guess (inVocab=false)', () {
-      final g = GuessResult.fromJson({
-        'word': 'مركبة',
-        'rank': 84,
-        'totalWords': 8000,
-        'isSecret': false,
-        'inVocab': false,
+    test('flags a duplicate canonical guess', () {
+      final g = GuessResponse.fromJson(const {
+        'accepted': true,
+        'duplicate': true,
+        'already_guessed': true,
+        'reason': 'duplicate_canonical_guess',
+        'solved': false,
+        'total_words': 22548,
+        'guess_number': 1,
+        'canonical_word': 'بيت',
+        'rank': 18607,
+        'proximity': 17.5,
+        'heat_level': 'freezing',
+        'previous_guesses': [],
+        'hints': [],
       });
-      expect(g.inVocab, isFalse);
+      expect(g.duplicate, isTrue);
+      expect(g.alreadyGuessed, isTrue);
     });
 
-    test('parses a solved guess with explanation', () {
-      final g = GuessResult.fromJson({
-        'word': 'برمجة',
+    test('parses an unknown word with suggestions', () {
+      final g = GuessResponse.fromJson(const {
+        'accepted': false,
+        'duplicate': false,
+        'already_guessed': false,
+        'reason': 'not_in_vocabulary',
+        'message': 'not in dictionary',
+        'original_guess': 'زقزقتيبل',
+        'solved': false,
+        'total_words': 22548,
+        'guess_number': 0,
+        'suggestions': [
+          {'word': 'قتيل'},
+          {'word': 'قتيلا'},
+        ],
+        'previous_guesses': [],
+        'hints': [],
+      });
+      expect(g.unknownWord, isTrue);
+      expect(g.guess, isNull);
+      expect(g.suggestions, ['قتيل', 'قتيلا']);
+    });
+
+    test('parses a solved guess with secret word', () {
+      final g = GuessResponse.fromJson(const {
+        'accepted': true,
+        'duplicate': false,
+        'already_guessed': false,
+        'solved': true,
+        'total_words': 22548,
+        'guess_number': 5,
+        'canonical_word': 'برمجة',
         'rank': 1,
-        'totalWords': 8000,
-        'isSecret': true,
-        'inVocab': true,
-        'explanation': 'شرح',
+        'proximity': 100,
+        'heat_level': 'boiling',
+        'secret_word': 'برمجة',
+        'previous_guesses': [],
+        'hints': [],
       });
-      expect(g.isSecret, isTrue);
-      expect(g.rank, 1);
-      expect(g.explanation, 'شرح');
-    });
-
-    test('root-match win reveals the real secret via answerWord', () {
-      final g = GuessResult.fromJson({
-        'word': 'مبرمج',
-        'rank': 1,
-        'totalWords': 8000,
-        'isSecret': true,
-        'inVocab': true,
-        'rootMatch': true,
-        'secret': 'برمجة',
-      });
-      expect(g.rootMatch, isTrue);
-      expect(g.answerWord, 'برمجة');
+      expect(g.solved, isTrue);
+      expect(g.secretWord, 'برمجة');
+      expect(g.guess!.isSecret, isTrue);
     });
   });
 
   group('HintResult', () {
-    test('parses Arabic hint text into word + rank', () {
-      final h = HintResult.fromJson({
-        'mode': 'general',
-        'gameId': 3,
-        'level': 1,
-        'maxLevel': 5,
-        'text': 'كلمة قريبة من الكلمة السرية (ترتيبها 152): «حرب»',
+    test('parses structured hint fields — no text parsing', () {
+      final h = HintResult.fromJson(const {
+        'ok': true,
+        'hint_number': 1,
+        'difficulty': 'medium',
+        'revealed_word': 'بطيئة',
+        'semantic_rank': 31,
+        'similarity_score': 0.6447,
+        'hints_used': 1,
+        'hints_remaining': 4,
+        'max_hints': 5,
       });
-      expect(h.word, 'حرب');
-      expect(h.rank, 152);
-      expect(h.level, 1);
-      expect(h.maxLevel, 5);
-    });
-
-    test('parses English hint text into word + rank', () {
-      final h = HintResult.fromJson({
-        'level': 2,
-        'maxLevel': 5,
-        'text': 'A word close to the secret (rank 89): “peace”',
-      });
-      expect(h.word, 'peace');
-      expect(h.rank, 89);
-    });
-
-    test('unparseable text keeps word/rank null but keeps raw text', () {
-      final h = HintResult.fromJson({
-        'level': 1,
-        'maxLevel': 5,
-        'text': 'تلميح غامض بلا صيغة',
-      });
-      expect(h.word, isNull);
-      expect(h.rank, isNull);
-      expect(h.text, isNotEmpty);
+      expect(h.number, 1);
+      expect(h.word, 'بطيئة');
+      expect(h.rank, 31);
+      expect(h.hintsRemaining, 4);
     });
   });
 
   group('WordSuggestions', () {
-    test('parses /api/datastore/words items', () {
-      final s = WordSuggestions.fromJson({
-        'total': 2,
-        'limit': 8,
-        'offset': 0,
-        'items': [
-          {'word': 'سيارة', 'idx': 5, 'modes': ['general']},
-          {'word': 'سيارات', 'idx': 9, 'modes': []},
+    test('parses /suggest', () {
+      final s = WordSuggestions.fromJson(const {
+        'language': 'ar',
+        'query': 'سيا',
+        'suggestions': [
+          {'word': 'سيارة'},
+          {'word': 'سياج'},
         ],
       });
-      expect(s.total, 2);
-      expect(s.words, ['سيارة', 'سيارات']);
+      expect(s.words, ['سيارة', 'سياج']);
     });
 
-    test('tolerates missing items', () {
-      expect(WordSuggestions.fromJson(const {'total': 0}).words, isEmpty);
-    });
-  });
-
-  group('RevealResult', () {
-    test('parses /api/giveup', () {
-      final r = RevealResult.fromJson(
-          const {'secret': 'برمجة', 'explanation': null});
-      expect(r.secret, 'برمجة');
-      expect(r.explanation, isNull);
+    test('tolerates missing suggestions', () {
+      expect(WordSuggestions.fromJson(const {}).words, isEmpty);
     });
   });
 }

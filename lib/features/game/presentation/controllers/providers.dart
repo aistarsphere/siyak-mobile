@@ -8,8 +8,9 @@ import '../../domain/repositories/game_repository.dart';
 import 'app_settings_controller.dart';
 
 final apiClientProvider = Provider<ApiClient>((ref) {
-  final baseUrl =
-      ref.watch(appSettingsProvider.select((s) => s.effectiveBaseUrl));
+  final baseUrl = ref.watch(
+    appSettingsProvider.select((s) => s.effectiveBaseUrl),
+  );
   return ApiClient(baseUrl: baseUrl);
 });
 
@@ -22,4 +23,13 @@ final gameRepositoryProvider = Provider<GameRepository>(
 final modesProvider = FutureProvider<ModesInfo>((ref) {
   final lang = ref.watch(appSettingsProvider.select((s) => s.lang));
   return ref.watch(gameRepositoryProvider).modes(language: lang);
+});
+
+/// Category catalogue for an explicit gameplay language (used when the chosen
+/// game-content language differs from the UI locale, e.g. Solo/Weekly setup).
+final modesByLanguageProvider = FutureProvider.family<ModesInfo, String>((
+  ref,
+  language,
+) {
+  return ref.watch(gameRepositoryProvider).modes(language: language);
 });

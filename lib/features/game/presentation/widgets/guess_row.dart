@@ -9,11 +9,11 @@ import '../../domain/entities/heat.dart';
 import 'glass_panel.dart';
 
 IconData heatIcon(HeatTier tier) => switch (tier) {
-      HeatTier.blazing => Icons.local_fire_department,
-      HeatTier.warm => Icons.thermostat,
-      HeatTier.cold => Icons.ac_unit,
-      HeatTier.freezing => Icons.severe_cold,
-    };
+  HeatTier.blazing => Icons.local_fire_department,
+  HeatTier.warm => Icons.thermostat,
+  HeatTier.cold => Icons.ac_unit,
+  HeatTier.freezing => Icons.severe_cold,
+};
 
 /// One guess-history row from the Stitch gameplay screen:
 /// glass panel · tier-tinted rank (#N) · word · closeness % + heat icon ·
@@ -75,8 +75,9 @@ class GuessRow extends StatelessWidget {
                       color: dim
                           ? AppColors.onSurfaceVariant
                           : AppColors.onSurface,
-                      fontWeight:
-                          highlighted ? FontWeight.w600 : FontWeight.w400,
+                      fontWeight: highlighted
+                          ? FontWeight.w600
+                          : FontWeight.w400,
                     ),
                   ),
                 ),
@@ -92,8 +93,9 @@ class GuessRow extends StatelessWidget {
                         children: [
                           Text(
                             Heat.percentLabel(guess.proximity),
-                            style: AppTypography.labelXs
-                                .copyWith(color: AppColors.onSurfaceVariant),
+                            style: AppTypography.labelXs.copyWith(
+                              color: AppColors.onSurfaceVariant,
+                            ),
                           ),
                           const SizedBox(width: 4),
                           Icon(heatIcon(tier), size: 14, color: tierColor),
@@ -103,7 +105,9 @@ class GuessRow extends StatelessWidget {
                       SizedBox(
                         width: 96,
                         child: HeatBarSmall(
-                            fraction: fraction, color: tierColor),
+                          fraction: fraction,
+                          color: tierColor,
+                        ),
                       ),
                     ],
                   ),

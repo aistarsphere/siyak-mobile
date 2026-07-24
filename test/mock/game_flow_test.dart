@@ -8,8 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/fake_repository.dart';
 
-/// End-to-end controller flows against the scripted fake backend —
-/// no live server required.
+/// End-to-end controller flows against the scripted fake backend that mirrors
+/// the real `/api/context-game` schema — no live server required.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -20,10 +20,12 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     fake = FakeGameRepository();
-    container = ProviderContainer(overrides: [
-      sharedPreferencesProvider.overrideWithValue(prefs),
-      gameRepositoryProvider.overrideWithValue(fake),
-    ]);
+    container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        gameRepositoryProvider.overrideWithValue(fake),
+      ],
+    );
     addTearDown(container.dispose);
   }
 
@@ -31,35 +33,32 @@ void main() {
       container.read(gameControllerProvider.notifier);
   GameState state() => container.read(gameControllerProvider);
 
-  group('suggestionQueryFor', () {
-    test('uses the first token stripped to letters', () {
-      expect(GameController.suggestionQueryFor('سيارة حمراء'), 'سيارة');
-      expect(GameController.suggestionQueryFor('سيارة1'), 'سيارة');
-      expect(GameController.suggestionQueryFor('  hello world '), 'hello');
-      expect(GameController.suggestionQueryFor('123'), '123'); // fallback
-    });
-  });
+  Future<void> newGame() => controller().startNewGame(
+    language: 'ar',
+    category: 'general',
+    categoryLabel: 'عام',
+    difficulty: 'medium',
+  );
 
-  group('game flow (mock API)', () {
+  group('game flow (mock API, real schema)', () {
     setUp(setUpContainer);
 
-    test('new game stores meta and resets state', () async {
-      await controller()
-          .startNewGame(mode: 'general', difficulty: 'medium');
-      expect(state().meta?.gameId, 3);
-      expect(state().meta?.mode, 'general');
+    test('new game stores snapshot and resets state', () async {
+      await newGame();
+      expect(state().gameId, 'game-1');
+      expect(state().category, 'general');
+      expect(state().categoryLabel, 'عام');
       expect(state().attempts, 0);
       expect(state().solved, isFalse);
       expect(container.read(statsProvider).gamesPlayed, 1);
     });
 
     test('accepted guess appends history and updates best rank', () async {
-      await controller()
-          .startNewGame(mode: 'general', difficulty: 'medium');
+      await newGame();
       await controller().submitGuess('بيت');
       expect(state().attempts, 1);
-      expect(state().bestRank, 50);
-      expect(state().lastGuess?.word, 'بيت');
+      expect(state().bestRank, 18607);
+      expect(state().lastGuessWord, 'بيت');
 
       await controller().submitGuess('حاسوب');
       expect(state().attempts, 2);
@@ -68,8 +67,7 @@ void main() {
     });
 
     test('duplicate canonical guess does NOT increment attempts', () async {
-      await controller()
-          .startNewGame(mode: 'general', difficulty: 'medium');
+      await newGame();
       await controller().submitGuess('بيت');
       expect(state().attempts, 1);
 
@@ -77,33 +75,30 @@ void main() {
       await controller().submitGuess('البيت');
       expect(state().attempts, 1, reason: 'duplicate must not count');
       expect(state().duplicateWord, 'بيت');
-      expect(state().lastGuess?.word, 'بيت');
+      expect(state().duplicateSeq, 1);
     });
 
-    test('unknown word (400) shows suggestions instead of a guess', () async {
-      await controller()
-          .startNewGame(mode: 'general', difficulty: 'medium');
-      await controller().submitGuess('سيار');
+    test('unknown word shows server suggestions, no attempt counted', () async {
+      await newGame();
+      await controller().submitGuess('زقزقتيبل');
       expect(state().attempts, 0);
       expect(state().unknown, isNotNull);
-      expect(state().unknown!.word, 'سيار');
-      expect(state().unknown!.loading, isFalse);
-      expect(state().unknown!.suggestions,
-          ['سيارة', 'السيارة', 'سيارات']);
+      expect(state().unknown!.word, 'زقزقتيبل');
+      expect(state().unknown!.suggestions, ['سيارة', 'السيارة', 'سيارات']);
+
       // A following valid guess clears the unknown state.
       await controller().submitGuess('بيت');
       expect(state().unknown, isNull);
       expect(state().attempts, 1);
     });
 
-    test('hint flow: level increments, parses word/rank, capped at 5',
-        () async {
-      await controller()
-          .startNewGame(mode: 'general', difficulty: 'medium');
+    test('hint flow: structured word/rank, capped at 5', () async {
+      await newGame();
       await controller().requestHint();
       expect(state().hintsUsed, 1);
       expect(state().hints.single.word, 'حرب');
       expect(state().hints.single.rank, 152);
+      expect(state().hintsRemaining, 4);
 
       for (var i = 0; i < 10; i++) {
         await controller().requestHint();
@@ -112,46 +107,30 @@ void main() {
       expect(state().hintsExhausted, isTrue);
     });
 
-    test('solved state on secret guess', () async {
-      await controller()
-          .startNewGame(mode: 'general', difficulty: 'medium');
+    test('solved state reveals the secret word', () async {
+      await newGame();
       await controller().submitGuess('حاسوب');
       await controller().submitGuess(FakeGameRepository.secretWord);
       expect(state().solved, isTrue);
-      expect(state().attempts, 2);
-      expect(
-          state().guesses.where((g) => g.isSecret).single.rank, 1);
+      expect(state().secretWord, FakeGameRepository.secretWord);
       expect(container.read(statsProvider).gamesSolved, 1);
-      expect(container.read(statsProvider).bestRank, 1);
     });
 
-    test('root-match win reveals the real secret word', () async {
-      await controller()
-          .startNewGame(mode: 'general', difficulty: 'medium');
-      await controller().submitGuess('مبرمج');
-      expect(state().solved, isTrue);
-      final win = state().guesses.single;
-      expect(win.rootMatch, isTrue);
-      expect(win.answerWord, FakeGameRepository.secretWord);
-    });
-
-    test('unsolved game persists and can be resumed', () async {
-      await controller()
-          .startNewGame(mode: 'general', difficulty: 'medium');
+    test('unsolved game persists and can be resumed from the server', () async {
+      await newGame();
       await controller().submitGuess('بيت');
 
-      // Simulate a fresh app session sharing the same prefs.
+      // Fresh session sharing the same prefs + backend.
       final prefs = await SharedPreferences.getInstance();
-      final second = ProviderContainer(overrides: [
-        sharedPreferencesProvider.overrideWithValue(prefs),
-        gameRepositoryProvider.overrideWithValue(fake),
-      ]);
+      final second = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          gameRepositoryProvider.overrideWithValue(fake),
+        ],
+      );
       addTearDown(second.dispose);
 
-      final saved =
-          second.read(gameControllerProvider.notifier).savedGame();
-      expect(saved?.gameId, 3);
-
+      expect(second.read(gameControllerProvider.notifier).hasSavedGame, isTrue);
       final ok = await second
           .read(gameControllerProvider.notifier)
           .resumeSavedGame();
@@ -162,10 +141,17 @@ void main() {
     });
 
     test('solved game is not offered for resume', () async {
-      await controller()
-          .startNewGame(mode: 'general', difficulty: 'medium');
+      await newGame();
       await controller().submitGuess(FakeGameRepository.secretWord);
-      expect(controller().savedGame(), isNull);
+      expect(controller().hasSavedGame, isFalse);
+    });
+  });
+
+  group('suggestionQueryFor', () {
+    test('uses the first token stripped to letters', () {
+      expect(GameController.suggestionQueryFor('سيارة حمراء'), 'سيارة');
+      expect(GameController.suggestionQueryFor('سيارة1'), 'سيارة');
+      expect(GameController.suggestionQueryFor('  hello world '), 'hello');
     });
   });
 }

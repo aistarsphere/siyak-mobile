@@ -49,26 +49,26 @@ class Heat {
 
   /// Localization key of a tier's label (resolved via AppLocalizations).
   static String labelKey(HeatTier tier) => switch (tier) {
-        HeatTier.blazing => 'heatBlazing',
-        HeatTier.warm => 'heatWarm',
-        HeatTier.cold => 'heatCold',
-        HeatTier.freezing => 'heatFreezing',
-      };
+    HeatTier.blazing => 'heatBlazing',
+    HeatTier.warm => 'heatWarm',
+    HeatTier.cold => 'heatCold',
+    HeatTier.freezing => 'heatFreezing',
+  };
 
   static Color color(HeatTier tier) => switch (tier) {
-        HeatTier.blazing => AppColors.error,
-        HeatTier.warm => AppColors.secondary,
-        HeatTier.cold => AppColors.tertiary,
-        HeatTier.freezing => AppColors.outline,
-      };
+    HeatTier.blazing => AppColors.error,
+    HeatTier.warm => AppColors.secondary,
+    HeatTier.cold => AppColors.tertiary,
+    HeatTier.freezing => AppColors.outline,
+  };
 
   /// Rank/label text color in the history list.
   static Color rankColor(HeatTier tier) => switch (tier) {
-        HeatTier.blazing => AppColors.primary,
-        HeatTier.warm => AppColors.secondary,
-        HeatTier.cold => AppColors.onSurfaceVariant,
-        HeatTier.freezing => AppColors.onSurfaceVariant,
-      };
+    HeatTier.blazing => AppColors.primary,
+    HeatTier.warm => AppColors.secondary,
+    HeatTier.cold => AppColors.onSurfaceVariant,
+    HeatTier.freezing => AppColors.onSurfaceVariant,
+  };
 
   /// Bar fill fraction in [0, 1] from the server proximity (0–100).
   static double fraction(double proximity) =>

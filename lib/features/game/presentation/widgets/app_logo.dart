@@ -21,9 +21,7 @@ class AppLogo extends StatelessWidget {
         border: Border.all(
           color: AppColors.surfaceBright.withValues(alpha: 0.40),
         ),
-        boxShadow: [
-          BoxShadow(color: AppColors.amberGlow(0.3), blurRadius: 25),
-        ],
+        boxShadow: [BoxShadow(color: AppColors.amberGlow(0.3), blurRadius: 25)],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(28),

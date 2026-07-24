@@ -20,12 +20,15 @@ class CategoryInfo {
   String labelFor(String lang) => lang == 'ar' ? labelAr : label;
 
   factory CategoryInfo.fromJson(Map<String, dynamic> j) => CategoryInfo(
-        code: j['code'] as String,
-        label: j['label'] as String? ?? j['code'] as String,
-        labelAr: j['label_ar'] as String? ?? j['label'] as String? ?? j['code'] as String,
-        wordCount: (j['word_count'] as num?)?.toInt() ?? 0,
-        playable: j['playable'] as bool? ?? true,
-      );
+    code: j['code'] as String,
+    label: j['label'] as String? ?? j['code'] as String,
+    labelAr:
+        j['label_ar'] as String? ??
+        j['label'] as String? ??
+        j['code'] as String,
+    wordCount: (j['word_count'] as num?)?.toInt() ?? 0,
+    playable: j['playable'] as bool? ?? true,
+  );
 }
 
 class ModesInfo {
@@ -39,9 +42,9 @@ class ModesInfo {
       categories.where((c) => c.playable).toList();
 
   factory ModesInfo.fromJson(Map<String, dynamic> j) => ModesInfo(
-        language: j['language'] as String? ?? 'ar',
-        categories: (j['modes'] as List<dynamic>? ?? const [])
-            .map((e) => CategoryInfo.fromJson(e as Map<String, dynamic>))
-            .toList(),
-      );
+    language: j['language'] as String? ?? 'ar',
+    categories: (j['modes'] as List<dynamic>? ?? const [])
+        .map((e) => CategoryInfo.fromJson(e as Map<String, dynamic>))
+        .toList(),
+  );
 }

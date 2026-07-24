@@ -16,20 +16,22 @@ flutter pub get
 flutter run                       # uses the documented public backend URL
 ```
 
-### Pointing at a different backend
+### Backend base URL (one config only)
 
-The API base URL resolves in this order (see `lib/core/config/app_config.dart`):
+The base URL **includes** the `/api/context-game` path prefix and resolves in
+this order (see the single source of truth `lib/core/config/app_config.dart`):
 
-1. **In-app developer override** — Stats tab → الإعدادات → رابط الخادم.
-2. **Build-time define**:
+1. **In-app developer override** — الإحصائيات (Stats) tab → الإعدادات → رابط الخادم.
+2. **Build-time define** — key is `CG_BASE`:
    ```bash
-   flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000
+   flutter build apk --release \
+     --dart-define=CG_BASE=https://<tunnel>.trycloudflare.com/api/context-game
    ```
-   - Android emulator → `http://10.0.2.2:8000`
-   - Physical Android device via USB → `adb reverse tcp:8000 tcp:8000`
-     then `http://127.0.0.1:8000`
-   - iOS simulator → `http://127.0.0.1:8000`
-3. **Default**: the documented public URL `https://v4nbg9o9snrk.shares.zrok.io`.
+3. **Default**: the documented public Cloudflare URL in `AppConfig`.
+
+> The `trycloudflare.com` quick tunnel is **temporary** and rotates when the
+> server restarts — when it changes, rebuild with a new `CG_BASE` or set the
+> in-app override. The URL is not hardcoded anywhere else.
 
 ## Tests
 
@@ -38,12 +40,12 @@ flutter test          # 44 tests: models, heat mapping, config, i18n/RTL,
                       # controller flows vs a scripted mock API, widget tests
 ```
 
-Live end-to-end test on a device (drives the real app against a real backend):
+Live end-to-end test on a device (drives the real app against the live
+Cloudflare backend — public URL, no tunnel/reverse needed):
 
 ```bash
-adb reverse tcp:8000 tcp:8000   # for a USB Android device + local backend
 flutter test integration_test/live_e2e_test.dart -d <device> \
-  --dart-define=API_BASE_URL=http://127.0.0.1:8000
+  --dart-define=CG_BASE=https://<tunnel>.trycloudflare.com/api/context-game
 ```
 
 Optional live-backend smoke test (needs a reachable backend):
@@ -89,3 +91,34 @@ timeouts, one safe retry on idempotent GETs, and typed error mapping.
 - Hints (max 5) parse the semantic-neighbor word + rank out of the hint text
   and render compact pills (`تلميح 1 · حرب · #152`); raw text is the fallback.
 - The secret word is only ever shown after `isSecret=true`.
+
+## API V2 (weekly challenge · multiplayer · profiles · adaptive hints)
+
+The app also integrates **Context Game API V2** (`<CG_BASE>/v2`) alongside V1.
+V2 is gated by a live capability probe (`GET /v2/capabilities`): if it's
+unreachable the app keeps V1 solo working and shows friendly "coming soon"
+states.
+
+- **Anonymous profile** — a UUID v4 in secure storage (no hardware id, no
+  login), sent as `X-Installation-ID`; registered idempotently, editable name.
+- **Weekly Challenge** — current challenge, run, adaptive hints, leaderboard
+  (paginated) + your placement.
+- **Multiplayer rooms** — create / join-by-code / lobby / shared live game /
+  winner, over a **WebSocket** (`/v2/rooms/{id}/events?installation_id=<uuid>`):
+  `room.snapshot` seed then ordered `{event_id,seq,type}` events; the client
+  dedups by id, detects `seq` gaps, and recovers from the REST snapshot with
+  exponential-backoff reconnect.
+- **Gameplay language lock** — chosen before a session, immutable after.
+- Backend is authoritative — no ranks/hints computed locally.
+
+Config: base URL is one `CG_BASE` define (`CG_V2_BASE` optional; otherwise
+`<CG_BASE>/v2`). Architecture: `lib/features/v2/{domain,data/{mock,remote},
+presentation}` — screens/controllers depend only on the `domain/repositories/`
+interfaces, so the remote client swaps in without touching UI. A developer
+"Preview V2 (mock)" toggle in Settings runs V2 on deterministic mock data.
+
+```bash
+# optional live V2 smoke test (hits the real backend):
+flutter test test/v2/live/live_v2_smoke.dart --tags live
+```
+# siyak-mobile

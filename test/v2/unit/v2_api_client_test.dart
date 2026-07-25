@@ -51,6 +51,74 @@ V2ApiClient _client(
   );
 }
 
+/// A scripted server: protected endpoints accept only [acceptedToken];
+/// `/auth/refresh` rotates the token to `sess_new` after a small delay so
+/// concurrent callers overlap. Counts refreshes to assert single-flight.
+class _RotatingAdapter implements HttpClientAdapter {
+  _RotatingAdapter({this.refreshStatus = 200});
+  final String acceptedToken = 'sess_new';
+  final int refreshStatus;
+  int refreshCalls = 0;
+  int protectedCalls = 0;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<List<int>>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    final path = options.uri.path;
+    if (path.endsWith('/auth/refresh')) {
+      refreshCalls++;
+      await Future<void>.delayed(const Duration(milliseconds: 25));
+      return _resp(
+        refreshStatus,
+        refreshStatus == 200
+            ? '{"session_token":"sess_new"}'
+            : '{"error":{"code":"SESSION_REVOKED","message":"no"}}',
+      );
+    }
+    protectedCalls++;
+    if (options.headers['Authorization'] == 'Bearer $acceptedToken') {
+      return _resp(200, '{"ok":true}');
+    }
+    return _resp(401, '{"error":{"code":"SESSION_EXPIRED","message":"stale"}}');
+  }
+
+  ResponseBody _resp(int code, String body) => ResponseBody.fromString(
+    body,
+    code,
+    headers: {
+      Headers.contentTypeHeader: [Headers.jsonContentType],
+    },
+  );
+
+  @override
+  void close({bool force = false}) {}
+}
+
+V2ApiClient _rotatingClient(
+  _RotatingAdapter adapter,
+  _TokenBox box, {
+  void Function(V2Exception)? onAuth,
+}) {
+  final dio = Dio(BaseOptions(baseUrl: 'https://x/api/context-game/v2'))
+    ..httpClientAdapter = adapter;
+  return V2ApiClient(
+    baseUrl: 'https://x/api/context-game/v2',
+    installationIdLoader: () async => 'inst-123',
+    sessionTokenProvider: () => box.token,
+    onTokenRotated: (t) async => box.token = t,
+    onAuthFailure: onAuth,
+    dio: dio,
+  );
+}
+
+class _TokenBox {
+  _TokenBox(this.token);
+  String? token;
+}
+
 void main() {
   test(
     'injects X-Installation-ID and a client X-Request-ID on every call',
@@ -121,6 +189,68 @@ void main() {
         onAuth: (_) => fired = true,
       ).get('/account/me'),
       throwsA(isA<V2Exception>()),
+    );
+    expect(fired, isTrue);
+  });
+
+  test('rotates the session on a refreshable 401 and retries once', () async {
+    final a = _RotatingAdapter();
+    final box = _TokenBox('sess_old');
+    final res = await _rotatingClient(a, box).get('/account/me');
+    expect(res['ok'], isTrue);
+    expect(box.token, 'sess_new', reason: 'rotated token persisted atomically');
+    expect(a.refreshCalls, 1);
+    expect(a.protectedCalls, 2, reason: 'original 401 + one retry');
+  });
+
+  test('concurrent refreshable 401s trigger exactly ONE refresh', () async {
+    final a = _RotatingAdapter();
+    final box = _TokenBox('sess_old');
+    final client = _rotatingClient(a, box);
+    final results = await Future.wait([
+      client.get('/account/me'),
+      client.get('/wallet'),
+      client.get('/profiles/me'),
+    ]);
+    expect(results.every((r) => r['ok'] == true), isTrue);
+    expect(
+      a.refreshCalls,
+      1,
+      reason: 'single-flight: 3 concurrent 401s coalesce to one rotation',
+    );
+    expect(box.token, 'sess_new');
+  });
+
+  test('clears session (onAuthFailure) when refresh itself fails', () async {
+    final a = _RotatingAdapter(refreshStatus: 401);
+    final box = _TokenBox('sess_old');
+    var fired = false;
+    await expectLater(
+      _rotatingClient(a, box, onAuth: (_) => fired = true).get('/account/me'),
+      throwsA(isA<V2Exception>()),
+    );
+    expect(fired, isTrue);
+    expect(a.refreshCalls, 1, reason: 'one refresh attempt, no loop');
+  });
+
+  test('SESSION_REVOKED is unrecoverable — no refresh, clears immediately', () async {
+    final a = _CapturingAdapter(
+      statusCode: 401,
+      bodyJson: jsonEncode({
+        'error': {'code': 'SESSION_REVOKED', 'message': 'revoked'},
+      }),
+    );
+    var fired = false;
+    await expectLater(
+      _client(a, token: () => 'sess_x', onAuth: (_) => fired = true)
+          .get('/account/me'),
+      throwsA(
+        isA<V2Exception>().having(
+          (e) => e.code,
+          'code',
+          V2ErrorCode.sessionRevoked,
+        ),
+      ),
     );
     expect(fired, isTrue);
   });

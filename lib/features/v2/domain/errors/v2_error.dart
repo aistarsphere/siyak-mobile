@@ -22,10 +22,20 @@ enum V2ErrorCode {
   authTokenExpired,
   authProviderUnsupported,
   authProviderNotConfigured,
+  authProviderDisabled,
   sessionInvalid,
   sessionExpired,
+  sessionRevoked,
+  reauthenticationRequired,
+  invalidInstallationToken,
   accountNotFound,
   accountDisabled,
+  // Account status (blocked lifecycle — surfaced to the profile UI)
+  accountSuspended,
+  accountBanned,
+  accountVerificationRequired,
+  accountDeletionPending,
+  accountDeleted,
   // Weekly
   weeklyUnavailable,
   weeklyExpired,
@@ -133,15 +143,35 @@ class V2Exception implements Exception {
       code == V2ErrorCode.socketReconnecting ||
       code == V2ErrorCode.backendUnavailable;
 
-  /// True when the session must be re-established (clear token, prompt sign-in).
-  bool get isAuthFailure =>
-      code == V2ErrorCode.authenticationRequired ||
-      code == V2ErrorCode.authTokenInvalid ||
-      code == V2ErrorCode.authTokenExpired ||
-      code == V2ErrorCode.sessionInvalid ||
+  /// The session token is stale but **rotatable** via `POST /auth/refresh`.
+  /// The API layer attempts a single-flight refresh + one retry for these.
+  bool get isRefreshable =>
       code == V2ErrorCode.sessionExpired ||
+      code == V2ErrorCode.authTokenExpired ||
+      code == V2ErrorCode.authenticationRequired;
+
+  /// The session cannot be recovered by refresh — the client must drop the
+  /// token and return to guest (then prompt re-authentication).
+  bool get isSessionUnrecoverable =>
+      code == V2ErrorCode.sessionRevoked ||
+      code == V2ErrorCode.reauthenticationRequired ||
+      code == V2ErrorCode.authTokenInvalid ||
+      code == V2ErrorCode.sessionInvalid ||
       code == V2ErrorCode.unauthorized ||
       code == V2ErrorCode.accountNotFound;
+
+  /// True when the session must be re-established (clear token, prompt sign-in).
+  bool get isAuthFailure => isRefreshable || isSessionUnrecoverable;
+
+  /// The user is still authenticated but the **account** is restricted — surface
+  /// the status in the profile UI; do not refresh or silently drop to guest.
+  bool get isAccountBlocked =>
+      code == V2ErrorCode.accountDisabled ||
+      code == V2ErrorCode.accountSuspended ||
+      code == V2ErrorCode.accountBanned ||
+      code == V2ErrorCode.accountVerificationRequired ||
+      code == V2ErrorCode.accountDeletionPending ||
+      code == V2ErrorCode.accountDeleted;
 
   /// Contract-recommended retry policy.
   V2Retry get retry => switch (code) {
@@ -177,7 +207,16 @@ class V2Exception implements Exception {
     V2ErrorCode.sessionInvalid ||
     V2ErrorCode.sessionExpired ||
     V2ErrorCode.unauthorized => 'v2ErrSignInRequired',
+    V2ErrorCode.sessionRevoked ||
+    V2ErrorCode.reauthenticationRequired => 'v2ErrReauth',
+    V2ErrorCode.authProviderDisabled => 'v2ErrProviderDisabled',
+    V2ErrorCode.invalidInstallationToken => 'v2ErrInstallation',
     V2ErrorCode.accountDisabled => 'v2ErrAccountDisabled',
+    V2ErrorCode.accountSuspended => 'v2ErrAccountSuspended',
+    V2ErrorCode.accountBanned => 'v2ErrAccountBanned',
+    V2ErrorCode.accountVerificationRequired => 'v2ErrAccountVerification',
+    V2ErrorCode.accountDeletionPending => 'v2ErrAccountDeletionPending',
+    V2ErrorCode.accountDeleted => 'v2ErrAccountDeleted',
     V2ErrorCode.weeklyUnavailable => 'v2ErrWeeklyUnavailable',
     V2ErrorCode.weeklyExpired => 'v2ErrWeeklyExpired',
     V2ErrorCode.weeklyCompleted => 'v2ErrWeeklyCompleted',

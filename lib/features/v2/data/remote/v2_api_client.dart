@@ -22,11 +22,14 @@ class V2ApiClient {
     required Future<String> Function() installationIdLoader,
     String? Function()? sessionTokenProvider,
     void Function(V2Exception error)? onAuthFailure,
+    Future<void> Function(String newToken)? onTokenRotated,
     Dio? dio,
   }) : _loadId = installationIdLoader,
        _sessionToken = sessionTokenProvider,
        // ignore: prefer_initializing_formals
        _onAuthFailure = onAuthFailure,
+       // ignore: prefer_initializing_formals
+       _onTokenRotated = onTokenRotated,
        _dio =
            dio ??
            Dio(
@@ -43,8 +46,13 @@ class V2ApiClient {
   final Future<String> Function() _loadId;
   final String? Function()? _sessionToken;
   final void Function(V2Exception error)? _onAuthFailure;
+  final Future<void> Function(String newToken)? _onTokenRotated;
   final Uuid _uuid = const Uuid();
   String? _cachedId;
+
+  /// Single-flight guard: while a `/auth/refresh` is in progress, concurrent
+  /// callers await this same future instead of triggering parallel rotations.
+  Future<String?>? _refreshInFlight;
 
   String get baseUrl => _dio.options.baseUrl;
 
@@ -128,8 +136,9 @@ class V2ApiClient {
   }
 
   Future<Map<String, dynamic>> _send(
-    Future<Response<dynamic>> Function() run,
-  ) async {
+    Future<Response<dynamic>> Function() run, {
+    bool allowRefresh = true,
+  }) async {
     try {
       final res = await run();
       final data = res.data;
@@ -137,8 +146,50 @@ class V2ApiClient {
       return const {};
     } on DioException catch (e) {
       final mapped = _map(e);
+      // Rotatable session error while a token exists → single-flight refresh,
+      // then retry the request exactly once with the rotated token.
+      if (allowRefresh &&
+          mapped.isRefreshable &&
+          (_sessionToken?.call()?.isNotEmpty ?? false)) {
+        final rotated = await _refreshSession();
+        if (rotated != null) {
+          // `run` re-reads the (now rotated) token via _opts(); no further
+          // refresh is attempted, so there is no recursive refresh loop.
+          return _send(run, allowRefresh: false);
+        }
+      }
       if (mapped.isAuthFailure) _onAuthFailure?.call(mapped);
       throw mapped;
+    }
+  }
+
+  /// Coalesced session refresh (contract `POST /auth/refresh`, bearer, rotates
+  /// the opaque token). Returns the new token, or null when refresh is
+  /// impossible/rejected (the caller then drops to guest).
+  Future<String?> _refreshSession() =>
+      _refreshInFlight ??= _performRefresh().whenComplete(() {
+        _refreshInFlight = null;
+      });
+
+  Future<String?> _performRefresh() async {
+    final current = _sessionToken?.call();
+    if (current == null || current.isEmpty) return null;
+    try {
+      final res = await _dio.post<dynamic>(
+        '/auth/refresh',
+        data: const {},
+        options: await _opts(),
+      );
+      final data = res.data;
+      final token = (data is Map && data['session_token'] is String)
+          ? data['session_token'] as String
+          : null;
+      if (token == null || token.isEmpty) return null;
+      // Persist atomically BEFORE any queued retry reads the token.
+      await _onTokenRotated?.call(token);
+      return token;
+    } on DioException {
+      return null; // refresh rejected → session unrecoverable
     }
   }
 

@@ -43,8 +43,11 @@ final v2ApiClientProvider = Provider<V2ApiClient>((ref) {
     installationIdLoader: () =>
         ref.read(installationIdStoreProvider).getOrCreate(),
     sessionTokenProvider: () => session.cachedToken,
+    // Persist a rotated session token atomically so queued retries resume with
+    // it (single-flight refresh lives in the client).
+    onTokenRotated: (newToken) => session.save(newToken),
     onAuthFailure: (_) {
-      // Server rejected the session → clear it and signal listeners.
+      // Refresh failed / unrecoverable → clear the session and signal listeners.
       session.clear();
       ref.read(sessionRevokedProvider.notifier).state++;
     },

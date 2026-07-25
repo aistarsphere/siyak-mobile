@@ -77,7 +77,7 @@ class SiyagHomeScreen extends ConsumerWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.local_fire_department_rounded,
+                  Icon(Icons.local_fire_department_rounded,
                       size: 15, color: SC.coral),
                   const SizedBox(width: 8),
                   Text(
@@ -229,14 +229,14 @@ class _WeeklyHeroCard extends StatelessWidget {
                           color: SC.coral,
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: const Icon(Icons.emoji_events_rounded,
+                        child: Icon(Icons.emoji_events_rounded,
                             size: 20, color: SC.bg),
                       ),
                       const Spacer(),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          const Kicker('Ends in', color: SC.coral),
+                          Kicker('Ends in', color: SC.coral),
                           Text(remaining, style: ST.mono(18)),
                         ],
                       ),
@@ -257,7 +257,7 @@ class _WeeklyHeroCard extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.play_arrow_rounded, size: 18, color: SC.bg),
+                        Icon(Icons.play_arrow_rounded, size: 18, color: SC.bg),
                         const SizedBox(width: 8),
                         Text(cta,
                             style: ST.ar(15, weight: FontWeight.w600, color: SC.bg)),
@@ -374,7 +374,7 @@ class _Launcher extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_left_rounded, size: 18, color: SC.textFaint),
+            Icon(Icons.chevron_left_rounded, size: 18, color: SC.textFaint),
           ],
         ),
       ),

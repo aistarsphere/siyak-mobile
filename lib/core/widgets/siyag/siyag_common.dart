@@ -5,15 +5,15 @@ import 'siyag_tap.dart';
 
 /// Mono uppercase kicker label (ui.tsx `Kicker`): 10px, 0.18em tracking.
 class Kicker extends StatelessWidget {
-  const Kicker(this.text, {super.key, this.color = SC.textMute});
+  const Kicker(this.text, {super.key, this.color});
 
   final String text;
-  final Color color;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) => Text(
         text.toUpperCase(),
-        style: ST.mono(10, color: color, letterSpacing: 1.8),
+        style: ST.mono(10, color: color ?? SC.textMute, letterSpacing: 1.8),
       );
 }
 
@@ -23,24 +23,25 @@ class SiyagAvatar extends StatelessWidget {
     super.key,
     required this.letter,
     this.size = 40,
-    this.color = SC.coral,
+    this.color,
     this.active = false,
   });
 
   final String letter;
   final double size;
-  final Color color;
+  final Color? color;
   final bool active;
 
   @override
   Widget build(BuildContext context) {
+    final c = color ?? SC.coral;
     return Container(
       width: size,
       height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: active ? color : SC.surfaceHi,
+        color: active ? c : SC.surfaceHi,
         border: active ? null : Border.all(color: SC.line),
       ),
       child: Text(
@@ -49,7 +50,7 @@ class SiyagAvatar extends StatelessWidget {
           fontFamily: SF.ar,
           fontSize: size * 0.4,
           fontWeight: FontWeight.w600,
-          color: active ? SC.bg : SC.textDim,
+          color: active ? SC.onColor(c) : SC.textDim,
         ),
       ),
     );
@@ -64,20 +65,20 @@ class SiyagPrimaryButton extends StatelessWidget {
     required this.label,
     this.onTap,
     this.icon,
-    this.color = SC.coral,
+    this.color,
     this.busy = false,
   });
 
   final String label;
   final VoidCallback? onTap;
   final IconData? icon;
-  final Color color;
+  final Color? color;
   final bool busy;
 
   @override
   Widget build(BuildContext context) {
-    final dark = color == SC.coral || color == SC.cyan || color == SC.emerald;
-    final fg = dark ? SC.bg : SC.text;
+    final c = color ?? SC.coral;
+    final fg = SC.onColor(c); // readable on graphite/gold/green fills
     return SiyagTap(
       onTap: busy ? null : onTap,
       child: Opacity(
@@ -86,7 +87,7 @@ class SiyagPrimaryButton extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
-            color: color,
+            color: c,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Row(

@@ -55,7 +55,7 @@ class _S extends ConsumerState<SiyagJoinRoomScreen> {
           bottom: false,
           child: Column(
             children: [
-              const SiyagTopBar(kicker: 'Join by code', kickerColor: SC.cyan),
+              SiyagTopBar(kicker: 'Join by code', kickerColor: SC.cyan),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
@@ -92,7 +92,7 @@ class _S extends ConsumerState<SiyagJoinRoomScreen> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
-                            borderSide: const BorderSide(color: SC.cyan, width: 2),
+                            borderSide: BorderSide(color: SC.cyan, width: 2),
                           ),
                         ),
                         onSubmitted: (_) => _join(),

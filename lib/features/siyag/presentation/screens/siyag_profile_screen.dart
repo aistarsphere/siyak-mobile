@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/siyag_theme.dart';
 import '../../../../core/widgets/siyag/siyag_common.dart';
 import '../../../../core/widgets/siyag/siyag_tap.dart';
+import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../v2/domain/entities/installation_profile.dart';
 import '../../../v2/presentation/controllers/profile_controller.dart';
 
@@ -45,7 +46,7 @@ class SiyagProfileScreen extends ConsumerWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.edit_rounded, size: 13, color: SC.coral),
+                      Icon(Icons.edit_rounded, size: 13, color: SC.coral),
                       const SizedBox(width: 6),
                       Text('تعديل الاسم', style: ST.ar(13, color: SC.coral)),
                     ],
@@ -79,7 +80,7 @@ class SiyagProfileScreen extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                const Icon(Icons.shield_outlined, size: 16, color: SC.textMute),
+                Icon(Icons.shield_outlined, size: 16, color: SC.textMute),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -90,6 +91,8 @@ class SiyagProfileScreen extends ConsumerWidget {
               ],
             ),
           ),
+          const SizedBox(height: 28),
+          _AppearanceSelector(),
           const SizedBox(height: 24),
         ],
       ),
@@ -126,7 +129,7 @@ class SiyagProfileScreen extends ConsumerWidget {
           padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
           child: Container(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: SC.surface,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             ),
@@ -163,7 +166,7 @@ class SiyagProfileScreen extends ConsumerWidget {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: const BorderSide(color: SC.coral, width: 2),
+                      borderSide: BorderSide(color: SC.coral, width: 2),
                     ),
                   ),
                 ),
@@ -186,6 +189,70 @@ class SiyagProfileScreen extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// System / Light / Dark segmented selector. Persists via [AppSettings] and
+/// applies immediately (no restart). The selected segment uses the restrained
+/// gold accent as a "selected indicator".
+class _AppearanceSelector extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationsProvider);
+    final mode = ref.watch(appSettingsProvider.select((s) => s.themeMode));
+    const options = [
+      (ThemeMode.system, 'themeSystem', Icons.brightness_auto_rounded),
+      (ThemeMode.light, 'themeLight', Icons.light_mode_rounded),
+      (ThemeMode.dark, 'themeDark', Icons.dark_mode_rounded),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Kicker(loc('appearance')),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: SC.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: SC.line),
+          ),
+          child: Row(
+            children: [
+              for (final (m, key, icon) in options)
+                Expanded(
+                  child: SiyagTap(
+                    onTap: () =>
+                        ref.read(appSettingsProvider.notifier).setThemeMode(m),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: m == mode ? SC.gold : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(icon,
+                              size: 15,
+                              color: m == mode ? SC.onGold : SC.textMute),
+                          const SizedBox(width: 6),
+                          Text(loc(key),
+                              style: ST.ar(13,
+                                  weight: FontWeight.w500,
+                                  color: m == mode ? SC.onGold : SC.textDim)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

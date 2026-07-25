@@ -159,12 +159,12 @@ class _SiyagGameViewState extends State<SiyagGameView> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: widget.submitting
-                              ? const SizedBox(
+                              ? SizedBox(
                                   width: 18,
                                   height: 18,
                                   child: CircularProgressIndicator(
                                       strokeWidth: 2.2, color: SC.bg))
-                              : const Icon(Icons.send_rounded,
+                              : Icon(Icons.send_rounded,
                                   size: 18, color: SC.bg),
                         ),
                       ),

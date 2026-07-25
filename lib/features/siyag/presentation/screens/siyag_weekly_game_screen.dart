@@ -103,7 +103,7 @@ class _SiyagWeeklyGameScreenState
     });
 
     if (run == null) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: SC.bg,
         body: Center(child: CircularProgressIndicator(color: SC.coral)),
       );

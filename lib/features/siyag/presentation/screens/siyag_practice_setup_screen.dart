@@ -37,10 +37,10 @@ class SiyagPracticeSetupScreen extends ConsumerWidget {
           bottom: false,
           child: Column(
             children: [
-              const SiyagTopBar(kicker: 'Solo Practice', kickerColor: SC.cyan),
+              SiyagTopBar(kicker: 'Solo Practice', kickerColor: SC.cyan),
               Expanded(
                 child: modes.when(
-                  loading: () => const Center(
+                  loading: () => Center(
                       child: CircularProgressIndicator(color: SC.coral)),
                   error: (e, _) => Center(
                       child: Text('تعذّر التحميل',
@@ -138,18 +138,20 @@ class SiyagPracticeSetupScreen extends ConsumerWidget {
       child: Text(t, style: ST.ar(13, color: SC.textDim)));
 
   Widget _chip(String label, bool selected, VoidCallback onTap,
-          {Color accent = SC.coral}) =>
+          {Color? accent}) =>
       SiyagTap(
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
           decoration: BoxDecoration(
-            color: selected ? accent : SC.surface,
+            color: selected ? (accent ?? SC.coral) : SC.surface,
             borderRadius: BorderRadius.circular(999),
           ),
           child: Text(label,
-              style: ST.ar(13, color: selected ? SC.bg : SC.textMute)),
+              style: ST.ar(13,
+                  color:
+                      selected ? SC.onColor(accent ?? SC.coral) : SC.textMute)),
         ),
       );
 }

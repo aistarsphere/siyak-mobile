@@ -88,7 +88,7 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
     final conn = ref.watch(realtimeRoomControllerProvider);
     final room = conn.room;
     if (room == null) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: SC.bg,
         body: Center(child: CircularProgressIndicator(color: SC.coral)),
       );
@@ -116,7 +116,7 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
                             onTap: () => ref
                                 .read(roomRepositoryProvider)
                                 .hint(roomId: room.roomId, mode: room.hintMode),
-                            child: const Icon(Icons.lightbulb_outline_rounded,
+                            child: Icon(Icons.lightbulb_outline_rounded,
                                 size: 20, color: SC.cyan),
                           ),
                   ),
@@ -130,7 +130,7 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(children: [
-                        const SizedBox(
+                        SizedBox(
                             width: 14,
                             height: 14,
                             child: CircularProgressIndicator(
@@ -179,12 +179,12 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: _submitting
-                                  ? const SizedBox(
+                                  ? SizedBox(
                                       width: 18,
                                       height: 18,
                                       child: CircularProgressIndicator(
                                           strokeWidth: 2.2, color: SC.bg))
-                                  : const Icon(Icons.send_rounded,
+                                  : Icon(Icons.send_rounded,
                                       size: 18, color: SC.bg),
                             ),
                           ),
@@ -282,11 +282,11 @@ class _Winner extends ConsumerWidget {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                   color: SC.emerald, borderRadius: BorderRadius.circular(24)),
-              child: const Icon(Icons.emoji_events_rounded,
+              child: Icon(Icons.emoji_events_rounded,
                   size: 34, color: SC.bg),
             ),
             const SizedBox(height: 16),
-            const Kicker('Winner', color: SC.emerald),
+            Kicker('Winner', color: SC.emerald),
             const SizedBox(height: 6),
             Text(room.winner?.label ?? '—',
                 style: ST.ar(28, weight: FontWeight.w700)),

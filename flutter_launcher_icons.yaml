@@ -1,11 +1,13 @@
-# Launcher icons generated from the Stitch "Siyag Word Explorer" logo
-# (gold puzzle piece on charcoal — Amber Noir identity).
+# Launcher icons — Siyaq graphite/gold brand (metallic "S" mark).
+# Sources: design_reference/SIYAQ_Flutter_Brand_Resources → assets/branding/.
 flutter_launcher_icons:
   android: true
   ios: true
   remove_alpha_ios: true
-  image_path: "assets/images/icon_1024.png"
-  # Android adaptive icon: charcoal background + padded gold puzzle foreground.
-  adaptive_icon_background: "#181309"
-  adaptive_icon_foreground: "assets/images/icon_foreground.png"
-  background_color_ios: "#181309"
+  image_path: "assets/branding/app_icon.png"
+  # Adaptive icon: warm graphite background + padded metallic-S foreground.
+  adaptive_icon_background: "#EDEAE4"
+  adaptive_icon_foreground: "assets/branding/adaptive_foreground.png"
+  # Android 13+ themed (monochrome) icon: white silhouette.
+  adaptive_icon_monochrome: "assets/branding/notification_icon.png"
+  background_color_ios: "#F4F2EE"

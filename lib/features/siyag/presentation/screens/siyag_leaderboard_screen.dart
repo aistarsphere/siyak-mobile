@@ -60,7 +60,7 @@ class _SiyagLeaderboardScreenState
           const SiyagScreenHeader(kicker: 'Weekly Rankings', title: 'المتصدرون'),
           Expanded(
             child: state.entries.isEmpty && state.loading
-                ? const Center(
+                ? Center(
                     child: CircularProgressIndicator(color: SC.coral))
                 : ListView(
                     controller: _scroll,
@@ -79,7 +79,7 @@ class _SiyagLeaderboardScreenState
                               style: ST.mono(13, color: SC.coral)),
                         ),
                       if (state.loading && state.entries.isNotEmpty)
-                        const Padding(
+                        Padding(
                           padding: EdgeInsets.all(16),
                           child: Center(
                               child: SizedBox(
@@ -98,15 +98,15 @@ class _SiyagLeaderboardScreenState
 }
 
 class _Podium extends StatelessWidget {
-  const _Podium({required this.top});
+  _Podium({required this.top});
   final List<LeaderboardEntry> top;
 
   @override
   Widget build(BuildContext context) {
-    // order 2·1·3, heights 70·96·56, colors dim·coral·cyan
+    // order 2·1·3, heights 70·96·56; #1 highlighted in gold (rank achievement).
     final order = [top[1], top[0], top[2]];
-    const heights = [70.0, 96.0, 56.0];
-    const colors = [SC.textDim, SC.coral, SC.cyan];
+    final heights = [70.0, 96.0, 56.0];
+    final colors = [SC.textDim, SC.gold, SC.cyan];
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: Row(
@@ -198,7 +198,7 @@ class _Row extends StatelessWidget {
                     color: me ? SC.text : SC.textDim)),
           ),
           if (entry.solved)
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(left: 8),
               child: Icon(Icons.check_circle, size: 14, color: SC.emerald),
             ),

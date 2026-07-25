@@ -59,7 +59,7 @@ class _S extends ConsumerState<SiyagRoomLobbyScreen> {
         body: SafeArea(
           bottom: false,
           child: room == null
-              ? const Center(
+              ? Center(
                   child: CircularProgressIndicator(color: SC.coral))
               : Column(
                   children: [
@@ -162,7 +162,7 @@ class _CodeCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Kicker('Join Code', color: SC.emerald),
+          Kicker('Join Code', color: SC.emerald),
           const SizedBox(height: 8),
           Text(room.joinCode, style: ST.mono(34, letterSpacing: 8)),
           const SizedBox(height: 12),

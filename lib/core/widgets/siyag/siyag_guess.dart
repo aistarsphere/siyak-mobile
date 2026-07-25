@@ -258,7 +258,7 @@ class SiyagHintPill extends StatelessWidget {
             Text(revealed ? '💡' : '🔒', style: const TextStyle(fontSize: 14)),
             const SizedBox(width: 10),
             if (loading)
-              const SizedBox(
+              SizedBox(
                   width: 14,
                   height: 14,
                   child: CircularProgressIndicator(strokeWidth: 2, color: SC.cyan))

@@ -57,7 +57,8 @@ class _NavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? SC.coral : SC.textFaint;
+    // Active tab uses the gold primary accent; inactive stays soft gray.
+    final color = active ? SC.gold : SC.textMute;
     return SiyagTap(
       onTap: onTap,
       scale: 0.9,
@@ -75,7 +76,7 @@ class _NavButton extends StatelessWidget {
                   width: 6,
                   height: 6,
                   decoration:
-                      const BoxDecoration(color: SC.coral, shape: BoxShape.circle),
+                      BoxDecoration(color: SC.gold, shape: BoxShape.circle),
                 ),
               ),
             ),

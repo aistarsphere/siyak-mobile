@@ -20,11 +20,16 @@ class SiyagShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final index = ref.watch(siyagTabProvider);
+    // Depend on Theme so a light/dark switch rebuilds the shell; re-key the
+    // stack by brightness so the visible tab repaints immediately (the custom
+    // SC-token screens don't otherwise subscribe to Theme changes).
+    final brightness = Theme.of(context).brightness;
     return Scaffold(
       backgroundColor: SC.bg,
       body: SafeArea(
         bottom: false,
         child: IndexedStack(
+          key: ValueKey(brightness),
           index: index,
           children: const [
             SiyagHomeScreen(),

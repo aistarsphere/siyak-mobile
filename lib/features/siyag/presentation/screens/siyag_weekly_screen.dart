@@ -38,12 +38,12 @@ class SiyagWeeklyScreen extends ConsumerWidget {
           bottom: false,
           child: async.when(
             loading: () =>
-                const Center(child: CircularProgressIndicator(color: SC.coral)),
+                Center(child: CircularProgressIndicator(color: SC.coral)),
             error: (e, _) => _Error(onRetry: () =>
                 ref.invalidate(weeklyChallengeProvider(lang))),
             data: (c) => Column(
               children: [
-                const SiyagTopBar(kicker: 'Hero Mode', kickerColor: SC.coral),
+                SiyagTopBar(kicker: 'Hero Mode', kickerColor: SC.coral),
                 Expanded(
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -165,7 +165,7 @@ class _Hero extends StatelessWidget {
                     color: SC.coral,
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: const Icon(Icons.emoji_events_rounded,
+                  child: Icon(Icons.emoji_events_rounded,
                       size: 26, color: SC.bg),
                 ),
                 const SizedBox(height: 16),
@@ -217,7 +217,7 @@ class _Error extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.cloud_off_rounded, size: 44, color: SC.textMute),
+              Icon(Icons.cloud_off_rounded, size: 44, color: SC.textMute),
               const SizedBox(height: 16),
               Text('تعذّر تحميل التحدي',
                   style: ST.ar(16, color: SC.textDim)),

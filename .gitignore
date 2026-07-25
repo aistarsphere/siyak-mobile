@@ -45,3 +45,16 @@ app.*.map.json
 /android/app/release
 # Figma Make design handoff — local reference only, not part of the app
 design_reference/
+
+# Secrets — never commit credentials / signing material
+secret/
+**/client_secret*.json
+**/google-services.json
+**/GoogleService-Info.plist
+android/key.properties
+**/*.keystore
+**/*.jks
+**/*.p8
+**/*.p12
+.env
+.env.*

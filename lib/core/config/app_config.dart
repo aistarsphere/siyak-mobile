@@ -54,6 +54,26 @@ class AppConfig {
   /// Documented capability-detection endpoint (relative to the V2 base).
   static const String capabilitiesPath = '/capabilities';
 
+  // ── Frozen backend contract identity (bundle `2026-07.1`) ────────────────
+  /// The contract revision this client targets. The backend echoes
+  /// `contract_version` / `X-Contract-Version`; surfaced for telemetry only.
+  static const String contractVersion = '2026-07.1';
+
+  /// The V2 API generation served at the V2 base.
+  static const String apiVersion = '2.0';
+
+  // ── Google Sign-In ───────────────────────────────────────────────────────
+  /// The Google **Web/Server OAuth client ID** for project `siyag-503420`.
+  /// Passed as `serverClientId` so Google issues an ID token whose audience is
+  /// the backend (which verifies it in `POST /v2/auth/google`). This is a
+  /// client *ID*, not a secret — safe to ship; the client *secret* never is.
+  /// Overridable at build time with `--dart-define=GOOGLE_SERVER_CLIENT_ID=`.
+  static const String googleServerClientId = String.fromEnvironment(
+    'GOOGLE_SERVER_CLIENT_ID',
+    defaultValue:
+        '1098591360557-am6kibuioo85lmhnp0cmbim62b1ob6i4.apps.googleusercontent.com',
+  );
+
   /// Normalizes a user/env supplied base URL (trims trailing slashes/spaces).
   static String normalizeBaseUrl(String url) {
     var u = url.trim();

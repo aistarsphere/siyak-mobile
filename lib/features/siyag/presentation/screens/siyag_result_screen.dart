@@ -81,7 +81,7 @@ class _SiyagResultScreenState extends ConsumerState<SiyagResultScreen>
                       ),
                     ),
                     const SizedBox(height: 24),
-                    const Center(child: Kicker('Solved!', color: SC.emerald)),
+                    Center(child: Kicker('Solved!', color: SC.emerald)),
                     const SizedBox(height: 8),
                     Center(
                         child: Text('الكلمة كانت',

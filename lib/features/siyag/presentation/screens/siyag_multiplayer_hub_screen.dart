@@ -26,7 +26,7 @@ class SiyagMultiplayerHubScreen extends ConsumerWidget {
           bottom: false,
           child: Column(
             children: [
-              const SiyagTopBar(
+              SiyagTopBar(
                   kicker: 'Multiplayer', kickerColor: SC.emerald),
               const SizedBox(height: 8),
               Expanded(
@@ -116,7 +116,7 @@ class SiyagMultiplayerHubScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_left_rounded,
+              Icon(Icons.chevron_left_rounded,
                   size: 18, color: SC.textFaint),
             ],
           ),

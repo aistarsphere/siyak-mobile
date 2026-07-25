@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 
 import '../../../../core/config/app_config.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
@@ -6,6 +7,7 @@ import '../../data/installation_id_store.dart';
 import '../../data/remote/remote_realtime_gateway.dart';
 import '../../data/remote/remote_repositories.dart';
 import '../../data/remote/v2_api_client.dart';
+import '../../data/session_store.dart';
 import '../../domain/repositories/v2_repositories.dart';
 import 'profile_controller.dart';
 
@@ -21,13 +23,28 @@ import 'profile_controller.dart';
 final installationIdStoreProvider =
     Provider<InstallationIdStore>((ref) => InstallationIdStore());
 
-/// Shared live REST client (injects `X-Installation-ID`, maps errors, retries).
+/// Account session-token store (`sess_…` bearer). Empty for guests.
+final sessionStoreProvider = Provider<SessionStore>((ref) => SessionStore());
+
+/// Bumped whenever the server rejects the current session (401 auth failure),
+/// so session-aware controllers can re-evaluate and prompt re-authentication.
+final sessionRevokedProvider = StateProvider<int>((ref) => 0);
+
+/// Shared live REST client. Injects `X-Installation-ID` (guest) + `Authorization:
+/// Bearer` (account) + `X-Request-ID`; drops a rejected session on 401.
 final v2ApiClientProvider = Provider<V2ApiClient>((ref) {
   final override = ref.watch(appSettingsProvider.select((s) => s.baseUrlOverride));
+  final session = ref.read(sessionStoreProvider);
   return V2ApiClient(
     baseUrl: AppConfig.resolveV2BaseUrl(override),
     installationIdLoader: () =>
         ref.read(installationIdStoreProvider).getOrCreate(),
+    sessionTokenProvider: () => session.cachedToken,
+    onAuthFailure: (_) {
+      // Server rejected the session → clear it and signal listeners.
+      session.clear();
+      ref.read(sessionRevokedProvider.notifier).state++;
+    },
   );
 });
 

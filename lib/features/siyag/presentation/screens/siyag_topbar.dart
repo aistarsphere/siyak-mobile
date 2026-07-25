@@ -12,7 +12,7 @@ class SiyagTopBar extends StatelessWidget {
     this.title,
     this.subtitle,
     this.kicker,
-    this.kickerColor = SC.textMute,
+    this.kickerColor,
     this.onBack,
     this.trailing,
   });
@@ -20,7 +20,7 @@ class SiyagTopBar extends StatelessWidget {
   final String? title;
   final String? subtitle;
   final String? kicker;
-  final Color kickerColor;
+  final Color? kickerColor;
   final VoidCallback? onBack;
   final Widget? trailing;
 
@@ -37,12 +37,12 @@ class SiyagTopBar extends StatelessWidget {
               width: 36,
               height: 36,
               alignment: Alignment.center,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: SC.surface,
                 shape: BoxShape.circle,
               ),
               // RTL: back points to the right (chevron_right).
-              child: const Icon(Icons.chevron_right_rounded,
+              child: Icon(Icons.chevron_right_rounded,
                   size: 18, color: SC.textDim),
             ),
           ),
@@ -51,7 +51,8 @@ class SiyagTopBar extends StatelessWidget {
               children: [
                 if (kicker != null)
                   Text(kicker!.toUpperCase(),
-                      style: ST.mono(10, color: kickerColor, letterSpacing: 1.8)),
+                      style: ST.mono(10,
+                          color: kickerColor ?? SC.textMute, letterSpacing: 1.8)),
                 if (title != null)
                   Text(title!, style: ST.ar(14, weight: FontWeight.w500)),
                 if (subtitle != null) ...[

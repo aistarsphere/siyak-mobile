@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -9,12 +10,16 @@ class AppSettings {
     this.lang = 'ar',
     this.sound = true,
     this.haptics = true,
+    this.themeMode = ThemeMode.system,
     this.baseUrlOverride = '',
   });
 
   final String lang; // 'ar' | 'en' — Arabic-first
   final bool sound;
   final bool haptics;
+
+  /// System / Light / Dark. Persisted; restored on launch.
+  final ThemeMode themeMode;
 
   /// Developer-only override; empty means use --dart-define / default.
   final String baseUrlOverride;
@@ -25,11 +30,13 @@ class AppSettings {
     String? lang,
     bool? sound,
     bool? haptics,
+    ThemeMode? themeMode,
     String? baseUrlOverride,
   }) => AppSettings(
     lang: lang ?? this.lang,
     sound: sound ?? this.sound,
     haptics: haptics ?? this.haptics,
+    themeMode: themeMode ?? this.themeMode,
     baseUrlOverride: baseUrlOverride ?? this.baseUrlOverride,
   );
 }
@@ -43,6 +50,7 @@ class AppSettingsController extends Notifier<AppSettings> {
   static const _kLang = 'siyaq.lang';
   static const _kSound = 'siyaq.sound';
   static const _kHaptics = 'siyaq.haptics';
+  static const _kThemeMode = 'siyaq.themeMode';
   static const _kBaseUrl = 'siyaq.baseUrlOverride';
 
   @override
@@ -52,11 +60,23 @@ class AppSettingsController extends Notifier<AppSettings> {
       lang: sp.getString(_kLang) ?? 'ar',
       sound: sp.getBool(_kSound) ?? true,
       haptics: sp.getBool(_kHaptics) ?? true,
+      themeMode: _parseThemeMode(sp.getString(_kThemeMode)),
       baseUrlOverride: sp.getString(_kBaseUrl) ?? '',
     );
   }
 
+  static ThemeMode _parseThemeMode(String? v) => switch (v) {
+        'light' => ThemeMode.light,
+        'dark' => ThemeMode.dark,
+        _ => ThemeMode.system,
+      };
+
   SharedPreferences get _sp => ref.read(sharedPreferencesProvider);
+
+  void setThemeMode(ThemeMode mode) {
+    state = state.copyWith(themeMode: mode);
+    _sp.setString(_kThemeMode, mode.name);
+  }
 
   void setLang(String lang) {
     state = state.copyWith(lang: lang);

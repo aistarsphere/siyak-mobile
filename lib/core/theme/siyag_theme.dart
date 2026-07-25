@@ -2,39 +2,62 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-/// ─── Siyag design system ──────────────────────────────────────────────────
-/// Ported verbatim from the Figma Make handoff `reference_web/src/app/theme.ts`.
-/// Modern game palette: charcoal/graphite surfaces, coral-orange primary,
-/// electric-cyan secondary, emerald success, warm-neutral text.
-/// No blue/indigo, no amber/gold, no gradients-as-identity.
+import 'app_tokens.dart';
+
+/// ─── Siyaq design tokens (theme-aware) ────────────────────────────────────
+/// Graphite/gold brand identity. Every field resolves from the active
+/// [AppTokens] palette so the same screens render correctly in Light and Dark.
+/// The legacy field names (`coral`, `cyan`, `emerald`) are kept to avoid a
+/// mass rename — they now map to graphite/info/success semantics.
 class SC {
   SC._();
 
-  // Canvas behind the phone frame (App.tsx outer bg)
-  static const outer = Color(0xFF0C0C0D);
+  static AppTokens _t = AppTokens.dark;
+  static AppTokens get tokens => _t;
 
-  // Surfaces (charcoal → graphite)
-  static const bg = Color(0xFF141416);
-  static const surface = Color(0xFF1D1E22);
-  static const surfaceHi = Color(0xFF26272C);
-  static const surfaceHover = Color(0xFF2E2F35);
-  static Color get line => Colors.white.withValues(alpha: 0.06);
-  static Color get lineStrong => Colors.white.withValues(alpha: 0.10);
+  /// Point the tokens at the active brightness (called from the app root
+  /// before the widget subtree builds, and again whenever the theme changes).
+  static void applyBrightness(Brightness b) => _t = AppTokens.of(b);
 
-  // Text (warm neutrals)
-  static const text = Color(0xFFF1ECE3);
-  static const textDim = Color(0xFFB4AEA3);
-  static const textMute = Color(0xFF7C7770);
-  static const textFaint = Color(0xFF4E4B46);
+  // Surfaces
+  static Color get outer => _t.background;
+  static Color get bg => _t.background;
+  static Color get surface => _t.surface;
+  static Color get surfaceHi => _t.surfaceAlt;
+  static Color get surfaceHover => _t.surfaceAlt;
+  static Color get line => _t.border;
+  static Color get lineStrong => _t.divider;
 
-  // Brand
-  static const coral = Color(0xFFFF6B4A);
-  static Color get coralDim => const Color(0xFFFF6B4A).withValues(alpha: 0.14);
-  static const cyan = Color(0xFF2DD4E8);
-  static Color get cyanDim => const Color(0xFF2DD4E8).withValues(alpha: 0.14);
-  static const emerald = Color(0xFF34D399);
-  static Color get emeraldDim =>
-      const Color(0xFF34D399).withValues(alpha: 0.14);
+  // Text
+  static Color get text => _t.textPrimary;
+  static Color get textDim => _t.textSecondary;
+  static Color get textMute => _t.textMuted;
+  static Color get textFaint => _t.disabled;
+
+  // Primary interactive accent → **graphite** (legacy name `coral`).
+  static Color get coral => _t.accentPrimary;
+  static Color get coralDim => _t.accentPrimary.withValues(alpha: 0.16);
+  static Color get onAccent => _t.onAccent;
+
+  // Restrained **gold** accent (premium / achievement / rank / key result).
+  static Color get gold => _t.accentGold;
+  static Color get goldDim => _t.accentGold.withValues(alpha: 0.16);
+  static Color get onGold => _t.onGold;
+
+  // Semantic (legacy names retained)
+  static Color get cyan => _t.info; // informational / hint / cold
+  static Color get cyanDim => _t.info.withValues(alpha: 0.16);
+  static Color get emerald => _t.success; // success / accepted / solved
+  static Color get emeraldDim => _t.success.withValues(alpha: 0.16);
+  static Color get warning => _t.warning;
+  static Color get error => _t.error;
+
+  /// Readable foreground for a filled [fill]: dark graphite text on light fills
+  /// (notably the **gold** primary, whose luminance ≈ 0.48), light text on
+  /// graphite/green/info fills. Threshold sits below gold so gold → dark text.
+  static Color onColor(Color fill) => fill.computeLuminance() > 0.42
+      ? AppTokens.graphiteDeep
+      : const Color(0xFFF5F6F8);
 }
 
 /// Typography families (bundled — no runtime fetch).
@@ -113,30 +136,33 @@ class ST {
 
   static TextStyle ar(double size,
           {FontWeight weight = FontWeight.w400,
-          Color color = SC.text,
+          Color? color,
           double? height}) =>
       TextStyle(
         fontFamily: SF.ar,
         fontSize: size,
         fontWeight: weight,
-        color: color,
+        color: color ?? SC.text,
         height: height,
       );
 
   static TextStyle mono(double size,
           {FontWeight weight = FontWeight.w400,
-          Color color = SC.text,
+          Color? color,
           double letterSpacing = 0}) =>
       TextStyle(
         fontFamily: SF.mono,
         fontSize: size,
         fontWeight: weight,
-        color: color,
+        color: color ?? SC.text,
         letterSpacing: letterSpacing,
       );
 
   static TextStyle sys(double size,
-          {FontWeight weight = FontWeight.w400, Color color = SC.text}) =>
+          {FontWeight weight = FontWeight.w400, Color? color}) =>
       TextStyle(
-          fontFamily: SF.sys, fontSize: size, fontWeight: weight, color: color);
+          fontFamily: SF.sys,
+          fontSize: size,
+          fontWeight: weight,
+          color: color ?? SC.text);
 }

@@ -38,10 +38,10 @@ class SiyagCreateRoomScreen extends ConsumerWidget {
           bottom: false,
           child: Column(
             children: [
-              const SiyagTopBar(kicker: 'Create Room', kickerColor: SC.emerald),
+              SiyagTopBar(kicker: 'Create Room', kickerColor: SC.emerald),
               Expanded(
                 child: modes.when(
-                  loading: () => const Center(
+                  loading: () => Center(
                       child: CircularProgressIndicator(color: SC.coral)),
                   error: (e, _) => Center(
                       child: Text('تعذّر التحميل',

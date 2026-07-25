@@ -203,14 +203,29 @@ class PushMessagingService {
   Future<bool> openSystemSettings() => ph.openAppSettings();
 
   // ── Token ───────────────────────────────────────────────────────────────────
-  /// Best-effort token fetch. Returns null when the platform can't provide one
-  /// yet (e.g. iOS before an APNs token / permission is available).
+  /// Best-effort token fetch. On iOS, `getToken()` *triggers* APNs registration
+  /// but throws `apns-token-not-set` until the OS delivers the APNs token — so
+  /// we retry it (up to ~12s) while APNs propagates. Returns null if it never
+  /// arrives (no permission / no network). Immediate on Android.
   Future<String?> token() async {
-    try {
-      return await _fm.getToken();
-    } catch (_) {
-      return null;
+    for (var i = 0; i < 12; i++) {
+      try {
+        return await _fm.getToken();
+      } catch (e) {
+        if (!e.toString().contains('apns-token-not-set')) return null;
+        await Future<void>.delayed(const Duration(seconds: 1));
+      }
     }
+    return null;
+  }
+
+  /// True once FCM can perform token/topic ops (iOS: APNs is set).
+  Future<bool> _ready() async {
+    if (defaultTargetPlatform != TargetPlatform.iOS &&
+        defaultTargetPlatform != TargetPlatform.macOS) {
+      return true;
+    }
+    return await token() != null;
   }
 
   /// Invalidate the current token (e.g. on sign-out / disabling notifications).
@@ -219,9 +234,7 @@ class PushMessagingService {
   // ── Topics ──────────────────────────────────────────────────────────────────
   Future<void> subscribeToTopic(String topic) async {
     try {
-      if (defaultTargetPlatform == TargetPlatform.iOS) {
-        await _fm.getAPNSToken();
-      }
+      if (!await _ready()) return; // iOS: skip until APNs is set
       await _fm.subscribeToTopic(topic);
     } catch (e) {
       debugPrint('[FCM] subscribeToTopic failed: $e');
@@ -230,6 +243,7 @@ class PushMessagingService {
 
   Future<void> unsubscribeFromTopic(String topic) async {
     try {
+      if (!await _ready()) return;
       await _fm.unsubscribeFromTopic(topic);
     } catch (e) {
       debugPrint('[FCM] unsubscribeFromTopic failed: $e');

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../v2/data/session_store.dart';
 import '../../../v2/presentation/controllers/profile_controller.dart';
 import '../../../v2/presentation/controllers/v2_providers.dart';
+import '../../../v2/presentation/controllers/wallet_controller.dart';
 import '../../domain/entities/account.dart';
 import '../../domain/repositories/auth_repository.dart';
 import 'auth_providers.dart';
@@ -125,6 +126,7 @@ class SessionController extends AsyncNotifier<SessionState> {
       unawaited(ref.read(installationServiceProvider).onLogin());
       // Account's current_profile is now bearer-scoped — refresh dependent state.
       ref.invalidate(profileControllerProvider);
+      ref.invalidate(walletControllerProvider);
       return true;
     } catch (e, st) {
       if (kDebugMode) debugPrint('[Auth] Google sign-in FAILED: ${e.runtimeType}');
@@ -175,6 +177,7 @@ class SessionController extends AsyncNotifier<SessionState> {
       );
       unawaited(ref.read(installationServiceProvider).onLogin());
       ref.invalidate(profileControllerProvider);
+      ref.invalidate(walletControllerProvider);
       return true;
     } catch (e, st) {
       if (kDebugMode) debugPrint('[Auth] Apple sign-in FAILED: ${e.runtimeType}');
@@ -199,6 +202,7 @@ class SessionController extends AsyncNotifier<SessionState> {
     state = AsyncData(prev.copyWith(account: updated, justCreated: false));
     // Account display name feeds bearer-scoped profile views.
     ref.invalidate(profileControllerProvider);
+      ref.invalidate(walletControllerProvider);
     if (kDebugMode) {
       debugPrint(
         '[Auth] account profile updated: player=${updated.publicPlayerId}',
@@ -229,6 +233,7 @@ class SessionController extends AsyncNotifier<SessionState> {
     } catch (_) {}
     await _sessions.clear();
     ref.invalidate(profileControllerProvider);
+      ref.invalidate(walletControllerProvider);
     if (kDebugMode) debugPrint('[Auth] logged out → guest (session cleared)');
     state = const AsyncData(SessionState());
   }

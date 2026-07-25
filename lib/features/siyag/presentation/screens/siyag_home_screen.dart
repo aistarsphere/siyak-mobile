@@ -8,6 +8,7 @@ import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../v2/domain/entities/gameplay_language.dart';
 import '../../../v2/presentation/controllers/capabilities_controller.dart';
 import '../../../v2/presentation/controllers/profile_controller.dart';
+import '../../../v2/presentation/controllers/wallet_controller.dart';
 import '../../../v2/presentation/controllers/weekly_controller.dart';
 import '../siyag_route.dart';
 import '../siyag_shell.dart';
@@ -32,6 +33,7 @@ class SiyagHomeScreen extends ConsumerWidget {
     final caps = ref.watch(capabilitiesProvider).value;
     final lang = GameplayLanguage.fromCode(ref.watch(appSettingsProvider).lang);
     final weekly = ref.watch(weeklyChallengeProvider(lang)).value;
+    final wallet = ref.watch(walletControllerProvider).value;
     final letter = (profile?.label.isNotEmpty ?? false)
         ? profile!.label.characters.first
         : 'س';
@@ -60,6 +62,10 @@ class SiyagHomeScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
+                if (wallet != null) ...[
+                  _CoinsPill(coins: wallet.availableBalance),
+                  const SizedBox(width: 12),
+                ],
                 SiyagTap(
                   onTap: () => ref.read(siyagTabProvider.notifier).state = 2,
                   child: SiyagAvatar(letter: letter, size: 44, active: true),
@@ -391,4 +397,28 @@ class _Launcher extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Compact coin balance pill (gold), shown in the Home header.
+class _CoinsPill extends StatelessWidget {
+  const _CoinsPill({required this.coins});
+  final int coins;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    decoration: BoxDecoration(
+      color: SC.gold.withValues(alpha: 0.14),
+      borderRadius: BorderRadius.circular(999),
+      border: Border.all(color: SC.gold.withValues(alpha: 0.40)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.monetization_on_rounded, size: 15, color: SC.gold),
+        const SizedBox(width: 5),
+        Text('$coins', style: ST.mono(14, color: SC.gold)),
+      ],
+    ),
+  );
 }

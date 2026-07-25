@@ -155,8 +155,15 @@ const Map<String, String> stringsEn = {
   'themeDark': 'Dark',
   'notifications': 'Notifications',
   'notificationsHint': 'Get game, room and match updates.',
+  'notificationsReady':
+      'Registered and ready for game, room and match updates.',
+  'notificationsWaiting': 'Permission granted. Waiting for the device token.',
+  'notificationsRegistering': 'Registering this device for notifications...',
+  'notificationsRecoverableError':
+      'Registration did not finish. The app will retry shortly.',
   'notificationsBlocked': 'Turned off in system settings.',
-  'notificationsDenied': 'Allow notifications in system settings to enable them.',
+  'notificationsDenied':
+      'Allow notifications in system settings to enable them.',
   'openSettings': 'Open settings',
   'copyToken': 'Copy device token',
   'tokenCopied': 'Device token copied',
@@ -184,7 +191,8 @@ const Map<String, String> stringsEn = {
   'v2ErrSignInRequired': 'Please sign in to continue.',
   'v2ErrReauth': 'Please sign in again to continue.',
   'v2ErrProviderDisabled': 'This sign-in method is currently unavailable.',
-  'v2ErrInstallation': 'Something went wrong with this device. Please try again.',
+  'v2ErrInstallation':
+      'Something went wrong with this device. Please try again.',
   'v2ErrAccountDisabled': 'This account is disabled. Contact support.',
   'v2ErrAccountSuspended': 'Your account is suspended. Contact support.',
   'v2ErrAccountBanned': 'Your account has been banned.',

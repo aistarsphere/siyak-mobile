@@ -17,15 +17,18 @@ class RemoteInstallationRepository implements InstallationRepository {
     String? locale,
     String? timezone,
     String? notificationPermission,
-  }) => _api.post('/installations/register', body: {
-    'installation_id': installationId,
-    'platform': platform,
-    'app_version': ?appVersion,
-    'build_number': ?buildNumber,
-    'locale': ?locale,
-    'timezone': ?timezone,
-    'notification_permission': ?notificationPermission,
-  });
+  }) => _api.post(
+    '/installations/register',
+    body: {
+      'installation_id': installationId,
+      'platform': platform,
+      'app_version': ?appVersion,
+      'build_number': ?buildNumber,
+      'locale': ?locale,
+      'timezone': ?timezone,
+      'notification_permission': ?notificationPermission,
+    },
+  );
 
   @override
   Future<void> heartbeat(String installationId) => _api.post(
@@ -50,18 +53,31 @@ class RemoteInstallationRepository implements InstallationRepository {
     required String installationId,
     required String platform,
     required String token,
-  }) => _api.post('/installations/push/register', body: {
-    'installation_id': installationId,
-    'platform': platform,
-    'token': token,
-  });
+    String? appVersion,
+    String? buildNumber,
+    String? locale,
+    String? timezone,
+    String? notificationPermission,
+  }) => _api.post(
+    '/installations/push/register',
+    body: {
+      'installation_id': installationId,
+      'platform': platform,
+      'token': token,
+      'app_version': ?appVersion,
+      'build_number': ?buildNumber,
+      'locale': ?locale,
+      'timezone': ?timezone,
+      'notification_permission': ?notificationPermission,
+    },
+  );
 
   @override
   Future<void> invalidatePushToken({
     required String installationId,
     required String platform,
-  }) => _api.post('/installations/push/invalidate', body: {
-    'installation_id': installationId,
-    'platform': platform,
-  });
+  }) => _api.post(
+    '/installations/push/invalidate',
+    body: {'installation_id': installationId, 'platform': platform},
+  );
 }

@@ -27,6 +27,11 @@ abstract class InstallationRepository {
     required String installationId,
     required String platform,
     required String token,
+    String? appVersion,
+    String? buildNumber,
+    String? locale,
+    String? timezone,
+    String? notificationPermission,
   });
 
   /// Invalidate the push token (e.g. on logout / notifications disabled).

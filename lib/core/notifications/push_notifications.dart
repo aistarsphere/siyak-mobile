@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:ui' show Color;
 
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -8,49 +10,131 @@ import 'package:permission_handler/permission_handler.dart' as ph;
 
 import '../firebase/firebase_bootstrap.dart';
 
-/// Background/terminated message handler. MUST be a top-level or static function
-/// annotated with `@pragma('vm:entry-point')` — the OS runs it in a **separate
-/// isolate**, so Firebase has to be (re)initialized here. Keep it light; heavy
-/// work risks the OS killing the isolate. A *notification* message is still
-/// rendered in the system tray by the OS automatically — this runs for the data
-/// payload / bookkeeping only.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await initializeFirebase();
+  await ensureFirebaseBootstrapped();
   if (kDebugMode) {
     debugPrint(
-      '[FCM] background message received: id=${message.messageId} '
-      'hasNotification=${message.notification != null} '
-      'data=${message.data.keys.toList()}',
+      '[Notifications] background message'
+      ' id=${message.messageId}'
+      ' hasNotification=${message.notification != null}'
+      ' dataKeys=${message.data.keys.toList()}',
     );
   }
 }
 
-/// Observable notification-permission status (platform-neutral).
-enum PushPermissionStatus { notDetermined, denied, authorized, provisional }
-
-extension PushPermissionStatusX on PushPermissionStatus {
-  bool get isGranted =>
-      this == PushPermissionStatus.authorized ||
-      this == PushPermissionStatus.provisional;
+enum NotificationPermissionStatus {
+  notDetermined,
+  denied,
+  authorized,
+  provisional,
 }
 
-/// Complete Firebase Cloud Messaging facade: configuration, permission,
-/// token lifecycle, and topic subscribe/unsubscribe. Backend-agnostic — it does
-/// not upload the token anywhere (that is a later, deliberate step).
-class PushMessagingService {
-  PushMessagingService(this._fm);
-  final FirebaseMessaging _fm;
+extension NotificationPermissionStatusX on NotificationPermissionStatus {
+  bool get isGranted =>
+      this == NotificationPermissionStatus.authorized ||
+      this == NotificationPermissionStatus.provisional;
+}
 
+enum NotificationPlatformTokenStatus {
+  unavailable,
+  waitingForPlatformToken,
+  ready,
+}
+
+class NotificationPlatformTokenState {
+  const NotificationPlatformTokenState({required this.status, this.fcmToken});
+
+  final NotificationPlatformTokenStatus status;
+  final String? fcmToken;
+
+  bool get isReady =>
+      status == NotificationPlatformTokenStatus.ready && fcmToken != null;
+}
+
+enum NotificationPlatformFailureCode {
+  firebaseUnavailable,
+  permissionDenied,
+  waitingForPlatformToken,
+  operationFailed,
+  configurationError,
+}
+
+class NotificationPlatformException implements Exception {
+  const NotificationPlatformException({
+    required this.code,
+    required this.exceptionType,
+  });
+
+  final NotificationPlatformFailureCode code;
+  final String exceptionType;
+
+  @override
+  String toString() => 'NotificationPlatformException($code, $exceptionType)';
+}
+
+abstract class NotificationRouter {
+  Future<void> handleRemoteOpen(RemoteMessage message);
+  Future<void> handleLocalOpen(String? payload);
+}
+
+class DebugNotificationRouter implements NotificationRouter {
+  const DebugNotificationRouter();
+
+  @override
+  Future<void> handleLocalOpen(String? payload) async {
+    if (!kDebugMode) return;
+    debugPrint('[Notifications] local open payload=${payload ?? "<empty>"}');
+  }
+
+  @override
+  Future<void> handleRemoteOpen(RemoteMessage message) async {
+    if (!kDebugMode) return;
+    debugPrint(
+      '[Notifications] remote open'
+      ' id=${message.messageId}'
+      ' dataKeys=${message.data.keys.toList()}',
+    );
+  }
+}
+
+abstract class NotificationPlatformGateway {
+  Stream<String> get onTokenRefresh;
+
+  Future<void> initialize(NotificationRouter router);
+  Future<NotificationPermissionStatus> permissionStatus();
+  Future<NotificationPermissionStatus> requestPermission();
+  Future<bool> canRequestPermissionAgain();
+  Future<bool> openSystemSettings();
+  Future<NotificationPlatformTokenState> tokenState();
+  Future<PushTopicApplyResult> applyTopicIntent({
+    required String topic,
+    required bool enabled,
+  });
+}
+
+enum PushTopicApplyStatus { performed, waitingForToken }
+
+class PushTopicApplyResult {
+  const PushTopicApplyResult({
+    required this.topic,
+    required this.enabled,
+    required this.status,
+  });
+
+  final String topic;
+  final bool enabled;
+  final PushTopicApplyStatus status;
+}
+
+class FirebaseNotificationPlatformGateway
+    implements NotificationPlatformGateway {
+  FirebaseNotificationPlatformGateway(this._messaging);
+
+  final FirebaseMessaging? _messaging;
   final FlutterLocalNotificationsPlugin _local =
       FlutterLocalNotificationsPlugin();
-  bool _configured = false;
 
-  /// Well-known broadcast topic every opted-in device joins.
-  static const String broadcastTopic = 'all';
-
-  /// Default channel — mirrors the native `siyaq_general` channel referenced by
-  /// the FCM manifest metadata (high importance → heads-up).
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
     'siyaq_general',
     'عام',
@@ -58,29 +142,21 @@ class PushMessagingService {
     importance: Importance.high,
   );
 
-  // ── Streams ────────────────────────────────────────────────────────────────
-  /// Emits a new registration token whenever FCM rotates it.
-  Stream<String> get onTokenRefresh => _fm.onTokenRefresh;
+  bool _initialized = false;
+  StreamSubscription<RemoteMessage>? _foregroundSub;
+  StreamSubscription<RemoteMessage>? _openSub;
 
-  /// Messages delivered while the app is in the **foreground**.
-  Stream<RemoteMessage> get onForegroundMessage => FirebaseMessaging.onMessage;
+  @override
+  Stream<String> get onTokenRefresh =>
+      _messaging?.onTokenRefresh ?? const Stream<String>.empty();
 
-  /// User tapped a notification that opened the app from the background.
-  Stream<RemoteMessage> get onMessageOpenedApp =>
-      FirebaseMessaging.onMessageOpenedApp;
+  @override
+  Future<void> initialize(NotificationRouter router) async {
+    if (_initialized || _messaging == null) return;
+    _initialized = true;
 
-  // ── Configuration ───────────────────────────────────────────────────────────
-  /// One-time runtime setup. Idempotent. Requests **no** permission — that is a
-  /// deliberate product moment (see [requestPermission]). Initializes local
-  /// notifications (used to DISPLAY foreground messages on Android), wires iOS
-  /// foreground presentation, and the tap-to-open handlers (incl. cold start).
-  Future<void> configure({void Function(RemoteMessage message)? onOpened}) async {
-    if (_configured) return;
-    _configured = true;
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-    // Local notifications render a real system notification when a message
-    // arrives while the app is FOREGROUNDED (Android otherwise only fires
-    // onMessage without showing anything).
     const androidInit = AndroidInitializationSettings('ic_stat_siyaq');
     const iosInit = DarwinInitializationSettings(
       requestAlertPermission: false,
@@ -89,10 +165,8 @@ class PushMessagingService {
     );
     await _local.initialize(
       settings: const InitializationSettings(android: androidInit, iOS: iosInit),
-      onDidReceiveNotificationResponse: (resp) {
-        if (kDebugMode) {
-          debugPrint('[FCM] local notification tapped: payload=${resp.payload}');
-        }
+      onDidReceiveNotificationResponse: (response) async {
+        await router.handleLocalOpen(response.payload);
       },
     );
     await _local
@@ -101,48 +175,35 @@ class PushMessagingService {
         >()
         ?.createNotificationChannel(_channel);
 
-    // iOS: show alert/badge/sound while the app is foregrounded.
-    await _fm.setForegroundNotificationPresentationOptions(
+    await _messaging.setForegroundNotificationPresentationOptions(
       alert: true,
       badge: true,
       sound: true,
     );
 
-    // Foreground messages → display a real notification + react in code.
-    onForegroundMessage.listen(_onForeground);
+    _foregroundSub ??= FirebaseMessaging.onMessage.listen((message) async {
+      if (defaultTargetPlatform == TargetPlatform.android &&
+          message.notification != null) {
+        await _showAndroidForegroundNotification(message);
+      }
+    });
 
-    if (onOpened != null) {
-      onMessageOpenedApp.listen(onOpened);
-      // App launched from a terminated state by tapping a notification.
-      final initial = await _fm.getInitialMessage();
-      if (initial != null) onOpened(initial);
+    _openSub ??= FirebaseMessaging.onMessageOpenedApp.listen(
+      router.handleRemoteOpen,
+    );
+    final initial = await _messaging.getInitialMessage();
+    if (initial != null) {
+      await router.handleRemoteOpen(initial);
     }
   }
 
-  void _onForeground(RemoteMessage message) {
-    if (kDebugMode) {
-      debugPrint(
-        '[FCM] foreground message received: id=${message.messageId} '
-        'hasNotification=${message.notification != null} '
-        'data=${message.data.keys.toList()}',
-      );
-    }
-    // iOS already shows the banner via presentation options; Android must post
-    // a local notification to surface it while the app is open.
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      showLocalNotification(message);
-    }
-  }
-
-  /// Renders [message]'s notification block as a system notification. Used for
-  /// foreground display; a no-op when the message carries no notification.
-  Future<void> showLocalNotification(RemoteMessage message) async {
-    final n = message.notification;
-    if (n == null) return;
+  Future<void> _showAndroidForegroundNotification(RemoteMessage message) async {
+    final notification = message.notification;
+    if (notification == null) return;
     await _local.show(
-      id: n.hashCode,
-      title: n.title,
-      body: n.body,
+      id: notification.hashCode,
+      title: notification.title,
+      body: notification.body,
       notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           _channel.id,
@@ -153,149 +214,175 @@ class PushMessagingService {
           icon: 'ic_stat_siyaq',
           color: const Color(0xFFDDB75F),
         ),
-        iOS: const DarwinNotificationDetails(),
       ),
       payload: message.messageId,
     );
   }
 
-  // ── Permission ──────────────────────────────────────────────────────────────
-  /// Current permission status without prompting. Android 13+ is read via
-  /// `permission_handler` (the source of truth for `POST_NOTIFICATIONS`); iOS
-  /// via FCM's notification settings (covers provisional).
-  Future<PushPermissionStatus> permissionStatus() async {
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return _mapPh(await ph.Permission.notification.status);
+  @override
+  Future<NotificationPermissionStatus> permissionStatus() async {
+    if (_messaging == null) {
+      throw const NotificationPlatformException(
+        code: NotificationPlatformFailureCode.firebaseUnavailable,
+        exceptionType: 'firebase_unavailable',
+      );
     }
-    return _map((await _fm.getNotificationSettings()).authorizationStatus);
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return _mapPermissionHandler(await ph.Permission.notification.status);
+    }
+    final settings = await _messaging.getNotificationSettings();
+    return _mapAuthorizationStatus(settings.authorizationStatus);
   }
 
-  /// Explicitly request permission from a deliberate product moment. On Android
-  /// 13+ this triggers the `POST_NOTIFICATIONS` runtime dialog via
-  /// `permission_handler` (more reliable than FCM's own path); on iOS it shows
-  /// the system dialog via FCM (which also registers for APNs).
-  Future<PushPermissionStatus> requestPermission() async {
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      final res = await ph.Permission.notification.request();
-      // Keep FCM's own settings in sync (no extra prompt on Android).
-      await _fm.requestPermission();
-      return _mapPh(res);
+  @override
+  Future<NotificationPermissionStatus> requestPermission() async {
+    if (_messaging == null) {
+      throw const NotificationPlatformException(
+        code: NotificationPlatformFailureCode.firebaseUnavailable,
+        exceptionType: 'firebase_unavailable',
+      );
     }
-    final settings = await _fm.requestPermission(
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      final result = await ph.Permission.notification.request();
+      await _messaging.requestPermission();
+      return _mapPermissionHandler(result);
+    }
+    final settings = await _messaging.requestPermission(
       alert: true,
       badge: true,
       sound: true,
     );
-    return _map(settings.authorizationStatus);
+    return _mapAuthorizationStatus(settings.authorizationStatus);
   }
 
-  /// True when the OS won't show the prompt again (Android "Don't allow" twice /
-  /// blocked in settings). The UI must then deep-link to system settings.
-  Future<bool> isPermanentlyDenied() async {
+  @override
+  Future<bool> canRequestPermissionAgain() async {
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return ph.Permission.notification.isPermanentlyDenied;
+      return !(await ph.Permission.notification.isPermanentlyDenied);
     }
-    return false;
+    final status = await permissionStatus();
+    return status != NotificationPermissionStatus.denied;
   }
 
-  /// Opens the OS app-settings page so the user can enable notifications when
-  /// the in-app prompt can no longer be shown.
+  @override
   Future<bool> openSystemSettings() => ph.openAppSettings();
 
-  // ── Token ───────────────────────────────────────────────────────────────────
-  /// Best-effort token fetch. On iOS, `getToken()` *triggers* APNs registration
-  /// but throws `apns-token-not-set` until the OS delivers the APNs token — so
-  /// we retry it (up to ~12s) while APNs propagates. Returns null if it never
-  /// arrives (no permission / no network). Immediate on Android.
-  Future<String?> token() async {
-    for (var i = 0; i < 12; i++) {
-      try {
-        return await _fm.getToken();
-      } catch (e) {
-        if (!e.toString().contains('apns-token-not-set')) return null;
-        await Future<void>.delayed(const Duration(seconds: 1));
+  @override
+  Future<NotificationPlatformTokenState> tokenState() async {
+    if (_messaging == null) {
+      return const NotificationPlatformTokenState(
+        status: NotificationPlatformTokenStatus.unavailable,
+      );
+    }
+    try {
+      if (Platform.isIOS) {
+        final apns = await _messaging.getAPNSToken();
+        if (apns == null || apns.isEmpty) {
+          return const NotificationPlatformTokenState(
+            status: NotificationPlatformTokenStatus.waitingForPlatformToken,
+          );
+        }
       }
-    }
-    return null;
-  }
-
-  /// True once FCM can perform token/topic ops (iOS: APNs is set).
-  Future<bool> _ready() async {
-    if (defaultTargetPlatform != TargetPlatform.iOS &&
-        defaultTargetPlatform != TargetPlatform.macOS) {
-      return true;
-    }
-    return await token() != null;
-  }
-
-  /// Invalidate the current token (e.g. on sign-out / disabling notifications).
-  Future<void> deleteToken() => _fm.deleteToken();
-
-  // ── Topics ──────────────────────────────────────────────────────────────────
-  Future<void> subscribeToTopic(String topic) async {
-    try {
-      if (!await _ready()) return; // iOS: skip until APNs is set
-      await _fm.subscribeToTopic(topic);
+      final token = await _messaging.getToken();
+      if (token == null || token.isEmpty) {
+        return const NotificationPlatformTokenState(
+          status: NotificationPlatformTokenStatus.waitingForPlatformToken,
+        );
+      }
+      return NotificationPlatformTokenState(
+        status: NotificationPlatformTokenStatus.ready,
+        fcmToken: token,
+      );
     } catch (e) {
-      debugPrint('[FCM] subscribeToTopic failed: $e');
+      final text = e.toString();
+      if (text.contains('apns-token-not-set')) {
+        return const NotificationPlatformTokenState(
+          status: NotificationPlatformTokenStatus.waitingForPlatformToken,
+        );
+      }
+      throw NotificationPlatformException(
+        code: NotificationPlatformFailureCode.operationFailed,
+        exceptionType: e.runtimeType.toString(),
+      );
     }
   }
 
-  Future<void> unsubscribeFromTopic(String topic) async {
+  @override
+  Future<PushTopicApplyResult> applyTopicIntent({
+    required String topic,
+    required bool enabled,
+  }) async {
+    if (_messaging == null) {
+      throw const NotificationPlatformException(
+        code: NotificationPlatformFailureCode.firebaseUnavailable,
+        exceptionType: 'firebase_unavailable',
+      );
+    }
+    final token = await tokenState();
+    if (!token.isReady) {
+      return PushTopicApplyResult(
+        topic: topic,
+        enabled: enabled,
+        status: PushTopicApplyStatus.waitingForToken,
+      );
+    }
     try {
-      if (!await _ready()) return;
-      await _fm.unsubscribeFromTopic(topic);
+      if (enabled) {
+        await _messaging.subscribeToTopic(topic);
+      } else {
+        await _messaging.unsubscribeFromTopic(topic);
+      }
+      return PushTopicApplyResult(
+        topic: topic,
+        enabled: enabled,
+        status: PushTopicApplyStatus.performed,
+      );
     } catch (e) {
-      debugPrint('[FCM] unsubscribeFromTopic failed: $e');
+      throw NotificationPlatformException(
+        code: NotificationPlatformFailureCode.operationFailed,
+        exceptionType: e.runtimeType.toString(),
+      );
     }
   }
 
-  static PushPermissionStatus _map(AuthorizationStatus s) => switch (s) {
-    AuthorizationStatus.authorized => PushPermissionStatus.authorized,
-    AuthorizationStatus.provisional => PushPermissionStatus.provisional,
-    AuthorizationStatus.denied => PushPermissionStatus.denied,
-    AuthorizationStatus.notDetermined => PushPermissionStatus.notDetermined,
+  static NotificationPermissionStatus _mapAuthorizationStatus(
+    AuthorizationStatus status,
+  ) => switch (status) {
+    AuthorizationStatus.authorized => NotificationPermissionStatus.authorized,
+    AuthorizationStatus.provisional => NotificationPermissionStatus.provisional,
+    AuthorizationStatus.denied => NotificationPermissionStatus.denied,
+    AuthorizationStatus.notDetermined =>
+      NotificationPermissionStatus.notDetermined,
   };
 
-  static PushPermissionStatus _mapPh(ph.PermissionStatus s) {
-    if (s.isGranted || s.isLimited) return PushPermissionStatus.authorized;
-    if (s.isProvisional) return PushPermissionStatus.provisional;
-    return PushPermissionStatus.denied;
+  static NotificationPermissionStatus _mapPermissionHandler(
+    ph.PermissionStatus status,
+  ) {
+    if (status.isGranted || status.isLimited) {
+      return NotificationPermissionStatus.authorized;
+    }
+    if (status.isProvisional) {
+      return NotificationPermissionStatus.provisional;
+    }
+    return NotificationPermissionStatus.denied;
   }
-
-  /// A non-reversible fingerprint (never the token itself) — safe to log.
-  static String fingerprint(String token) =>
-      'len=${token.length} fp=${token.hashCode.toRadixString(16)}';
 }
 
-// ── Providers ─────────────────────────────────────────────────────────────────
-final firebaseMessagingProvider = Provider<FirebaseMessaging>(
-  (ref) => FirebaseMessaging.instance,
+final firebaseMessagingProvider = Provider<FirebaseMessaging?>((ref) {
+  final result = ref.watch(firebaseBootstrapResultProvider);
+  return result is FirebaseAvailable ? FirebaseMessaging.instance : null;
+});
+
+final notificationRouterProvider = Provider<NotificationRouter>(
+  (ref) => const DebugNotificationRouter(),
 );
 
-final pushMessagingServiceProvider = Provider<PushMessagingService>(
-  (ref) => PushMessagingService(ref.watch(firebaseMessagingProvider)),
-);
+final notificationPlatformGatewayProvider =
+    Provider<NotificationPlatformGateway>(
+      (ref) => FirebaseNotificationPlatformGateway(
+        ref.watch(firebaseMessagingProvider),
+      ),
+    );
 
-/// Foreground messages as a stream — the app subscribes to show an in-app cue.
-final foregroundMessageProvider = StreamProvider<RemoteMessage>(
-  (ref) => ref.watch(pushMessagingServiceProvider).onForegroundMessage,
-);
-
-/// Debug-only proof that FCM is correctly installed: fetches a token and logs
-/// only a redacted fingerprint (never the token). Also wires the refresh
-/// listener. No-op in release; no permission prompt; no backend upload.
-Future<void> verifyFcmInstallation(PushMessagingService push) async {
-  if (!kDebugMode) return;
-  push.onTokenRefresh.listen(
-    (t) => debugPrint(
-      '[FCM] token refreshed (${PushMessagingService.fingerprint(t)})',
-    ),
-  );
-  final t = await push.token();
-  debugPrint(
-    t == null
-        ? '[FCM] token not available yet on this platform/device'
-        : '[FCM] registration token OK (${PushMessagingService.fingerprint(t)})',
-  );
-}
+String redactedTokenFingerprint(String token) =>
+    'len=${token.length} fp=${token.hashCode.toRadixString(16)}';

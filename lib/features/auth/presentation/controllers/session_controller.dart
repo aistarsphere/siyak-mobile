@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../../../../core/notifications/notification_runtime.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,7 +11,6 @@ import '../../../v2/presentation/controllers/wallet_controller.dart';
 import '../../domain/entities/account.dart';
 import '../../domain/repositories/auth_repository.dart';
 import 'auth_providers.dart';
-import 'installation_service.dart';
 
 /// Signed-in state. `account == null` means the user is a **guest** (still fully
 /// playable via `X-Installation-ID`).
@@ -65,10 +65,18 @@ class SessionController extends AsyncNotifier<SessionState> {
     // Any 401 rejection bumps this → rebuild restores guest without a network hit.
     ref.watch(sessionRevokedProvider);
     final token = await _sessions.load();
-    if (token == null || token.isEmpty) return const SessionState();
+    if (token == null || token.isEmpty) {
+      unawaited(
+        ref.read(notificationRuntimeActionsProvider).onSessionBecameGuest(),
+      );
+      return const SessionState();
+    }
     final account = await _auth.currentSession();
     if (account == null) {
       await _sessions.clear();
+      unawaited(
+        ref.read(notificationRuntimeActionsProvider).onSessionBecameGuest(),
+      );
       if (kDebugMode) {
         debugPrint('[Auth] stored session invalid → guest (token cleared)');
       }
@@ -80,6 +88,11 @@ class SessionController extends AsyncNotifier<SessionState> {
         'providers=${account.linkedProviders}',
       );
     }
+    unawaited(
+      ref
+          .read(notificationRuntimeActionsProvider)
+          .onSessionAuthenticated(account.publicPlayerId),
+    );
     return SessionState(account: account);
   }
 
@@ -96,8 +109,10 @@ class SessionController extends AsyncNotifier<SessionState> {
         return false; // cancelled
       }
       if (kDebugMode) {
-        debugPrint('[Auth] Google ID token obtained (redacted); '
-            'submitting to backend /v2/auth/google');
+        debugPrint(
+          '[Auth] Google ID token obtained (redacted); '
+          'submitting to backend /v2/auth/google',
+        );
       }
       final installationId = await ref
           .read(installationIdStoreProvider)
@@ -123,13 +138,19 @@ class SessionController extends AsyncNotifier<SessionState> {
         ),
       );
       // Attach this installation to the account + (re)register its push token.
-      unawaited(ref.read(installationServiceProvider).onLogin());
+      unawaited(
+        ref
+            .read(notificationRuntimeActionsProvider)
+            .onSessionAuthenticated(result.account.publicPlayerId),
+      );
       // Account's current_profile is now bearer-scoped — refresh dependent state.
       ref.invalidate(profileControllerProvider);
       ref.invalidate(walletControllerProvider);
       return true;
     } catch (e, st) {
-      if (kDebugMode) debugPrint('[Auth] Google sign-in FAILED: ${e.runtimeType}');
+      if (kDebugMode) {
+        debugPrint('[Auth] Google sign-in FAILED: ${e.runtimeType}');
+      }
       state = AsyncError(e, st);
       // Keep a usable (guest) state so the UI can recover.
       state = AsyncData(prev.copyWith(signingIn: false));
@@ -175,12 +196,18 @@ class SessionController extends AsyncNotifier<SessionState> {
           justCreated: result.created,
         ),
       );
-      unawaited(ref.read(installationServiceProvider).onLogin());
+      unawaited(
+        ref
+            .read(notificationRuntimeActionsProvider)
+            .onSessionAuthenticated(result.account.publicPlayerId),
+      );
       ref.invalidate(profileControllerProvider);
       ref.invalidate(walletControllerProvider);
       return true;
     } catch (e, st) {
-      if (kDebugMode) debugPrint('[Auth] Apple sign-in FAILED: ${e.runtimeType}');
+      if (kDebugMode) {
+        debugPrint('[Auth] Apple sign-in FAILED: ${e.runtimeType}');
+      }
       state = AsyncError(e, st);
       state = AsyncData(prev.copyWith(signingIn: false));
       rethrow;
@@ -202,7 +229,7 @@ class SessionController extends AsyncNotifier<SessionState> {
     state = AsyncData(prev.copyWith(account: updated, justCreated: false));
     // Account display name feeds bearer-scoped profile views.
     ref.invalidate(profileControllerProvider);
-      ref.invalidate(walletControllerProvider);
+    ref.invalidate(walletControllerProvider);
     if (kDebugMode) {
       debugPrint(
         '[Auth] account profile updated: player=${updated.publicPlayerId}',
@@ -220,9 +247,7 @@ class SessionController extends AsyncNotifier<SessionState> {
 
   /// Sign out: revoke server session, drop the local Google session + token.
   Future<void> logout() async {
-    // Detach the installation + invalidate its push token while the bearer is
-    // still valid; the installation UUID itself survives logout.
-    await ref.read(installationServiceProvider).onLogout();
+    await ref.read(notificationRuntimeActionsProvider).onSessionBecameGuest();
     try {
       await _auth.logout();
     } catch (_) {
@@ -233,7 +258,7 @@ class SessionController extends AsyncNotifier<SessionState> {
     } catch (_) {}
     await _sessions.clear();
     ref.invalidate(profileControllerProvider);
-      ref.invalidate(walletControllerProvider);
+    ref.invalidate(walletControllerProvider);
     if (kDebugMode) debugPrint('[Auth] logged out → guest (session cleared)');
     state = const AsyncData(SessionState());
   }

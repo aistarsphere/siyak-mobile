@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/notifications/notifications_controller.dart';
+import '../../../../core/notifications/notification_runtime.dart';
 import '../../../../core/notifications/push_notifications.dart';
 import '../../../../core/theme/siyag_theme.dart';
 import '../../../../core/widgets/siyag/siyag_common.dart';
 import '../../../../core/widgets/siyag/siyag_tap.dart';
 import '../../../auth/domain/repositories/auth_repository.dart';
 import '../../../auth/presentation/controllers/auth_providers.dart';
-import '../../../auth/presentation/controllers/installation_service.dart';
 import '../../../auth/presentation/controllers/session_controller.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../v2/domain/entities/installation_profile.dart';
@@ -115,9 +114,8 @@ class _IdentityHeader extends ConsumerWidget {
         ref,
         title: loc('editName'),
         initial: profile!.displayName ?? '',
-        onSave: (n) => ref
-            .read(profileControllerProvider.notifier)
-            .updateDisplayName(n),
+        onSave: (n) =>
+            ref.read(profileControllerProvider.notifier).updateDisplayName(n),
       );
     }
 
@@ -287,7 +285,8 @@ class _AccountSection extends ConsumerWidget {
                           loc(switch (account.status) {
                             'suspended' => 'v2ErrAccountSuspended',
                             'banned' => 'v2ErrAccountBanned',
-                            'verification_required' => 'v2ErrAccountVerification',
+                            'verification_required' =>
+                              'v2ErrAccountVerification',
                             'deletion_pending' => 'v2ErrAccountDeletionPending',
                             'deleted' => 'v2ErrAccountDeleted',
                             _ => 'v2ErrAccountDisabled',
@@ -415,7 +414,9 @@ Future<void> _showNameSheet(
         builder: (ctx, setSheet) => Directionality(
           textDirection: TextDirection.rtl,
           child: Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.viewInsetsOf(ctx).bottom,
+            ),
             child: Container(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
               decoration: BoxDecoration(
@@ -521,8 +522,8 @@ class _NotificationsSelector extends ConsumerWidget {
   Future<void> _copyToken(BuildContext context, WidgetRef ref) async {
     final loc = ref.read(localizationsProvider);
     final token = await ref
-        .read(notificationsControllerProvider.notifier)
-        .fetchToken();
+        .read(notificationRuntimeActionsProvider)
+        .currentTokenForDebug();
     if (!context.mounted) return;
     final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
     if (token == null) {
@@ -540,8 +541,31 @@ class _NotificationsSelector extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationsProvider);
-    final state = ref.watch(notificationsControllerProvider);
-    final ctrl = ref.read(notificationsControllerProvider.notifier);
+    final state = ref.watch(notificationRuntimeProvider);
+    final ctrl = ref.read(notificationRuntimeActionsProvider);
+    final statusText = switch (state.readiness) {
+      NotificationRuntimeStatus.waitingForPlatformToken => loc(
+        'notificationsWaiting',
+      ),
+      NotificationRuntimeStatus.registeringWithBackend ||
+      NotificationRuntimeStatus.requestingPermission ||
+      NotificationRuntimeStatus.synchronizing => loc(
+        'notificationsRegistering',
+      ),
+      NotificationRuntimeStatus.recoverableError => loc(
+        'notificationsRecoverableError',
+      ),
+      NotificationRuntimeStatus.blockedBySystem => loc('notificationsBlocked'),
+      NotificationRuntimeStatus.ready => loc('notificationsReady'),
+      NotificationRuntimeStatus.disabledByUser => loc('notificationsHint'),
+      NotificationRuntimeStatus.permissionNotDetermined => loc(
+        'notificationsHint',
+      ),
+      NotificationRuntimeStatus.unavailable ||
+      NotificationRuntimeStatus.configurationError => loc(
+        'notificationsRecoverableError',
+      ),
+    };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -575,12 +599,14 @@ class _NotificationsSelector extends ConsumerWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          state.blockedBySystem
-                              ? loc('notificationsBlocked')
-                              : loc('notificationsHint'),
+                          statusText,
                           style: ST.ar(
                             11,
-                            color: state.blockedBySystem
+                            color:
+                                state.blockedBySystem ||
+                                    state.readiness ==
+                                        NotificationRuntimeStatus
+                                            .recoverableError
                                 ? SC.coral
                                 : SC.textMute,
                           ),
@@ -603,13 +629,7 @@ class _NotificationsSelector extends ConsumerWidget {
                       activeThumbColor: SC.onGold,
                       activeTrackColor: SC.gold,
                       onChanged: (v) async {
-                        final perm = await ctrl.toggle(v);
-                        if (v && perm != null && perm.isGranted) {
-                          // Permission just granted → a token is now available.
-                          ref
-                              .read(installationServiceProvider)
-                              .syncPushToken();
-                        }
+                        final perm = await ctrl.setNotificationsEnabled(v);
                         if (v &&
                             perm != null &&
                             !perm.isGranted &&
@@ -638,9 +658,16 @@ class _NotificationsSelector extends ConsumerWidget {
                   onTap: () => _copyToken(context, ref),
                   child: Row(
                     children: [
-                      Icon(Icons.vpn_key_outlined, size: 14, color: SC.textMute),
+                      Icon(
+                        Icons.vpn_key_outlined,
+                        size: 14,
+                        color: SC.textMute,
+                      ),
                       const SizedBox(width: 8),
-                      Text(loc('copyToken'), style: ST.ar(12, color: SC.textDim)),
+                      Text(
+                        loc('copyToken'),
+                        style: ST.ar(12, color: SC.textDim),
+                      ),
                       const Spacer(),
                       Icon(Icons.copy_rounded, size: 12, color: SC.textMute),
                     ],

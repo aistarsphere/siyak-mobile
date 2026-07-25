@@ -154,6 +154,12 @@ const Map<String, String> stringsAr = {
   'themeDark': 'داكن',
   'notifications': 'الإشعارات',
   'notificationsHint': 'استلم تحديثات اللعبة والغرف والمباريات.',
+  'notificationsReady':
+      'تم تسجيل هذا الجهاز وأصبح جاهزاً لتحديثات اللعبة والغرف والمباريات.',
+  'notificationsWaiting': 'تم منح الإذن. ننتظر رمز الجهاز من النظام.',
+  'notificationsRegistering': 'جارٍ تسجيل هذا الجهاز للإشعارات...',
+  'notificationsRecoverableError':
+      'لم يكتمل التسجيل. سيحاول التطبيق مرة أخرى بعد قليل.',
   'notificationsBlocked': 'معطّلة من إعدادات النظام.',
   'notificationsDenied': 'اسمح بالإشعارات من إعدادات النظام لتفعيلها.',
   'openSettings': 'فتح الإعدادات',
@@ -170,7 +176,8 @@ const Map<String, String> stringsAr = {
   'playerId': 'معرّف اللاعب',
   'idCopied': 'تم نسخ معرّف اللاعب',
   'signedInNote': 'مسجّل الدخول عبر Google — يتزامن تقدمك عبر أجهزتك.',
-  'guestIdentityNote': 'هوية مجهولة على هذا الجهاز فقط — لا حساب ولا معرّف جهاز.',
+  'guestIdentityNote':
+      'هوية مجهولة على هذا الجهاز فقط — لا حساب ولا معرّف جهاز.',
   'nameHint': 'اسمك',
   'welcomeTitle': 'مرحباً بك في سياق',
   'welcomeBody': 'اختر كيف يظهر اسمك للاعبين الآخرين. يمكنك تغييره في أي وقت.',

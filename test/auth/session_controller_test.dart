@@ -1,3 +1,5 @@
+import 'package:context_game/core/notifications/notification_runtime.dart';
+import 'package:context_game/core/notifications/push_notifications.dart';
 import 'package:context_game/features/auth/domain/entities/account.dart';
 import 'package:context_game/features/auth/domain/entities/sign_in_result.dart';
 import 'package:context_game/features/auth/domain/repositories/auth_repository.dart';
@@ -82,7 +84,10 @@ class _FakeAuth implements AuthRepository {
   String? lastUpdatedName;
   String? lastUpdatedAvatar;
   @override
-  Future<Account> updateAccount({String? displayName, String? avatarUrl}) async {
+  Future<Account> updateAccount({
+    String? displayName,
+    String? avatarUrl,
+  }) async {
     lastUpdatedName = displayName;
     lastUpdatedAvatar = avatarUrl;
     final base = sessionAccount ?? signInResult?.account ?? _account;
@@ -121,6 +126,34 @@ class _FakeApple implements AppleAuthGateway {
   bool get isSupported => true;
 }
 
+class _FakeNotificationRuntime implements NotificationRuntimeCoordinator {
+  @override
+  NotificationRuntimeState get currentState => const NotificationRuntimeState();
+
+  @override
+  Future<String?> currentTokenForDebug() async => null;
+
+  @override
+  Future<void> initialize() async {}
+
+  @override
+  Future<void> maybeRunFirstPermissionFlow() async {}
+
+  @override
+  Future<void> openSettings() async {}
+
+  @override
+  Future<void> onSessionAuthenticated(String accountId) async {}
+
+  @override
+  Future<void> onSessionBecameGuest() async {}
+
+  @override
+  Future<NotificationPermissionStatus?> setNotificationsEnabled(
+    bool value,
+  ) async => null;
+}
+
 const _account = Account(publicPlayerId: 'SYG-TEST1', displayName: 'سالم');
 
 ProviderContainer _container({
@@ -137,6 +170,9 @@ ProviderContainer _container({
     authRepositoryProvider.overrideWithValue(auth),
     googleAuthGatewayProvider.overrideWithValue(google),
     appleAuthGatewayProvider.overrideWithValue(apple ?? _FakeApple(null)),
+    notificationRuntimeActionsProvider.overrideWithValue(
+      _FakeNotificationRuntime(),
+    ),
   ],
 );
 
@@ -217,37 +253,43 @@ void main() {
     },
   );
 
-  test('Apple sign-in saves the session and migrates the installation', () async {
-    final store = SessionStore(storage: _Mem());
-    final auth = _FakeAuth()
-      ..signInResult = const SignInResult(
-        sessionToken: 'sess_apple',
-        account: Account(
-          publicPlayerId: 'SYG-APPLE',
-          displayName: 'سالم',
-          linkedProviders: ['apple'],
+  test(
+    'Apple sign-in saves the session and migrates the installation',
+    () async {
+      final store = SessionStore(storage: _Mem());
+      final auth = _FakeAuth()
+        ..signInResult = const SignInResult(
+          sessionToken: 'sess_apple',
+          account: Account(
+            publicPlayerId: 'SYG-APPLE',
+            displayName: 'سالم',
+            linkedProviders: ['apple'],
+          ),
+        );
+      final c = _container(
+        session: store,
+        auth: auth,
+        google: _FakeGoogle(null),
+        apple: _FakeApple(
+          const AppleCredential(
+            identityToken: 'apple-idtoken',
+            givenName: 'سالم',
+          ),
         ),
       );
-    final c = _container(
-      session: store,
-      auth: auth,
-      google: _FakeGoogle(null),
-      apple: _FakeApple(
-        const AppleCredential(identityToken: 'apple-idtoken', givenName: 'سالم'),
-      ),
-    );
-    addTearDown(c.dispose);
-    await c.read(sessionControllerProvider.future);
-    final ok = await c
-        .read(sessionControllerProvider.notifier)
-        .signInWithApple();
-    expect(ok, isTrue);
-    final s = c.read(sessionControllerProvider).value!;
-    expect(s.account!.publicPlayerId, 'SYG-APPLE');
-    expect(s.account!.linkedProviders, contains('apple'));
-    expect(store.cachedToken, 'sess_apple');
-    expect(auth.lastInstallation, isNotNull);
-  });
+      addTearDown(c.dispose);
+      await c.read(sessionControllerProvider.future);
+      final ok = await c
+          .read(sessionControllerProvider.notifier)
+          .signInWithApple();
+      expect(ok, isTrue);
+      final s = c.read(sessionControllerProvider).value!;
+      expect(s.account!.publicPlayerId, 'SYG-APPLE');
+      expect(s.account!.linkedProviders, contains('apple'));
+      expect(store.cachedToken, 'sess_apple');
+      expect(auth.lastInstallation, isNotNull);
+    },
+  );
 
   test('cancelled Apple sign-in keeps the guest state', () async {
     final store = SessionStore(storage: _Mem());
@@ -297,39 +339,46 @@ void main() {
     expect(google.signOutCalls, 1);
   });
 
-  test('updateAccountProfile edits the account and clears justCreated', () async {
-    final store = SessionStore(storage: _Mem());
-    final auth = _FakeAuth()
-      ..signInResult = const SignInResult(
-        sessionToken: 'sess_new',
-        account: _account,
-        created: true,
-        suggestedDisplayName: 'سالم',
-      );
-    final c = _container(
-      session: store,
-      auth: auth,
-      google: _FakeGoogle('google-id-token'),
-    );
-    addTearDown(c.dispose);
-    await c.read(sessionControllerProvider.future);
-    await c.read(sessionControllerProvider.notifier).signInWithGoogle();
-    expect(c.read(sessionControllerProvider).value!.justCreated, isTrue);
-
-    await c
-        .read(sessionControllerProvider.notifier)
-        .updateAccountProfile(
-          displayName: 'اسم جديد',
-          avatarUrl: 'https://example.com/a.png',
+  test(
+    'updateAccountProfile edits the account and clears justCreated',
+    () async {
+      final store = SessionStore(storage: _Mem());
+      final auth = _FakeAuth()
+        ..signInResult = const SignInResult(
+          sessionToken: 'sess_new',
+          account: _account,
+          created: true,
+          suggestedDisplayName: 'سالم',
         );
+      final c = _container(
+        session: store,
+        auth: auth,
+        google: _FakeGoogle('google-id-token'),
+      );
+      addTearDown(c.dispose);
+      await c.read(sessionControllerProvider.future);
+      await c.read(sessionControllerProvider.notifier).signInWithGoogle();
+      expect(c.read(sessionControllerProvider).value!.justCreated, isTrue);
 
-    final s = c.read(sessionControllerProvider).value!;
-    expect(auth.lastUpdatedName, 'اسم جديد');
-    expect(auth.lastUpdatedAvatar, 'https://example.com/a.png');
-    expect(s.account!.displayName, 'اسم جديد');
-    expect(s.account!.avatarUrl, 'https://example.com/a.png');
-    expect(s.justCreated, isFalse, reason: 'first-run flag cleared after edit');
-  });
+      await c
+          .read(sessionControllerProvider.notifier)
+          .updateAccountProfile(
+            displayName: 'اسم جديد',
+            avatarUrl: 'https://example.com/a.png',
+          );
+
+      final s = c.read(sessionControllerProvider).value!;
+      expect(auth.lastUpdatedName, 'اسم جديد');
+      expect(auth.lastUpdatedAvatar, 'https://example.com/a.png');
+      expect(s.account!.displayName, 'اسم جديد');
+      expect(s.account!.avatarUrl, 'https://example.com/a.png');
+      expect(
+        s.justCreated,
+        isFalse,
+        reason: 'first-run flag cleared after edit',
+      );
+    },
+  );
 
   test('consumeJustCreated clears the flag without editing', () async {
     final store = SessionStore(storage: _Mem());

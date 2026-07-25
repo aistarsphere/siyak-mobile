@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/siyag_theme.dart';
 import '../../../../core/widgets/siyag/siyag_common.dart';
 import '../../../../core/widgets/siyag/siyag_tap.dart';
+import '../../../auth/domain/repositories/auth_repository.dart';
+import '../../../auth/presentation/controllers/session_controller.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../v2/domain/entities/installation_profile.dart';
 import '../../../v2/presentation/controllers/profile_controller.dart';
@@ -74,6 +76,8 @@ class SiyagProfileScreen extends ConsumerWidget {
               ),
             ],
           ),
+          const SizedBox(height: 24),
+          const _AccountSection(),
           const SizedBox(height: 24),
           Container(
             padding: const EdgeInsets.all(16),
@@ -195,6 +199,112 @@ class SiyagProfileScreen extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Account section: real Google sign-in (guest) or the linked account +
+/// sign-out (signed in). Uses the existing [SessionController]; on a real
+/// authentication failure it surfaces the error (never a silent guest fallback).
+class _AccountSection extends ConsumerWidget {
+  const _AccountSection();
+
+  Future<void> _signIn(BuildContext context, WidgetRef ref) async {
+    final loc = ref.read(localizationsProvider);
+    try {
+      final ok = await ref
+          .read(sessionControllerProvider.notifier)
+          .signInWithGoogle();
+      if (!ok) return; // user cancelled — stay guest silently, no error
+    } catch (e) {
+      final msg = e is GoogleAuthException && e.isConfiguration
+          ? loc('signInConfigError')
+          : loc.errorMessage(e);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(msg)));
+      }
+    }
+  }
+
+  Future<void> _signOut(WidgetRef ref) =>
+      ref.read(sessionControllerProvider.notifier).logout();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationsProvider);
+    final session = ref.watch(sessionControllerProvider);
+    final state = session.asData?.value;
+    final account = state?.account;
+    final signingIn = state?.signingIn ?? false;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: SC.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: SC.line),
+      ),
+      child: account == null
+          // ── Guest → offer Google sign-in ──────────────────────────────────
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Kicker(loc('account')),
+                const SizedBox(height: 6),
+                Text(loc('signInBenefit'), style: ST.ar(13, color: SC.textDim)),
+                const SizedBox(height: 12),
+                SiyagPrimaryButton(
+                  label: loc('signInWithGoogle'),
+                  icon: Icons.login_rounded,
+                  busy: signingIn,
+                  onTap: () => _signIn(context, ref),
+                ),
+              ],
+            )
+          // ── Signed in → show the account + sign out ───────────────────────
+          : Row(
+              children: [
+                SiyagAvatar(
+                  letter: account.effectiveName.characters.first,
+                  size: 44,
+                  active: true,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        account.effectiveName,
+                        style: ST.ar(15, weight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        account.publicPlayerId,
+                        style: ST.mono(11, color: SC.textMute),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        loc('linkedGoogle'),
+                        style: ST.ar(11, color: SC.emerald),
+                      ),
+                    ],
+                  ),
+                ),
+                SiyagTap(
+                  onTap: () => _signOut(ref),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Text(
+                      loc('signOut'),
+                      style: ST.ar(13, color: SC.textDim),
+                    ),
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }

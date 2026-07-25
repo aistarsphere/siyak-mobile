@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../v2/data/session_store.dart';
@@ -63,7 +64,16 @@ class SessionController extends AsyncNotifier<SessionState> {
     final account = await _auth.currentSession();
     if (account == null) {
       await _sessions.clear();
+      if (kDebugMode) {
+        debugPrint('[Auth] stored session invalid → guest (token cleared)');
+      }
       return const SessionState();
+    }
+    if (kDebugMode) {
+      debugPrint(
+        '[Auth] session restored from cold start: player=${account.publicPlayerId} '
+        'providers=${account.linkedProviders}',
+      );
     }
     return SessionState(account: account);
   }
@@ -76,8 +86,13 @@ class SessionController extends AsyncNotifier<SessionState> {
     try {
       final idToken = await _google.obtainIdToken();
       if (idToken == null) {
+        if (kDebugMode) debugPrint('[Auth] Google sign-in cancelled by user');
         state = AsyncData(prev.copyWith(signingIn: false));
         return false; // cancelled
+      }
+      if (kDebugMode) {
+        debugPrint('[Auth] Google ID token obtained (redacted); '
+            'submitting to backend /v2/auth/google');
       }
       final installationId = await ref
           .read(installationIdStoreProvider)
@@ -87,6 +102,13 @@ class SessionController extends AsyncNotifier<SessionState> {
         installationId: installationId,
       );
       await _sessions.save(result.sessionToken);
+      if (kDebugMode) {
+        debugPrint(
+          '[Auth] Google sign-in OK: player=${result.account.publicPlayerId} '
+          'created=${result.created} providers=${result.account.linkedProviders} '
+          '(session token stored securely, redacted)',
+        );
+      }
       state = AsyncData(
         SessionState(
           account: result.account,
@@ -99,6 +121,7 @@ class SessionController extends AsyncNotifier<SessionState> {
       ref.invalidate(profileControllerProvider);
       return true;
     } catch (e, st) {
+      if (kDebugMode) debugPrint('[Auth] Google sign-in FAILED: ${e.runtimeType}');
       state = AsyncError(e, st);
       // Keep a usable (guest) state so the UI can recover.
       state = AsyncData(prev.copyWith(signingIn: false));
@@ -118,6 +141,7 @@ class SessionController extends AsyncNotifier<SessionState> {
     } catch (_) {}
     await _sessions.clear();
     ref.invalidate(profileControllerProvider);
+    if (kDebugMode) debugPrint('[Auth] logged out → guest (session cleared)');
     state = const AsyncData(SessionState());
   }
 }

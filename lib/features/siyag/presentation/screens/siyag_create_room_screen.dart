@@ -44,8 +44,9 @@ class SiyagCreateRoomScreen extends ConsumerWidget {
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
                   child: modes.when(
-                    loading: () =>
-                        Center(child: CircularProgressIndicator(color: SC.coral)),
+                    loading: () => Center(
+                      child: CircularProgressIndicator(color: SC.coral),
+                    ),
                     error: (e, _) => Center(
                       child: Text(
                         'تعذّر التحميل',

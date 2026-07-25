@@ -10,13 +10,12 @@
 class AppConfig {
   AppConfig._();
 
-  /// Documented public base URL — the Cloudflare tunnel fronting the
-  /// "Arabic English Context Game" service. INCLUDES `/api/context-game`.
-  ///
-  /// NOTE: `trycloudflare.com` quick tunnels are ephemeral and rotate when
-  /// the server restarts; override via Settings or --dart-define=CG_BASE.
+  /// Production Runtime base URL for the "Arabic English Context Game" service.
+  /// INCLUDES the `/api/context-game` prefix. This is the stable production
+  /// host — not a temporary tunnel. Override via Settings or
+  /// `--dart-define=CG_BASE` only for local/staging testing.
   static const String documentedPublicUrl =
-      'https://viking-subject-watched-woods.trycloudflare.com/api/context-game';
+      'https://siyak-api.aljoodnet.info/api/context-game';
 
   /// Build-time override. Primary key is `CG_BASE`; `API_BASE_URL` is kept as
   /// a backward-compatible alias.
@@ -72,6 +71,17 @@ class AppConfig {
     'GOOGLE_SERVER_CLIENT_ID',
     defaultValue:
         '1098591360557-am6kibuioo85lmhnp0cmbim62b1ob6i4.apps.googleusercontent.com',
+  );
+
+  /// The Google **iOS OAuth client ID** for bundle `com.kaher.siyak` (project
+  /// `1098591360557`). Required on iOS/macOS as the `clientId` (Android uses the
+  /// SHA-1-registered client instead). Public identifier — never a secret; the
+  /// reversed form is the `Info.plist` URL scheme.
+  /// Overridable with `--dart-define=GOOGLE_IOS_CLIENT_ID=`.
+  static const String googleIosClientId = String.fromEnvironment(
+    'GOOGLE_IOS_CLIENT_ID',
+    defaultValue:
+        '1098591360557-8kishc17ka2t9q5qbg15tmiutkrr5b5f.apps.googleusercontent.com',
   );
 
   /// Normalizes a user/env supplied base URL (trims trailing slashes/spaces).

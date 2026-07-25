@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/legacy.dart';
 
 import '../../../core/theme/siyag_theme.dart';
 import '../../../core/widgets/siyag/siyag_bottom_nav.dart';
+import '../../auth/presentation/controllers/session_controller.dart';
 import 'screens/siyag_home_screen.dart';
 import 'screens/siyag_leaderboard_screen.dart';
 import 'screens/siyag_profile_screen.dart';
@@ -20,6 +21,10 @@ class SiyagShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final index = ref.watch(siyagTabProvider);
+    // Bootstrap account session on launch (cold-start restore). The result is
+    // consumed on the Profile tab; watching here also primes the bearer token
+    // for the API client before any authenticated call.
+    ref.watch(sessionControllerProvider);
     // Depend on Theme so a light/dark switch rebuilds the shell; re-key the
     // stack by brightness so the visible tab repaints immediately (the custom
     // SC-token screens don't otherwise subscribe to Theme changes).

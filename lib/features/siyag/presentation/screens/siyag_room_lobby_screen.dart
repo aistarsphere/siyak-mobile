@@ -93,7 +93,8 @@ class _S extends ConsumerState<SiyagRoomLobbyScreen> {
                               style: ST.mono(11, color: SC.textMute),
                             ),
                             const SizedBox(height: 8),
-                            for (final p in room.participants) _Participant(p: p),
+                            for (final p in room.participants)
+                              _Participant(p: p),
                           ],
                         ),
                       ),
@@ -113,7 +114,9 @@ class _S extends ConsumerState<SiyagRoomLobbyScreen> {
                                         .start(roomId: room.roomId);
                                   } catch (e) {
                                     if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
                                         SnackBar(
                                           content: Text(
                                             ref
@@ -137,7 +140,9 @@ class _S extends ConsumerState<SiyagRoomLobbyScreen> {
                               icon: Icons.logout_rounded,
                               onTap: () async {
                                 await ref
-                                    .read(realtimeRoomControllerProvider.notifier)
+                                    .read(
+                                      realtimeRoomControllerProvider.notifier,
+                                    )
                                     .leave();
                                 await ref
                                     .read(

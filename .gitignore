@@ -49,8 +49,11 @@ design_reference/
 # Secrets — never commit credentials / signing material
 secret/
 **/client_secret*.json
-**/google-services.json
-**/GoogleService-Info.plist
+# NOTE: google-services.json / GoogleService-Info.plist are Firebase *client*
+# config (not secrets — the API key is restricted by app signature/bundle).
+# They are committed so the Firebase foundation is reproducible from a clean
+# clone. Real secrets (OAuth client secrets, service accounts, keystores, .env)
+# remain ignored above/below.
 android/key.properties
 **/*.keystore
 **/*.jks

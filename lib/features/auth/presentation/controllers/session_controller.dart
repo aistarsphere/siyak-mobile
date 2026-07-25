@@ -129,6 +129,36 @@ class SessionController extends AsyncNotifier<SessionState> {
     }
   }
 
+  /// Edit the signed-in account's public profile (`PATCH /account/me`). No-op
+  /// when guest. Clears [SessionState.justCreated] once applied.
+  Future<void> updateAccountProfile({
+    String? displayName,
+    String? avatarUrl,
+  }) async {
+    final prev = state.asData?.value;
+    if (prev == null || prev.account == null) return;
+    final updated = await _auth.updateAccount(
+      displayName: displayName,
+      avatarUrl: avatarUrl,
+    );
+    state = AsyncData(prev.copyWith(account: updated, justCreated: false));
+    // Account display name feeds bearer-scoped profile views.
+    ref.invalidate(profileControllerProvider);
+    if (kDebugMode) {
+      debugPrint(
+        '[Auth] account profile updated: player=${updated.publicPlayerId}',
+      );
+    }
+  }
+
+  /// Acknowledge the one-shot first-run flag without editing anything (the user
+  /// skipped the welcome setup), so the setup sheet is not offered again.
+  void consumeJustCreated() {
+    final prev = state.asData?.value;
+    if (prev == null || !prev.justCreated) return;
+    state = AsyncData(prev.copyWith(justCreated: false));
+  }
+
   /// Sign out: revoke server session, drop the local Google session + token.
   Future<void> logout() async {
     try {

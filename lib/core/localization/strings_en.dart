@@ -159,6 +159,16 @@ const Map<String, String> stringsEn = {
   'signInBenefit': 'Save your progress and play Ranked & Social Rooms.',
   'signOut': 'Sign out',
   'linkedGoogle': 'Linked with Google',
+  'playerId': 'Player ID',
+  'idCopied': 'Player ID copied',
+  'signedInNote':
+      'Signed in with Google — your progress syncs across your devices.',
+  'guestIdentityNote':
+      'Anonymous identity on this device only — no account, no device id.',
+  'nameHint': 'Your name',
+  'welcomeTitle': 'Welcome to Siyaq',
+  'welcomeBody':
+      'Choose how your name appears to other players. You can change it anytime.',
   'signInFailed': 'Sign-in failed. Please try again.',
   'signInConfigError': 'Sign-in isn\'t available on this device right now.',
   'v2ErrSignInRequired': 'Please sign in to continue.',

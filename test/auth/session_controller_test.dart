@@ -65,6 +65,22 @@ class _FakeAuth implements AuthRepository {
 
   @override
   Future<Account?> currentSession() async => sessionAccount;
+
+  String? lastUpdatedName;
+  String? lastUpdatedAvatar;
+  @override
+  Future<Account> updateAccount({String? displayName, String? avatarUrl}) async {
+    lastUpdatedName = displayName;
+    lastUpdatedAvatar = avatarUrl;
+    final base = sessionAccount ?? signInResult?.account ?? _account;
+    final updated = base.copyWith(
+      displayName: displayName,
+      avatarUrl: avatarUrl,
+    );
+    sessionAccount = updated;
+    return updated;
+  }
+
   @override
   Future<void> logout() async => logoutCalls++;
   @override
@@ -206,5 +222,63 @@ void main() {
     expect(store.cachedToken, isNull);
     expect(auth.logoutCalls, 1);
     expect(google.signOutCalls, 1);
+  });
+
+  test('updateAccountProfile edits the account and clears justCreated', () async {
+    final store = SessionStore(storage: _Mem());
+    final auth = _FakeAuth()
+      ..signInResult = const SignInResult(
+        sessionToken: 'sess_new',
+        account: _account,
+        created: true,
+        suggestedDisplayName: 'سالم',
+      );
+    final c = _container(
+      session: store,
+      auth: auth,
+      google: _FakeGoogle('google-id-token'),
+    );
+    addTearDown(c.dispose);
+    await c.read(sessionControllerProvider.future);
+    await c.read(sessionControllerProvider.notifier).signInWithGoogle();
+    expect(c.read(sessionControllerProvider).value!.justCreated, isTrue);
+
+    await c
+        .read(sessionControllerProvider.notifier)
+        .updateAccountProfile(
+          displayName: 'اسم جديد',
+          avatarUrl: 'https://example.com/a.png',
+        );
+
+    final s = c.read(sessionControllerProvider).value!;
+    expect(auth.lastUpdatedName, 'اسم جديد');
+    expect(auth.lastUpdatedAvatar, 'https://example.com/a.png');
+    expect(s.account!.displayName, 'اسم جديد');
+    expect(s.account!.avatarUrl, 'https://example.com/a.png');
+    expect(s.justCreated, isFalse, reason: 'first-run flag cleared after edit');
+  });
+
+  test('consumeJustCreated clears the flag without editing', () async {
+    final store = SessionStore(storage: _Mem());
+    final auth = _FakeAuth()
+      ..signInResult = const SignInResult(
+        sessionToken: 'sess_new',
+        account: _account,
+        created: true,
+        suggestedDisplayName: 'سالم',
+      );
+    final c = _container(
+      session: store,
+      auth: auth,
+      google: _FakeGoogle('google-id-token'),
+    );
+    addTearDown(c.dispose);
+    await c.read(sessionControllerProvider.future);
+    await c.read(sessionControllerProvider.notifier).signInWithGoogle();
+    c.read(sessionControllerProvider.notifier).consumeJustCreated();
+    final s = c.read(sessionControllerProvider).value!;
+    expect(s.justCreated, isFalse);
+    expect(auth.lastUpdatedName, isNull, reason: 'skip performs no edit');
+    expect(s.isSignedIn, isTrue);
   });
 }

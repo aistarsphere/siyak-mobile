@@ -25,6 +25,7 @@ class SiyagAvatar extends StatelessWidget {
     this.size = 40,
     this.color,
     this.active = false,
+    this.imageUrl,
   });
 
   final String letter;
@@ -32,27 +33,44 @@ class SiyagAvatar extends StatelessWidget {
   final Color? color;
   final bool active;
 
+  /// Optional network avatar (e.g. the account `avatar_url`). Falls back to the
+  /// [letter] tile while loading or on error.
+  final String? imageUrl;
+
   @override
   Widget build(BuildContext context) {
     final c = color ?? SC.coral;
+    final letterTile = Text(
+      letter,
+      style: TextStyle(
+        fontFamily: SF.ar,
+        fontSize: size * 0.4,
+        fontWeight: FontWeight.w600,
+        color: active ? SC.onColor(c) : SC.textDim,
+      ),
+    );
+    final hasImage = imageUrl != null && imageUrl!.isNotEmpty;
     return Container(
       width: size,
       height: size,
       alignment: Alignment.center,
+      clipBehavior: hasImage ? Clip.antiAlias : Clip.none,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: active ? c : SC.surfaceHi,
         border: active ? null : Border.all(color: SC.line),
       ),
-      child: Text(
-        letter,
-        style: TextStyle(
-          fontFamily: SF.ar,
-          fontSize: size * 0.4,
-          fontWeight: FontWeight.w600,
-          color: active ? SC.onColor(c) : SC.textDim,
-        ),
-      ),
+      child: hasImage
+          ? Image.network(
+              imageUrl!,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Center(child: letterTile),
+              loadingBuilder: (_, child, progress) =>
+                  progress == null ? child : Center(child: letterTile),
+            )
+          : letterTile,
     );
   }
 }

@@ -16,6 +16,11 @@ abstract class AuthRepository {
   /// authenticated, or `null` on a 401 (session gone → fall back to guest).
   Future<Account?> currentSession();
 
+  /// Update the signed-in account's public profile (contract §4,
+  /// `PATCH /account/me`). Only non-null fields are sent. Returns the updated
+  /// [Account].
+  Future<Account> updateAccount({String? displayName, String? avatarUrl});
+
   /// Revoke the current session server-side.
   Future<void> logout();
 

@@ -43,6 +43,15 @@ class RemoteAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<Account> updateAccount({String? displayName, String? avatarUrl}) async {
+    final res = await _api.patch(
+      '/account/me',
+      body: {'display_name': ?displayName, 'avatar_url': ?avatarUrl},
+    );
+    return AuthMappers.account(res);
+  }
+
+  @override
   Future<void> logout() => _api.post('/auth/logout');
 
   @override

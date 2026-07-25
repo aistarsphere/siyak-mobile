@@ -146,7 +146,8 @@ class MockRoomRepository implements RoomRepository {
 
   @override
   Future<Room> start({required String roomId}) async {
-    _room = _room?.copyWith(state: RoomState.playing) ??
+    _room =
+        _room?.copyWith(state: RoomState.playing) ??
         (throw const V2Exception(V2ErrorCode.roomExpired));
     return _room!;
   }
@@ -156,14 +157,13 @@ class MockRoomRepository implements RoomRepository {
     required String roomId,
     HintMode mode = HintMode.adaptive,
     String difficulty = 'medium',
-  }) async =>
-      const AdaptiveHint(
-        number: 1,
-        word: 'مسيرة',
-        semanticRank: 100,
-        hintsRemaining: 4,
-        bestUserGeneratedRank: 5650,
-      );
+  }) async => const AdaptiveHint(
+    number: 1,
+    word: 'مسيرة',
+    semanticRank: 100,
+    hintsRemaining: 4,
+    bestUserGeneratedRank: 5650,
+  );
 
   @override
   Future<void> leave({required String roomId}) async {

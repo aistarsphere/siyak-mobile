@@ -6,8 +6,9 @@ import '../../data/remote/remote_auth_repository.dart';
 import '../../domain/repositories/auth_repository.dart';
 
 /// Platform Google gateway (mints an ID token for the backend audience).
-final googleAuthGatewayProvider =
-    Provider<GoogleAuthGateway>((ref) => RealGoogleAuthGateway());
+final googleAuthGatewayProvider = Provider<GoogleAuthGateway>(
+  (ref) => RealGoogleAuthGateway(),
+);
 
 /// Live account-auth repository over the shared V2 REST client.
 final authRepositoryProvider = Provider<AuthRepository>(

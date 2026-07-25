@@ -16,8 +16,11 @@ class _CapturingAdapter implements HttpClientAdapter {
   _CapturingAdapter({this.statusCode = 200, this.bodyJson = '{"ok":true}'});
 
   @override
-  Future<ResponseBody> fetch(RequestOptions options,
-      Stream<List<int>>? requestStream, Future<void>? cancelFuture) async {
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<List<int>>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
     lastHeaders = Map<String, dynamic>.from(options.headers);
     return ResponseBody.fromString(
       bodyJson,
@@ -49,15 +52,20 @@ V2ApiClient _client(
 }
 
 void main() {
-  test('injects X-Installation-ID and a client X-Request-ID on every call',
-      () async {
-    final a = _CapturingAdapter();
-    await _client(a).get('/wallet');
-    expect(a.lastHeaders['X-Installation-ID'], 'inst-123');
-    expect(a.lastHeaders['X-Request-ID'], startsWith('req_'));
-    expect(a.lastHeaders.containsKey('Authorization'), isFalse,
-        reason: 'guests send no bearer');
-  });
+  test(
+    'injects X-Installation-ID and a client X-Request-ID on every call',
+    () async {
+      final a = _CapturingAdapter();
+      await _client(a).get('/wallet');
+      expect(a.lastHeaders['X-Installation-ID'], 'inst-123');
+      expect(a.lastHeaders['X-Request-ID'], startsWith('req_'));
+      expect(
+        a.lastHeaders.containsKey('Authorization'),
+        isFalse,
+        reason: 'guests send no bearer',
+      );
+    },
+  );
 
   test('adds Authorization: Bearer when a session token exists', () async {
     final a = _CapturingAdapter();
@@ -65,14 +73,20 @@ void main() {
     expect(a.lastHeaders['Authorization'], 'Bearer sess_abc');
   });
 
-  test('adds X-Game-Language and Idempotency-Key on writes when supplied',
-      () async {
-    final a = _CapturingAdapter();
-    await _client(a).post('/weekly/runs/wr_1/guess',
-        body: {'guess': 'x'}, gameLanguage: 'ar', idempotencyKey: 'idem-1');
-    expect(a.lastHeaders['X-Game-Language'], 'ar');
-    expect(a.lastHeaders['Idempotency-Key'], 'idem-1');
-  });
+  test(
+    'adds X-Game-Language and Idempotency-Key on writes when supplied',
+    () async {
+      final a = _CapturingAdapter();
+      await _client(a).post(
+        '/weekly/runs/wr_1/guess',
+        body: {'guess': 'x'},
+        gameLanguage: 'ar',
+        idempotencyKey: 'idem-1',
+      );
+      expect(a.lastHeaders['X-Game-Language'], 'ar');
+      expect(a.lastHeaders['Idempotency-Key'], 'idem-1');
+    },
+  );
 
   test('maps the error envelope to a typed V2Exception with rawCode', () async {
     final a = _CapturingAdapter(
@@ -84,9 +98,11 @@ void main() {
     );
     await expectLater(
       _client(a).post('/ranked-matches/rm_1/guess', body: {'guess': 'x'}),
-      throwsA(isA<V2Exception>()
-          .having((e) => e.code, 'code', V2ErrorCode.notYourTurn)
-          .having((e) => e.rawCode, 'rawCode', 'NOT_YOUR_TURN')),
+      throwsA(
+        isA<V2Exception>()
+            .having((e) => e.code, 'code', V2ErrorCode.notYourTurn)
+            .having((e) => e.rawCode, 'rawCode', 'NOT_YOUR_TURN'),
+      ),
     );
   });
 
@@ -99,8 +115,11 @@ void main() {
     );
     var fired = false;
     await expectLater(
-      _client(a, token: () => 'sess_x', onAuth: (_) => fired = true)
-          .get('/account/me'),
+      _client(
+        a,
+        token: () => 'sess_x',
+        onAuth: (_) => fired = true,
+      ).get('/account/me'),
       throwsA(isA<V2Exception>()),
     );
     expect(fired, isTrue);
@@ -113,14 +132,21 @@ void main() {
         'error': {
           'code': 'NOT_IN_VOCABULARY',
           'message': 'nope',
-          'details': {'suggestions': ['كتاب', 'علم']},
+          'details': {
+            'suggestions': ['كتاب', 'علم'],
+          },
         },
       }),
     );
     await expectLater(
       _client(a).post('/weekly/runs/wr_1/guess', body: {'guess': 'zzz'}),
-      throwsA(isA<NotInVocabularyException>()
-          .having((e) => e.suggestions, 'suggestions', ['كتاب', 'علم'])),
+      throwsA(
+        isA<NotInVocabularyException>().having(
+          (e) => e.suggestions,
+          'suggestions',
+          ['كتاب', 'علم'],
+        ),
+      ),
     );
   });
 }

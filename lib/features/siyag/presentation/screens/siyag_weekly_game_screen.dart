@@ -20,8 +20,7 @@ class SiyagWeeklyGameScreen extends ConsumerStatefulWidget {
       _SiyagWeeklyGameScreenState();
 }
 
-class _SiyagWeeklyGameScreenState
-    extends ConsumerState<SiyagWeeklyGameScreen> {
+class _SiyagWeeklyGameScreenState extends ConsumerState<SiyagWeeklyGameScreen> {
   final _input = TextEditingController();
   String? _flash;
   double? _prevBest;
@@ -46,8 +45,10 @@ class _SiyagWeeklyGameScreenState
   void _showFlash(String msg) {
     setState(() => _flash = msg);
     _flashTimer?.cancel();
-    _flashTimer = Timer(const Duration(milliseconds: 2200),
-        () => mounted ? setState(() => _flash = null) : null);
+    _flashTimer = Timer(
+      const Duration(milliseconds: 2200),
+      () => mounted ? setState(() => _flash = null) : null,
+    );
   }
 
   @override
@@ -57,27 +58,33 @@ class _SiyagWeeklyGameScreenState
     final run = state.run;
 
     // Progress flash on each newly accepted guess.
-    ref.listen(weeklyRunControllerProvider.select((s) => s.run?.guesses.length),
-        (prev, next) {
-      final r = ref.read(weeklyRunControllerProvider).run;
-      if (r == null || r.guesses.isEmpty) return;
-      final best = r.guesses
-          .map((g) => _heat(g.rank, r.totalWords, g.isSecret))
-          .reduce((a, b) => a > b ? a : b);
-      _showFlash(SiyagHeat.progressMessage(_prevBest, best));
-      _prevBest = best;
-    });
+    ref.listen(
+      weeklyRunControllerProvider.select((s) => s.run?.guesses.length),
+      (prev, next) {
+        final r = ref.read(weeklyRunControllerProvider).run;
+        if (r == null || r.guesses.isEmpty) return;
+        final best = r.guesses
+            .map((g) => _heat(g.rank, r.totalWords, g.isSecret))
+            .reduce((a, b) => a > b ? a : b);
+        _showFlash(SiyagHeat.progressMessage(_prevBest, best));
+        _prevBest = best;
+      },
+    );
 
     // Duplicate feedback.
-    ref.listen(weeklyRunControllerProvider.select((s) => s.duplicateSeq),
-        (prev, next) {
+    ref.listen(weeklyRunControllerProvider.select((s) => s.duplicateSeq), (
+      prev,
+      next,
+    ) {
       if (next > (prev ?? 0)) {
         final w = ref.read(weeklyRunControllerProvider).duplicateCanonical;
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(
-              content:
-                  Text(loc.fill('canonicalDuplicate', {'w': w ?? ''}))));
+          ..showSnackBar(
+            SnackBar(
+              content: Text(loc.fill('canonicalDuplicate', {'w': w ?? ''})),
+            ),
+          );
       }
     });
     ref.listen(weeklyRunControllerProvider.select((s) => s.error), (p, n) {
@@ -89,18 +96,24 @@ class _SiyagWeeklyGameScreenState
       }
     });
     // Solved → result.
-    ref.listen(weeklyRunControllerProvider.select((s) => s.run?.solved ?? false),
-        (prev, next) {
-      if (next == true && prev != true) {
-        final r = ref.read(weeklyRunControllerProvider).run;
-        Navigator.of(context).pushReplacement(siyagRoute(SiyagResultScreen(
-          secretWord: r?.secretWord ?? '',
-          attempts: r?.attempts ?? 0,
-          hintsUsed: r?.hintsUsed ?? 0,
-          elapsed: r?.elapsed,
-        )));
-      }
-    });
+    ref.listen(
+      weeklyRunControllerProvider.select((s) => s.run?.solved ?? false),
+      (prev, next) {
+        if (next == true && prev != true) {
+          final r = ref.read(weeklyRunControllerProvider).run;
+          Navigator.of(context).pushReplacement(
+            siyagRoute(
+              SiyagResultScreen(
+                secretWord: r?.secretWord ?? '',
+                attempts: r?.attempts ?? 0,
+                hintsUsed: r?.hintsUsed ?? 0,
+                elapsed: r?.elapsed,
+              ),
+            ),
+          );
+        }
+      },
+    );
 
     if (run == null) {
       return Scaffold(
@@ -114,8 +127,12 @@ class _SiyagWeeklyGameScreenState
       title: 'التحدي الأسبوعي',
       guesses: [
         for (final g in run.guesses)
-          SiyagGuessVM(g.word, g.rank, _heat(g.rank, total, g.isSecret),
-              solved: g.isSecret),
+          SiyagGuessVM(
+            g.word,
+            g.rank,
+            _heat(g.rank, total, g.isSecret),
+            solved: g.isSecret,
+          ),
       ],
       controller: _input,
       onSubmit: _submit,
@@ -127,8 +144,9 @@ class _SiyagWeeklyGameScreenState
       onRequestHint: () => ref
           .read(weeklyRunControllerProvider.notifier)
           .requestHint(HintMode.adaptive),
-      unknownSuggestions:
-          state.unknownWord != null ? state.unknownSuggestions : const [],
+      unknownSuggestions: state.unknownWord != null
+          ? state.unknownSuggestions
+          : const [],
       onSuggestionTap: (w) {
         _input.text = w;
         _submit(w);

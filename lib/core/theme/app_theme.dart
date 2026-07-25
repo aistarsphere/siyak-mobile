@@ -23,32 +23,37 @@ class AppTheme {
       statusBarIconBrightness: dark ? Brightness.light : Brightness.dark,
       statusBarBrightness: dark ? Brightness.dark : Brightness.light,
       systemNavigationBarColor: t.background,
-      systemNavigationBarIconBrightness:
-          dark ? Brightness.light : Brightness.dark,
+      systemNavigationBarIconBrightness: dark
+          ? Brightness.light
+          : Brightness.dark,
     );
   }
 
   static ThemeData _build(AppTokens t) {
     final scheme = ColorScheme(
       brightness: t.brightness,
-      primary: t.accentPrimary,
-      onPrimary: t.onAccent,
-      secondary: t.accentGold,
-      onSecondary: t.onGold,
+      primary: t.primary,
+      onPrimary: t.onPrimary,
+      primaryContainer: t.primaryContainer,
+      onPrimaryContainer: t.primary,
+      secondary: t.primary,
+      onSecondary: t.onPrimary,
       tertiary: t.info,
-      onTertiary: t.onAccent,
+      onTertiary: t.onPrimary,
       error: t.error,
-      onError: t.onAccent,
+      onError: t.onPrimary,
       surface: t.surface,
       onSurface: t.textPrimary,
-      surfaceContainerHighest: t.surfaceAlt,
-      surfaceContainerHigh: t.surfaceAlt,
+      surfaceContainerHighest: t.surfaceStrong,
+      surfaceContainerHigh: t.surfaceElevated,
       surfaceContainer: t.surface,
       surfaceContainerLow: t.surface,
       surfaceContainerLowest: t.background,
       onSurfaceVariant: t.textSecondary,
       outline: t.border,
       outlineVariant: t.divider,
+      shadow: t.shadow,
+      scrim: t.scrim,
     );
 
     return ThemeData(
@@ -80,7 +85,11 @@ class AppTheme {
       dialogTheme: DialogThemeData(
         backgroundColor: t.surface,
         surfaceTintColor: Colors.transparent,
-        titleTextStyle: ST.ar(18, weight: FontWeight.w700, color: t.textPrimary),
+        titleTextStyle: ST.ar(
+          18,
+          weight: FontWeight.w700,
+          color: t.textPrimary,
+        ),
         contentTextStyle: ST.ar(14, color: t.textSecondary),
       ),
       bottomSheetTheme: BottomSheetThemeData(
@@ -93,12 +102,12 @@ class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: t.background,
         surfaceTintColor: Colors.transparent,
-        indicatorColor: t.surfaceAlt,
+        indicatorColor: t.surfaceElevated,
       ),
       textSelectionTheme: TextSelectionThemeData(
-        cursorColor: t.accentPrimary,
-        selectionHandleColor: t.accentPrimary,
-        selectionColor: t.accentPrimary.withValues(alpha: 0.24),
+        cursorColor: t.primary,
+        selectionHandleColor: t.primary,
+        selectionColor: t.primary.withValues(alpha: 0.24),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -114,35 +123,37 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: t.accentPrimary, width: 2),
+          borderSide: BorderSide(color: t.primary, width: 2),
         ),
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: t.surfaceAlt,
+        backgroundColor: t.surfaceElevated,
         side: BorderSide(color: t.border),
         labelStyle: ST.ar(13, color: t.textSecondary),
       ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected) ? t.accentGold : t.textMuted,
+          (s) => s.contains(WidgetState.selected) ? t.primary : t.textMuted,
         ),
         trackColor: WidgetStateProperty.resolveWith(
           (s) => s.contains(WidgetState.selected)
-              ? t.accentGold.withValues(alpha: 0.35)
-              : t.surfaceAlt,
+              ? t.primary.withValues(alpha: 0.35)
+              : t.surfaceElevated,
         ),
       ),
-      progressIndicatorTheme: ProgressIndicatorThemeData(color: t.accentPrimary),
+      progressIndicatorTheme: ProgressIndicatorThemeData(color: t.primary),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: t.surfaceAlt,
+        backgroundColor: t.surfaceElevated,
         contentTextStyle: ST.ar(14, color: t.textPrimary),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
-      pageTransitionsTheme: const PageTransitionsTheme(builders: {
-        TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
-        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-      }),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        },
+      ),
     );
   }
 }

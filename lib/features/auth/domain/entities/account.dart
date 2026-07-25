@@ -29,8 +29,8 @@ class Account {
   /// Name to render, falling back to the public id when unnamed.
   String get effectiveName =>
       (displayName != null && displayName!.trim().isNotEmpty)
-          ? displayName!
-          : publicPlayerId;
+      ? displayName!
+      : publicPlayerId;
 
   Account copyWith({String? displayName, String? avatarUrl, String? status}) =>
       Account(

@@ -37,14 +37,13 @@ class SessionState {
     String? suggestedDisplayName,
     String? suggestedAvatarUrl,
     bool? justCreated,
-  }) =>
-      SessionState(
-        account: clearAccount ? null : (account ?? this.account),
-        signingIn: signingIn ?? this.signingIn,
-        suggestedDisplayName: suggestedDisplayName ?? this.suggestedDisplayName,
-        suggestedAvatarUrl: suggestedAvatarUrl ?? this.suggestedAvatarUrl,
-        justCreated: justCreated ?? this.justCreated,
-      );
+  }) => SessionState(
+    account: clearAccount ? null : (account ?? this.account),
+    signingIn: signingIn ?? this.signingIn,
+    suggestedDisplayName: suggestedDisplayName ?? this.suggestedDisplayName,
+    suggestedAvatarUrl: suggestedAvatarUrl ?? this.suggestedAvatarUrl,
+    justCreated: justCreated ?? this.justCreated,
+  );
 }
 
 /// Owns account session lifecycle: cold-start restore, Google sign-in (with
@@ -80,19 +79,22 @@ class SessionController extends AsyncNotifier<SessionState> {
         state = AsyncData(prev.copyWith(signingIn: false));
         return false; // cancelled
       }
-      final installationId =
-          await ref.read(installationIdStoreProvider).getOrCreate();
+      final installationId = await ref
+          .read(installationIdStoreProvider)
+          .getOrCreate();
       final result = await _auth.signInWithGoogle(
         idToken: idToken,
         installationId: installationId,
       );
       await _sessions.save(result.sessionToken);
-      state = AsyncData(SessionState(
-        account: result.account,
-        suggestedDisplayName: result.suggestedDisplayName,
-        suggestedAvatarUrl: result.suggestedAvatarUrl,
-        justCreated: result.created,
-      ));
+      state = AsyncData(
+        SessionState(
+          account: result.account,
+          suggestedDisplayName: result.suggestedDisplayName,
+          suggestedAvatarUrl: result.suggestedAvatarUrl,
+          justCreated: result.created,
+        ),
+      );
       // Account's current_profile is now bearer-scoped — refresh dependent state.
       ref.invalidate(profileControllerProvider);
       return true;
@@ -122,5 +124,5 @@ class SessionController extends AsyncNotifier<SessionState> {
 
 final sessionControllerProvider =
     AsyncNotifierProvider<SessionController, SessionState>(
-  SessionController.new,
-);
+      SessionController.new,
+    );

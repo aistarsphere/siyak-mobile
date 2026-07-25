@@ -36,8 +36,10 @@ class SiyagProfileScreen extends ConsumerWidget {
                   active: true,
                 ),
                 const SizedBox(height: 16),
-                Text(profile?.label ?? '—',
-                    style: ST.ar(22, weight: FontWeight.w600)),
+                Text(
+                  profile?.label ?? '—',
+                  style: ST.ar(22, weight: FontWeight.w600),
+                ),
                 const SizedBox(height: 6),
                 SiyagTap(
                   onTap: profile == null
@@ -65,10 +67,11 @@ class SiyagProfileScreen extends ConsumerWidget {
               _stat('${profile?.roomsWon ?? 0}', 'غرف'),
               const SizedBox(width: 8),
               _stat(
-                  profile?.weeklyBestPlacement != null
-                      ? '#${profile!.weeklyBestPlacement}'
-                      : '—',
-                  'الأفضل'),
+                profile?.weeklyBestPlacement != null
+                    ? '#${profile!.weeklyBestPlacement}'
+                    : '—',
+                'الأفضل',
+              ),
             ],
           ),
           const SizedBox(height: 24),
@@ -100,24 +103,27 @@ class SiyagProfileScreen extends ConsumerWidget {
   }
 
   Widget _stat(String v, String l) => Expanded(
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: SC.surface,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            children: [
-              Text(v, style: ST.mono(20)),
-              const SizedBox(height: 6),
-              Text(l, style: ST.ar(9, color: SC.textMute)),
-            ],
-          ),
-        ),
-      );
+    child: Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: SC.surface,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Text(v, style: ST.mono(20)),
+          const SizedBox(height: 6),
+          Text(l, style: ST.ar(9, color: SC.textMute)),
+        ],
+      ),
+    ),
+  );
 
   Future<void> _editName(
-      BuildContext context, WidgetRef ref, InstallationProfile p) async {
+    BuildContext context,
+    WidgetRef ref,
+    InstallationProfile p,
+  ) async {
     final controller = TextEditingController(text: p.displayName ?? '');
     await showModalBottomSheet<void>(
       context: context,
@@ -143,12 +149,12 @@ class SiyagProfileScreen extends ConsumerWidget {
                     height: 4,
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
-                        color: SC.textFaint,
-                        borderRadius: BorderRadius.circular(999)),
+                      color: SC.textFaint,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
                   ),
                 ),
-                Text('تعديل الاسم',
-                    style: ST.ar(18, weight: FontWeight.w600)),
+                Text('تعديل الاسم', style: ST.ar(18, weight: FontWeight.w600)),
                 const SizedBox(height: 12),
                 TextField(
                   controller: controller,
@@ -236,14 +242,20 @@ class _AppearanceSelector extends ConsumerWidget {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(icon,
-                              size: 15,
-                              color: m == mode ? SC.onGold : SC.textMute),
+                          Icon(
+                            icon,
+                            size: 15,
+                            color: m == mode ? SC.onGold : SC.textMute,
+                          ),
                           const SizedBox(width: 6),
-                          Text(loc(key),
-                              style: ST.ar(13,
-                                  weight: FontWeight.w500,
-                                  color: m == mode ? SC.onGold : SC.textDim)),
+                          Text(
+                            loc(key),
+                            style: ST.ar(
+                              13,
+                              weight: FontWeight.w500,
+                              color: m == mode ? SC.onGold : SC.textDim,
+                            ),
+                          ),
                         ],
                       ),
                     ),

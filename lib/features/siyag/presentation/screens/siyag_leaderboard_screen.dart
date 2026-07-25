@@ -57,39 +57,49 @@ class _SiyagLeaderboardScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SiyagScreenHeader(kicker: 'Weekly Rankings', title: 'المتصدرون'),
+          const SiyagScreenHeader(
+            kicker: 'Weekly Rankings',
+            title: 'المتصدرون',
+          ),
           Expanded(
-            child: state.entries.isEmpty && state.loading
-                ? Center(
-                    child: CircularProgressIndicator(color: SC.coral))
-                : ListView(
-                    controller: _scroll,
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                    children: [
-                      if (state.entries.length >= 3)
-                        _Podium(top: state.entries.take(3).toList()),
-                      const SizedBox(height: 8),
-                      for (final e in state.entries.skip(3))
-                        _Row(entry: e),
-                      if (state.currentPlacement != null &&
-                          !state.entries.any((e) => e.isCurrentProfile))
-                        Padding(
-                          padding: const EdgeInsets.only(top: 12),
-                          child: Text('مركزك #${state.currentPlacement}',
-                              style: ST.mono(13, color: SC.coral)),
-                        ),
-                      if (state.loading && state.entries.isNotEmpty)
-                        Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Center(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: state.entries.isEmpty && state.loading
+                  ? Center(child: CircularProgressIndicator(color: SC.coral))
+                  : ListView(
+                      controller: _scroll,
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                      children: [
+                        if (state.entries.length >= 3)
+                          _Podium(top: state.entries.take(3).toList()),
+                        const SizedBox(height: 8),
+                        for (final e in state.entries.skip(3)) _Row(entry: e),
+                        if (state.currentPlacement != null &&
+                            !state.entries.any((e) => e.isCurrentProfile))
+                          Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: Text(
+                              'مركزك #${state.currentPlacement}',
+                              style: ST.mono(13, color: SC.coral),
+                            ),
+                          ),
+                        if (state.loading && state.entries.isNotEmpty)
+                          Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Center(
                               child: SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2, color: SC.coral))),
-                        ),
-                    ],
-                  ),
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: SC.coral,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+            ),
           ),
         ],
       ),
@@ -98,7 +108,7 @@ class _SiyagLeaderboardScreenState
 }
 
 class _Podium extends StatelessWidget {
-  _Podium({required this.top});
+  const _Podium({required this.top});
   final List<LeaderboardEntry> top;
 
   @override
@@ -123,10 +133,12 @@ class _Podium extends StatelessWidget {
                     active: i == 1,
                   ),
                   const SizedBox(height: 8),
-                  Text(order[i].label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: ST.ar(12, color: SC.textDim)),
+                  Text(
+                    order[i].label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: ST.ar(12, color: SC.textDim),
+                  ),
                   const SizedBox(height: 8),
                   TweenAnimationBuilder<double>(
                     tween: Tween(begin: 0, end: heights[i]),
@@ -140,12 +152,16 @@ class _Podium extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: i == 1 ? SC.coralDim : SC.surface,
                         borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(16)),
+                          top: Radius.circular(16),
+                        ),
                         border: Border(
-                            top: BorderSide(color: colors[i], width: 2)),
+                          top: BorderSide(color: colors[i], width: 2),
+                        ),
                       ),
-                      child: Text('${order[i].placement}',
-                          style: ST.mono(22, color: colors[i])),
+                      child: Text(
+                        '${order[i].placement}',
+                        style: ST.mono(22, color: colors[i]),
+                      ),
                     ),
                   ),
                 ],
@@ -182,20 +198,29 @@ class _Row extends StatelessWidget {
         children: [
           SizedBox(
             width: 24,
-            child: Text('${entry.placement}',
-                style: ST.mono(13, color: me ? SC.coral : SC.textMute)),
+            child: Text(
+              '${entry.placement}',
+              style: ST.mono(13, color: me ? SC.coral : SC.textMute),
+            ),
           ),
           const SizedBox(width: 8),
           SiyagAvatar(
-              letter: entry.label.characters.first, size: 34, active: me),
+            letter: entry.label.characters.first,
+            size: 34,
+            active: me,
+          ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(entry.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: ST.ar(15,
-                    weight: me ? FontWeight.w500 : FontWeight.w400,
-                    color: me ? SC.text : SC.textDim)),
+            child: Text(
+              entry.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: ST.ar(
+                15,
+                weight: me ? FontWeight.w500 : FontWeight.w400,
+                color: me ? SC.text : SC.textDim,
+              ),
+            ),
           ),
           if (entry.solved)
             Padding(
@@ -215,11 +240,11 @@ class _Row extends StatelessWidget {
       '${d.inMinutes}:${(d.inSeconds % 60).toString().padLeft(2, '0')}';
 
   Widget _mini(String v, IconData icon) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(v, style: ST.mono(11, color: SC.textMute)),
-          const SizedBox(width: 3),
-          Icon(icon, size: 10, color: SC.textMute),
-        ],
-      );
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text(v, style: ST.mono(11, color: SC.textMute)),
+      const SizedBox(width: 3),
+      Icon(icon, size: 10, color: SC.textMute),
+    ],
+  );
 }

@@ -12,9 +12,9 @@ class Kicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Text(
-        text.toUpperCase(),
-        style: ST.mono(10, color: color ?? SC.textMute, letterSpacing: 1.8),
-      );
+    text.toUpperCase(),
+    style: ST.mono(10, color: color ?? SC.textMute, letterSpacing: 1.8),
+  );
 }
 
 /// Circular avatar (ui.tsx `Avatar`).
@@ -95,14 +95,17 @@ class SiyagPrimaryButton extends StatelessWidget {
             children: [
               if (busy)
                 SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2.2, color: fg))
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2.2, color: fg),
+                )
               else if (icon != null)
                 Icon(icon, size: 16, color: fg),
               if (icon != null || busy) const SizedBox(width: 8),
-              Text(label,
-                  style: ST.ar(15, weight: FontWeight.w600, color: fg)),
+              Text(
+                label,
+                style: ST.ar(15, weight: FontWeight.w600, color: fg),
+              ),
             ],
           ),
         ),
@@ -144,8 +147,10 @@ class SiyagGhostButton extends StatelessWidget {
                 Icon(icon, size: 16, color: SC.text),
                 const SizedBox(width: 8),
               ],
-              Text(label,
-                  style: ST.ar(15, weight: FontWeight.w500, color: SC.text)),
+              Text(
+                label,
+                style: ST.ar(15, weight: FontWeight.w500, color: SC.text),
+              ),
             ],
           ),
         ),
@@ -156,7 +161,11 @@ class SiyagGhostButton extends StatelessWidget {
 
 /// Screen header (ui.tsx `ScreenHeader`): kicker + 30px bold title, px-6 pt-12.
 class SiyagScreenHeader extends StatelessWidget {
-  const SiyagScreenHeader({super.key, required this.kicker, required this.title});
+  const SiyagScreenHeader({
+    super.key,
+    required this.kicker,
+    required this.title,
+  });
 
   final String kicker;
   final String title;
@@ -170,8 +179,7 @@ class SiyagScreenHeader extends StatelessWidget {
         children: [
           Kicker(kicker),
           const SizedBox(height: 4),
-          Text(title,
-              style: ST.ar(30, weight: FontWeight.w700, height: 1.1)),
+          Text(title, style: ST.ar(30, weight: FontWeight.w700, height: 1.1)),
         ],
       ),
     );

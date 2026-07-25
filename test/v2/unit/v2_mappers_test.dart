@@ -33,7 +33,12 @@ void main() {
       'rank': 12905,
       'total_words': 14060,
       'similarity': 0.0183,
-      'heat': {'tier': 1, 'label_ar': 'بارد', 'color': '#3b82f6', 'proximity': 0.1},
+      'heat': {
+        'tier': 1,
+        'label_ar': 'بارد',
+        'color': '#3b82f6',
+        'proximity': 0.1,
+      },
       'heat_level': 'cold',
       'proximity': 0.1,
       'solved': false,
@@ -48,7 +53,14 @@ void main() {
       'hint_count': 0,
       'best_rank': 12905,
       'guesses': [
-        {'guess': 'بيت', 'word': 'بيت', 'rank': 12905, 'proximity': 0.1, 'heat_level': 'cold', 'solved': false},
+        {
+          'guess': 'بيت',
+          'word': 'بيت',
+          'rank': 12905,
+          'proximity': 0.1,
+          'heat_level': 'cold',
+          'solved': false,
+        },
       ],
       'secret_word': null,
     };
@@ -102,8 +114,24 @@ void main() {
         'limit': 3,
         'offset': 0,
         'entries': [
-          {'placement': 1, 'profile_id': 'prof_a', 'display_name': 'لاعب', 'short_code': 'AAA', 'solved': false, 'guesses': 1, 'hints': 1},
-          {'placement': 2, 'profile_id': 'prof_me', 'display_name': 'كاظم', 'short_code': 'ZZZ', 'solved': true, 'guesses': 5, 'hints': 0},
+          {
+            'placement': 1,
+            'profile_id': 'prof_a',
+            'display_name': 'لاعب',
+            'short_code': 'AAA',
+            'solved': false,
+            'guesses': 1,
+            'hints': 1,
+          },
+          {
+            'placement': 2,
+            'profile_id': 'prof_me',
+            'display_name': 'كاظم',
+            'short_code': 'ZZZ',
+            'solved': true,
+            'guesses': 5,
+            'hints': 0,
+          },
         ],
       }, myProfileId: 'prof_me');
       expect(page.entries, hasLength(2));
@@ -125,14 +153,45 @@ void main() {
       'host_profile_id': 'prof_host',
       'max_players': 8,
       'participants': [
-        {'profile_id': 'prof_host', 'display_name': 'المضيف', 'short_code': 'HHH', 'role': 'host', 'connection_state': 'connected'},
-        {'profile_id': 'prof_me', 'display_name': 'أنا', 'short_code': 'MMM', 'role': 'player', 'connection_state': 'connected'},
+        {
+          'profile_id': 'prof_host',
+          'display_name': 'المضيف',
+          'short_code': 'HHH',
+          'role': 'host',
+          'connection_state': 'connected',
+        },
+        {
+          'profile_id': 'prof_me',
+          'display_name': 'أنا',
+          'short_code': 'MMM',
+          'role': 'player',
+          'connection_state': 'connected',
+        },
       ],
       'guesses': [
-        {'ord': 1, 'by': {'profile_id': 'prof_host', 'display_name': 'المضيف', 'short_code': 'HHH'}, 'guess': 'بيت', 'word': 'بيت', 'rank': 5650, 'proximity': 3.7, 'heat': {'tier': 1}, 'solved': false},
+        {
+          'ord': 1,
+          'by': {
+            'profile_id': 'prof_host',
+            'display_name': 'المضيف',
+            'short_code': 'HHH',
+          },
+          'guess': 'بيت',
+          'word': 'بيت',
+          'rank': 5650,
+          'proximity': 3.7,
+          'heat': {'tier': 1},
+          'solved': false,
+        },
       ],
       'hints': [
-        {'ord': 2, 'by': {'profile_id': 'prof_host'}, 'revealed_word': 'مسيرة', 'semantic_rank': 100, 'proximity': 0.0},
+        {
+          'ord': 2,
+          'by': {'profile_id': 'prof_host'},
+          'revealed_word': 'مسيرة',
+          'semantic_rank': 100,
+          'proximity': 0.0,
+        },
       ],
       'winner': null,
       'winning_word': null,
@@ -169,7 +228,14 @@ void main() {
       final e = V2Mappers.roomEvent(const {
         'type': 'room.snapshot',
         'seq': 0,
-        'snapshot': {'room_id': 'room_x', 'join_code': 'AB', 'status': 'lobby', 'participants': [], 'guesses': [], 'hints': []},
+        'snapshot': {
+          'room_id': 'room_x',
+          'join_code': 'AB',
+          'status': 'lobby',
+          'participants': [],
+          'guesses': [],
+          'hints': [],
+        },
       }, 'prof_me');
       expect(e.type, RoomEventType.snapshot);
       expect(e.seq, 0);
@@ -181,7 +247,11 @@ void main() {
         'event_id': 'evt_1',
         'seq': 3,
         'type': 'guess.accepted',
-        'by': {'profile_id': 'prof_me', 'display_name': 'أنا', 'short_code': 'M'},
+        'by': {
+          'profile_id': 'prof_me',
+          'display_name': 'أنا',
+          'short_code': 'M',
+        },
         'guess': 'سيارة',
         'canonical_word': 'سيارة',
         'rank': 11334,
@@ -197,12 +267,34 @@ void main() {
 
     test('participant.joined + room.started + hint.revealed', () {
       expect(
-          V2Mappers.roomEvent(const {'event_id': 'e', 'seq': 1, 'type': 'participant.joined', 'participant': {'profile_id': 'p', 'display_name': 'x', 'short_code': 's'}}, null).type,
-          RoomEventType.participantJoined);
+        V2Mappers.roomEvent(const {
+          'event_id': 'e',
+          'seq': 1,
+          'type': 'participant.joined',
+          'participant': {
+            'profile_id': 'p',
+            'display_name': 'x',
+            'short_code': 's',
+          },
+        }, null).type,
+        RoomEventType.participantJoined,
+      );
       expect(
-          V2Mappers.roomEvent(const {'event_id': 'e', 'seq': 2, 'type': 'room.started'}, null).type,
-          RoomEventType.roomStarted);
-      final hint = V2Mappers.roomEvent(const {'event_id': 'e', 'seq': 4, 'type': 'hint.revealed', 'by': {'profile_id': 'p'}, 'revealed_word': 'لسكان', 'semantic_rank': 59}, null);
+        V2Mappers.roomEvent(const {
+          'event_id': 'e',
+          'seq': 2,
+          'type': 'room.started',
+        }, null).type,
+        RoomEventType.roomStarted,
+      );
+      final hint = V2Mappers.roomEvent(const {
+        'event_id': 'e',
+        'seq': 4,
+        'type': 'hint.revealed',
+        'by': {'profile_id': 'p'},
+        'revealed_word': 'لسكان',
+        'semantic_rank': 59,
+      }, null);
       expect(hint.type, RoomEventType.hintRevealed);
       expect(hint.sharedGuess?.isSystemHint, isTrue);
       expect(hint.sharedGuess?.guess.word, 'لسكان');

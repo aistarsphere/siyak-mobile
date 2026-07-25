@@ -65,7 +65,9 @@ class _SiyagResultScreenState extends ConsumerState<SiyagResultScreen>
                   children: [
                     ScaleTransition(
                       scale: CurvedAnimation(
-                          parent: _pop, curve: Curves.easeOutBack),
+                        parent: _pop,
+                        curve: Curves.easeOutBack,
+                      ),
                       child: Center(
                         child: Container(
                           width: 80,
@@ -75,8 +77,10 @@ class _SiyagResultScreenState extends ConsumerState<SiyagResultScreen>
                             color: SC.emerald,
                             borderRadius: BorderRadius.circular(24),
                           ),
-                          child:
-                              const Text('🎉', style: TextStyle(fontSize: 38)),
+                          child: const Text(
+                            '🎉',
+                            style: TextStyle(fontSize: 38),
+                          ),
                         ),
                       ),
                     ),
@@ -84,13 +88,18 @@ class _SiyagResultScreenState extends ConsumerState<SiyagResultScreen>
                     Center(child: Kicker('Solved!', color: SC.emerald)),
                     const SizedBox(height: 8),
                     Center(
-                        child: Text('الكلمة كانت',
-                            style: ST.ar(16, color: SC.textMute))),
+                      child: Text(
+                        'الكلمة كانت',
+                        style: ST.ar(16, color: SC.textMute),
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     Center(
-                      child: Text(widget.secretWord,
-                          textAlign: TextAlign.center,
-                          style: ST.ar(52, weight: FontWeight.w700, height: 1)),
+                      child: Text(
+                        widget.secretWord,
+                        textAlign: TextAlign.center,
+                        style: ST.ar(52, weight: FontWeight.w700, height: 1),
+                      ),
                     ),
                     const SizedBox(height: 32),
                     Row(
@@ -123,7 +132,8 @@ class _SiyagResultScreenState extends ConsumerState<SiyagResultScreen>
               ),
             ),
             const Positioned.fill(
-                child: IgnorePointer(child: ConfettiOverlay())),
+              child: IgnorePointer(child: ConfettiOverlay()),
+            ),
           ],
         ),
       ),
@@ -131,19 +141,19 @@ class _SiyagResultScreenState extends ConsumerState<SiyagResultScreen>
   }
 
   Widget _stat(String v, String l) => Expanded(
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          decoration: BoxDecoration(
-            color: SC.surface,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            children: [
-              Text(v, style: ST.mono(26)),
-              const SizedBox(height: 6),
-              Text(l, style: ST.ar(11, color: SC.textMute)),
-            ],
-          ),
-        ),
-      );
+    child: Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(
+        color: SC.surface,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Text(v, style: ST.mono(26)),
+          const SizedBox(height: 6),
+          Text(l, style: ST.ar(11, color: SC.textMute)),
+        ],
+      ),
+    ),
+  );
 }

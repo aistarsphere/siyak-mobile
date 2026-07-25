@@ -66,10 +66,10 @@ class AppSettingsController extends Notifier<AppSettings> {
   }
 
   static ThemeMode _parseThemeMode(String? v) => switch (v) {
-        'light' => ThemeMode.light,
-        'dark' => ThemeMode.dark,
-        _ => ThemeMode.system,
-      };
+    'light' => ThemeMode.light,
+    'dark' => ThemeMode.dark,
+    _ => ThemeMode.system,
+  };
 
   SharedPreferences get _sp => ref.read(sharedPreferencesProvider);
 

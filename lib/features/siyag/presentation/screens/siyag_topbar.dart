@@ -42,17 +42,25 @@ class SiyagTopBar extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               // RTL: back points to the right (chevron_right).
-              child: Icon(Icons.chevron_right_rounded,
-                  size: 18, color: SC.textDim),
+              child: Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: SC.textDim,
+              ),
             ),
           ),
           Expanded(
             child: Column(
               children: [
                 if (kicker != null)
-                  Text(kicker!.toUpperCase(),
-                      style: ST.mono(10,
-                          color: kickerColor ?? SC.textMute, letterSpacing: 1.8)),
+                  Text(
+                    kicker!.toUpperCase(),
+                    style: ST.mono(
+                      10,
+                      color: kickerColor ?? SC.textMute,
+                      letterSpacing: 1.8,
+                    ),
+                  ),
                 if (title != null)
                   Text(title!, style: ST.ar(14, weight: FontWeight.w500)),
                 if (subtitle != null) ...[

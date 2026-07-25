@@ -19,30 +19,36 @@ class SC {
   /// before the widget subtree builds, and again whenever the theme changes).
   static void applyBrightness(Brightness b) => _t = AppTokens.of(b);
 
-  // Surfaces
+  // Surfaces (background < surface < elevated < strong)
   static Color get outer => _t.background;
   static Color get bg => _t.background;
   static Color get surface => _t.surface;
-  static Color get surfaceHi => _t.surfaceAlt;
-  static Color get surfaceHover => _t.surfaceAlt;
+  static Color get surfaceHi => _t.surfaceElevated;
+  static Color get surfaceHover => _t.surfaceStrong;
+  static Color get surfaceStrong => _t.surfaceStrong;
   static Color get line => _t.border;
-  static Color get lineStrong => _t.divider;
+  static Color get lineStrong => _t.borderStrong;
+  static Color get divider => _t.divider;
+  static Color get shadow => _t.shadow;
+  static Color get scrim => _t.scrim;
 
   // Text
   static Color get text => _t.textPrimary;
   static Color get textDim => _t.textSecondary;
   static Color get textMute => _t.textMuted;
-  static Color get textFaint => _t.disabled;
+  static Color get textFaint => _t.textDisabled;
 
-  // Primary interactive accent → **graphite** (legacy name `coral`).
-  static Color get coral => _t.accentPrimary;
-  static Color get coralDim => _t.accentPrimary.withValues(alpha: 0.16);
-  static Color get onAccent => _t.onAccent;
+  // Primary interaction color → **gold** (legacy name `coral` retained).
+  static Color get coral => _t.primary;
+  static Color get coralDim => _t.primaryContainer;
+  static Color get onAccent => _t.onPrimary;
 
-  // Restrained **gold** accent (premium / achievement / rank / key result).
-  static Color get gold => _t.accentGold;
-  static Color get goldDim => _t.accentGold.withValues(alpha: 0.16);
-  static Color get onGold => _t.onGold;
+  // Gold roles (gold IS the primary; these are convenience names).
+  static Color get gold => _t.primary;
+  static Color get goldStrong => _t.primaryStrong; // pressed / active
+  static Color get goldDim => _t.primaryContainer;
+  static Color get goldContainer => _t.primaryContainer; // soft gold fill
+  static Color get onGold => _t.onPrimary;
 
   // Semantic (legacy names retained)
   static Color get cyan => _t.info; // informational / hint / cold
@@ -52,7 +58,7 @@ class SC {
   static Color get warning => _t.warning;
   static Color get error => _t.error;
 
-  /// Readable foreground for a filled [fill]: dark graphite text on light fills
+  /// Readable foreground for a filled [fill]: dark charcoal text on light fills
   /// (notably the **gold** primary, whose luminance ≈ 0.48), light text on
   /// graphite/green/info fills. Threshold sits below gold so gold → dark text.
   static Color onColor(Color fill) => fill.computeLuminance() > 0.42
@@ -134,35 +140,40 @@ class SM {
 class ST {
   ST._();
 
-  static TextStyle ar(double size,
-          {FontWeight weight = FontWeight.w400,
-          Color? color,
-          double? height}) =>
-      TextStyle(
-        fontFamily: SF.ar,
-        fontSize: size,
-        fontWeight: weight,
-        color: color ?? SC.text,
-        height: height,
-      );
+  static TextStyle ar(
+    double size, {
+    FontWeight weight = FontWeight.w400,
+    Color? color,
+    double? height,
+  }) => TextStyle(
+    fontFamily: SF.ar,
+    fontSize: size,
+    fontWeight: weight,
+    color: color ?? SC.text,
+    height: height,
+  );
 
-  static TextStyle mono(double size,
-          {FontWeight weight = FontWeight.w400,
-          Color? color,
-          double letterSpacing = 0}) =>
-      TextStyle(
-        fontFamily: SF.mono,
-        fontSize: size,
-        fontWeight: weight,
-        color: color ?? SC.text,
-        letterSpacing: letterSpacing,
-      );
+  static TextStyle mono(
+    double size, {
+    FontWeight weight = FontWeight.w400,
+    Color? color,
+    double letterSpacing = 0,
+  }) => TextStyle(
+    fontFamily: SF.mono,
+    fontSize: size,
+    fontWeight: weight,
+    color: color ?? SC.text,
+    letterSpacing: letterSpacing,
+  );
 
-  static TextStyle sys(double size,
-          {FontWeight weight = FontWeight.w400, Color? color}) =>
-      TextStyle(
-          fontFamily: SF.sys,
-          fontSize: size,
-          fontWeight: weight,
-          color: color ?? SC.text);
+  static TextStyle sys(
+    double size, {
+    FontWeight weight = FontWeight.w400,
+    Color? color,
+  }) => TextStyle(
+    fontFamily: SF.sys,
+    fontSize: size,
+    fontWeight: weight,
+    color: color ?? SC.text,
+  );
 }

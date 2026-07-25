@@ -13,10 +13,7 @@ import 'v2_mappers.dart';
 /// `room.snapshot`; subsequent frames are `{event_id,seq,type,...}`. Frames are
 /// mapped to domain [RoomEvent]s; ordering/gap/reconnect live in the controller.
 class RemoteRealtimeGateway implements RealtimeGateway {
-  RemoteRealtimeGateway({
-    required this.socketBase,
-    this.myProfileId,
-  });
+  RemoteRealtimeGateway({required this.socketBase, this.myProfileId});
 
   /// e.g. `wss://host/api/context-game/v2`
   final String socketBase;
@@ -33,7 +30,8 @@ class RemoteRealtimeGateway implements RealtimeGateway {
     required String installationId,
   }) {
     final uri = Uri.parse(
-        '$socketBase/rooms/$roomId/events?installation_id=$installationId');
+      '$socketBase/rooms/$roomId/events?installation_id=$installationId',
+    );
     final channel = WebSocketChannel.connect(uri);
     _channel = channel;
     final out = StreamController<RoomEvent>();
@@ -62,7 +60,9 @@ class RemoteRealtimeGateway implements RealtimeGateway {
   void sendPing() {
     try {
       _channel?.sink.add(jsonEncode({'type': 'ping'}));
-    } catch (_) {/* socket closing */}
+    } catch (_) {
+      /* socket closing */
+    }
   }
 
   @override

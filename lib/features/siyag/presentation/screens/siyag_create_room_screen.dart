@@ -15,7 +15,8 @@ import 'siyag_room_lobby_screen.dart';
 import 'siyag_topbar.dart';
 
 final _lang = StateProvider<GameplayLanguage>(
-    (ref) => GameplayLanguage.fromCode(ref.watch(appSettingsProvider).lang));
+  (ref) => GameplayLanguage.fromCode(ref.watch(appSettingsProvider).lang),
+);
 final _cat = StateProvider<String?>((ref) => null);
 final _hint = StateProvider<HintMode>((ref) => HintMode.adaptive);
 final _max = StateProvider<int>((ref) => 8);
@@ -40,51 +41,74 @@ class SiyagCreateRoomScreen extends ConsumerWidget {
             children: [
               SiyagTopBar(kicker: 'Create Room', kickerColor: SC.emerald),
               Expanded(
-                child: modes.when(
-                  loading: () => Center(
-                      child: CircularProgressIndicator(color: SC.coral)),
-                  error: (e, _) => Center(
-                      child: Text('تعذّر التحميل',
-                          style: ST.ar(15, color: SC.textMute))),
-                  data: (info) {
-                    final cats = info.playable;
-                    final selCat = ref.watch(_cat) ??
-                        (cats.isNotEmpty ? cats.first.code : '');
-                    return ListView(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                      children: [
-                        _lbl('لغة اللعب'),
-                        _wrap([
-                          for (final l in GameplayLanguage.values)
-                            _chip(l == GameplayLanguage.arabic ? 'العربية' : 'الإنجليزية',
-                                l == lang, () {
-                              ref.read(_lang.notifier).state = l;
-                              ref.read(_cat.notifier).state = null;
-                            }, SC.emerald),
-                        ]),
-                        _lbl('التصنيف'),
-                        _wrap([
-                          for (final c in cats)
-                            _chip(c.labelFor(lang.code), c.code == selCat,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: modes.when(
+                    loading: () =>
+                        Center(child: CircularProgressIndicator(color: SC.coral)),
+                    error: (e, _) => Center(
+                      child: Text(
+                        'تعذّر التحميل',
+                        style: ST.ar(15, color: SC.textMute),
+                      ),
+                    ),
+                    data: (info) {
+                      final cats = info.playable;
+                      final selCat =
+                          ref.watch(_cat) ??
+                          (cats.isNotEmpty ? cats.first.code : '');
+                      return ListView(
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                        children: [
+                          _lbl('لغة اللعب'),
+                          _wrap([
+                            for (final l in GameplayLanguage.values)
+                              _chip(
+                                l == GameplayLanguage.arabic
+                                    ? 'العربية'
+                                    : 'الإنجليزية',
+                                l == lang,
+                                () {
+                                  ref.read(_lang.notifier).state = l;
+                                  ref.read(_cat.notifier).state = null;
+                                },
+                                SC.emerald,
+                              ),
+                          ]),
+                          _lbl('التصنيف'),
+                          _wrap([
+                            for (final c in cats)
+                              _chip(
+                                c.labelFor(lang.code),
+                                c.code == selCat,
                                 () => ref.read(_cat.notifier).state = c.code,
-                                SC.emerald),
-                        ]),
-                        _lbl('نمط التلميح'),
-                        _wrap([
-                          for (final m in HintMode.values)
-                            _chip(m == HintMode.adaptive ? 'تكيّفي' : 'عادي',
+                                SC.emerald,
+                              ),
+                          ]),
+                          _lbl('نمط التلميح'),
+                          _wrap([
+                            for (final m in HintMode.values)
+                              _chip(
+                                m == HintMode.adaptive ? 'تكيّفي' : 'عادي',
                                 ref.watch(_hint) == m,
-                                () => ref.read(_hint.notifier).state = m, SC.cyan),
-                        ]),
-                        _lbl('أقصى عدد لاعبين'),
-                        _wrap([
-                          for (final n in const [2, 4, 6, 8])
-                            _chip('$n', ref.watch(_max) == n,
-                                () => ref.read(_max.notifier).state = n, SC.coral),
-                        ]),
-                      ],
-                    );
-                  },
+                                () => ref.read(_hint.notifier).state = m,
+                                SC.cyan,
+                              ),
+                          ]),
+                          _lbl('أقصى عدد لاعبين'),
+                          _wrap([
+                            for (final n in const [2, 4, 6, 8])
+                              _chip(
+                                '$n',
+                                ref.watch(_max) == n,
+                                () => ref.read(_max.notifier).state = n,
+                                SC.coral,
+                              ),
+                          ]),
+                        ],
+                      );
+                    },
+                  ),
                 ),
               ),
               Padding(
@@ -108,15 +132,20 @@ class SiyagCreateRoomScreen extends ConsumerWidget {
                         );
                     if (room != null && context.mounted) {
                       Navigator.of(context).pushReplacement(
-                          siyagRoute(const SiyagRoomLobbyScreen()));
+                        siyagRoute(const SiyagRoomLobbyScreen()),
+                      );
                     } else if (context.mounted) {
-                      final err =
-                          ref.read(roomLifecycleControllerProvider).error;
+                      final err = ref
+                          .read(roomLifecycleControllerProvider)
+                          .error;
                       if (err != null) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text(ref
-                                .read(localizationsProvider)
-                                .errorMessage(err))));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              ref.read(localizationsProvider).errorMessage(err),
+                            ),
+                          ),
+                        );
                       }
                     }
                   },
@@ -130,16 +159,17 @@ class SiyagCreateRoomScreen extends ConsumerWidget {
   }
 
   Widget _lbl(String t) => Padding(
-        padding: const EdgeInsets.only(top: 4, bottom: 8),
-        child: Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: Text(t, style: ST.ar(13, color: SC.textDim))),
-      );
+    padding: const EdgeInsets.only(top: 4, bottom: 8),
+    child: Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: Text(t, style: ST.ar(13, color: SC.textDim)),
+    ),
+  );
 
   Widget _wrap(List<Widget> c) => Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: Wrap(spacing: 8, runSpacing: 8, children: c),
-      );
+    padding: const EdgeInsets.only(bottom: 16),
+    child: Wrap(spacing: 8, runSpacing: 8, children: c),
+  );
 
   Widget _chip(String label, bool sel, VoidCallback onTap, Color accent) =>
       SiyagTap(
@@ -151,7 +181,10 @@ class SiyagCreateRoomScreen extends ConsumerWidget {
             color: sel ? accent : SC.surface,
             borderRadius: BorderRadius.circular(999),
           ),
-          child: Text(label, style: ST.ar(13, color: sel ? SC.bg : SC.textMute)),
+          child: Text(
+            label,
+            style: ST.ar(13, color: sel ? SC.bg : SC.textMute),
+          ),
         ),
       );
 }

@@ -51,9 +51,11 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
       if (res.unknown) {
         _snack('هذه الكلمة غير موجودة في القاموس');
       } else if (res.duplicate) {
-        _snack(res.firstByLabel != null
-            ? 'خمّنها أولاً: ${res.firstByLabel}'
-            : 'خُمّنت هذه الكلمة سابقاً');
+        _snack(
+          res.firstByLabel != null
+              ? 'خمّنها أولاً: ${res.firstByLabel}'
+              : 'خُمّنت هذه الكلمة سابقاً',
+        );
       } else {
         final me = room.me;
         final g = Guess(
@@ -63,12 +65,14 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
           tier: v1heat.Heat.fromLevel(res.heatLevel, res.proximity ?? 0),
           isSecret: res.solved,
         );
-        ctrl.addAcceptedGuess(SharedGuess(
-          guess: g,
-          byParticipantId: me?.participantId ?? 'me',
-          byLabel: me?.label ?? 'أنت',
-          isMine: true,
-        ));
+        ctrl.addAcceptedGuess(
+          SharedGuess(
+            guess: g,
+            byParticipantId: me?.participantId ?? 'me',
+            byLabel: me?.label ?? 'أنت',
+            isMine: true,
+          ),
+        );
         if (res.solved) ctrl.markSolved(winner: me, secret: res.secretWord);
         _input.clear();
       }
@@ -94,7 +98,8 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
       );
     }
     final solved = room.isSolved;
-    final reconnecting = conn.status == RoomConnStatus.reconnecting ||
+    final reconnecting =
+        conn.status == RoomConnStatus.reconnecting ||
         conn.status == RoomConnStatus.recovering;
 
     return Directionality(
@@ -116,29 +121,41 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
                             onTap: () => ref
                                 .read(roomRepositoryProvider)
                                 .hint(roomId: room.roomId, mode: room.hintMode),
-                            child: Icon(Icons.lightbulb_outline_rounded,
-                                size: 20, color: SC.cyan),
+                            child: Icon(
+                              Icons.lightbulb_outline_rounded,
+                              size: 20,
+                              color: SC.cyan,
+                            ),
                           ),
                   ),
                   if (reconnecting)
                     Container(
                       margin: const EdgeInsets.fromLTRB(20, 0, 20, 8),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: SC.coral.withValues(alpha: 0.13),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Row(children: [
-                        SizedBox(
+                      child: Row(
+                        children: [
+                          SizedBox(
                             width: 14,
                             height: 14,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: SC.coral)),
-                        const SizedBox(width: 8),
-                        Text('إعادة الاتصال...',
-                            style: ST.ar(13, color: SC.coral)),
-                      ]),
+                              strokeWidth: 2,
+                              color: SC.coral,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'إعادة الاتصال...',
+                            style: ST.ar(13, color: SC.coral),
+                          ),
+                        ],
+                      ),
                     ),
                   if (!solved)
                     Padding(
@@ -149,46 +166,62 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
                           borderRadius: BorderRadius.circular(22),
                           border: Border.all(color: SC.lineStrong),
                         ),
-                        padding:
-                            const EdgeInsetsDirectional.only(start: 16, end: 8),
-                        child: Row(children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _input,
-                              textDirection: TextDirection.rtl,
-                              onSubmitted: (_) => _submit(),
-                              style: ST.ar(20),
-                              decoration: InputDecoration(
-                                hintText: 'اكتب كلمتك...',
-                                hintStyle: ST.ar(20, color: SC.textFaint),
-                                border: InputBorder.none,
-                                contentPadding:
-                                    const EdgeInsets.symmetric(vertical: 16),
+                        padding: const EdgeInsetsDirectional.only(
+                          start: 16,
+                          end: 8,
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _input,
+                                textDirection: TextDirection.rtl,
+                                onSubmitted: (_) => _submit(),
+                                style: ST.ar(20),
+                                decoration: InputDecoration(
+                                  hintText: 'اكتب كلمتك...',
+                                  hintStyle: ST.ar(20, color: SC.textFaint),
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                          SiyagTap(
-                            onTap: _submitting ? null : _submit,
-                            scale: 0.88,
-                            child: Container(
-                              width: 48,
-                              height: 48,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: SC.emerald,
-                                borderRadius: BorderRadius.circular(16),
+                            SiyagTap(
+                              onTap: _submitting ? null : _submit,
+                              scale: 0.88,
+                              child: Container(
+                                width: 48,
+                                height: 48,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: SC.emerald,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  child: _submitting
+                                      ? SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          key: const ValueKey('loader'),
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2.2,
+                                            color: SC.onColor(SC.emerald),
+                                          ),
+                                        )
+                                      : Icon(
+                                          Icons.send_rounded,
+                                          key: const ValueKey('icon'),
+                                          size: 18,
+                                          color: SC.onColor(SC.emerald),
+                                        ),
+                                ),
                               ),
-                              child: _submitting
-                                  ? SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2.2, color: SC.bg))
-                                  : Icon(Icons.send_rounded,
-                                      size: 18, color: SC.bg),
                             ),
-                          ),
-                        ]),
+                          ],
+                        ),
                       ),
                     ),
                   Expanded(
@@ -221,43 +254,48 @@ class _SharedRow extends StatelessWidget {
     final edge = shared.isSystemHint
         ? SC.cyan
         : shared.isMine
-            ? SC.coral
-            : SC.textDim;
+        ? SC.coral
+        : SC.textDim;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-      child: Row(children: [
-        Container(width: 3, height: 40, color: edge),
-        const SizedBox(width: 10),
-        Expanded(
-          child: SiyagGuessRow(
-            word: shared.guess.word,
-            rank: shared.guess.rank,
-            heat: heat,
-            solved: shared.guess.isSecret,
+      child: Row(
+        children: [
+          Container(width: 3, height: 40, color: edge),
+          const SizedBox(width: 10),
+          Expanded(
+            child: SiyagGuessRow(
+              word: shared.guess.word,
+              rank: shared.guess.rank,
+              heat: heat,
+              solved: shared.guess.isSecret,
+            ),
           ),
-        ),
-        SizedBox(
-          width: 56,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Icon(
+          SizedBox(
+            width: 56,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Icon(
                   shared.isSystemHint
                       ? Icons.lightbulb_rounded
                       : (shared.isMine
-                          ? Icons.person_rounded
-                          : Icons.group_rounded),
+                            ? Icons.person_rounded
+                            : Icons.group_rounded),
                   size: 11,
-                  color: edge),
-              const SizedBox(height: 2),
-              Text(shared.isSystemHint ? '—' : shared.byLabel,
+                  color: edge,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  shared.isSystemHint ? '—' : shared.byLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: ST.mono(9, color: edge)),
-            ],
+                  style: ST.mono(9, color: edge),
+                ),
+              ],
+            ),
           ),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 }
@@ -269,7 +307,7 @@ class _Winner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
-      color: SC.bg.withValues(alpha: 0.85),
+      color: SC.scrim,
       alignment: Alignment.center,
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -281,28 +319,35 @@ class _Winner extends ConsumerWidget {
               height: 72,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                  color: SC.emerald, borderRadius: BorderRadius.circular(24)),
-              child: Icon(Icons.emoji_events_rounded,
-                  size: 34, color: SC.bg),
+                color: SC.emerald,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Icon(
+                Icons.emoji_events_rounded,
+                size: 34,
+                color: SC.onColor(SC.emerald),
+              ),
             ),
             const SizedBox(height: 16),
             Kicker('Winner', color: SC.emerald),
             const SizedBox(height: 6),
-            Text(room.winner?.label ?? '—',
-                style: ST.ar(28, weight: FontWeight.w700)),
+            Text(
+              room.winner?.label ?? '—',
+              style: ST.ar(28, weight: FontWeight.w700),
+            ),
             if (room.secretWord != null) ...[
               const SizedBox(height: 12),
-              Text('الكلمة: ${room.secretWord}',
-                  style: ST.ar(16, color: SC.textDim)),
+              Text(
+                'الكلمة: ${room.secretWord}',
+                style: ST.ar(16, color: SC.textDim),
+              ),
             ],
             const SizedBox(height: 24),
             SiyagPrimaryButton(
               label: 'العودة للرئيسية',
               color: SC.emerald,
               onTap: () async {
-                await ref
-                    .read(realtimeRoomControllerProvider.notifier)
-                    .leave();
+                await ref.read(realtimeRoomControllerProvider.notifier).leave();
                 await ref
                     .read(roomLifecycleControllerProvider.notifier)
                     .leave();

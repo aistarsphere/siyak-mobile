@@ -23,18 +23,21 @@ class V2ApiClient {
     String? Function()? sessionTokenProvider,
     void Function(V2Exception error)? onAuthFailure,
     Dio? dio,
-  })  : _loadId = installationIdLoader,
-        _sessionToken = sessionTokenProvider,
-        // ignore: prefer_initializing_formals
-        _onAuthFailure = onAuthFailure,
-        _dio = dio ??
-            Dio(BaseOptions(
-              baseUrl: baseUrl,
-              connectTimeout: AppConfig.connectTimeout,
-              receiveTimeout: AppConfig.receiveTimeout,
-              headers: const {'Accept': 'application/json'},
-              responseType: ResponseType.json,
-            ));
+  }) : _loadId = installationIdLoader,
+       _sessionToken = sessionTokenProvider,
+       // ignore: prefer_initializing_formals
+       _onAuthFailure = onAuthFailure,
+       _dio =
+           dio ??
+           Dio(
+             BaseOptions(
+               baseUrl: baseUrl,
+               connectTimeout: AppConfig.connectTimeout,
+               receiveTimeout: AppConfig.receiveTimeout,
+               headers: const {'Accept': 'application/json'},
+               responseType: ResponseType.json,
+             ),
+           );
 
   final Dio _dio;
   final Future<String> Function() _loadId;
@@ -53,16 +56,24 @@ class V2ApiClient {
     CancelToken? cancelToken,
   }) async {
     try {
-      return await _send(() async => _dio.get<dynamic>(path,
+      return await _send(
+        () async => _dio.get<dynamic>(
+          path,
           queryParameters: query,
           cancelToken: cancelToken,
-          options: await _opts()));
+          options: await _opts(),
+        ),
+      );
     } on V2Exception catch (e) {
       if (e.isConnectivity) {
-        return _send(() async => _dio.get<dynamic>(path,
+        return _send(
+          () async => _dio.get<dynamic>(
+            path,
             queryParameters: query,
             cancelToken: cancelToken,
-            options: await _opts())); // single safe retry
+            options: await _opts(),
+          ),
+        ); // single safe retry
       }
       rethrow;
     }
@@ -74,27 +85,33 @@ class V2ApiClient {
     CancelToken? cancelToken,
     String? gameLanguage,
     String? idempotencyKey,
-  }) =>
-      _send(() async => _dio.post<dynamic>(path,
-          data: body ?? const {},
-          cancelToken: cancelToken,
-          options: await _opts(
-            gameLanguage: gameLanguage,
-            idempotencyKey: idempotencyKey,
-          )));
+  }) => _send(
+    () async => _dio.post<dynamic>(
+      path,
+      data: body ?? const {},
+      cancelToken: cancelToken,
+      options: await _opts(
+        gameLanguage: gameLanguage,
+        idempotencyKey: idempotencyKey,
+      ),
+    ),
+  );
 
   Future<Map<String, dynamic>> patch(
     String path, {
     Object? body,
     String? idempotencyKey,
-  }) =>
-      _send(() async => _dio.patch<dynamic>(path,
-          data: body ?? const {},
-          options: await _opts(idempotencyKey: idempotencyKey)));
+  }) => _send(
+    () async => _dio.patch<dynamic>(
+      path,
+      data: body ?? const {},
+      options: await _opts(idempotencyKey: idempotencyKey),
+    ),
+  );
 
-  Future<Map<String, dynamic>> delete(String path, {Object? body}) =>
-      _send(() async =>
-          _dio.delete<dynamic>(path, data: body, options: await _opts()));
+  Future<Map<String, dynamic>> delete(String path, {Object? body}) => _send(
+    () async => _dio.delete<dynamic>(path, data: body, options: await _opts()),
+  );
 
   Future<Options> _opts({String? gameLanguage, String? idempotencyKey}) async {
     final headers = <String, String>{
@@ -111,7 +128,8 @@ class V2ApiClient {
   }
 
   Future<Map<String, dynamic>> _send(
-      Future<Response<dynamic>> Function() run) async {
+    Future<Response<dynamic>> Function() run,
+  ) async {
     try {
       final res = await run();
       final data = res.data;
@@ -175,7 +193,7 @@ class V2ApiClient {
 /// Special case: an out-of-vocabulary guess (HTTP 422) carrying suggestions.
 class NotInVocabularyException extends V2Exception {
   const NotInVocabularyException(this.suggestions)
-      : super(V2ErrorCode.notInVocabulary, detail: 'not_in_vocabulary');
+    : super(V2ErrorCode.notInVocabulary, detail: 'not_in_vocabulary');
 
   final List<String> suggestions;
 }

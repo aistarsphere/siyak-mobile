@@ -46,16 +46,15 @@ class InstallationProfile {
     int? roomsJoined,
     int? roomsWon,
     int? weeklyBestPlacement,
-  }) =>
-      InstallationProfile(
-        installationId: installationId,
-        profileId: profileId ?? this.profileId,
-        shortCode: shortCode,
-        displayName: displayName ?? this.displayName,
-        gamesPlayed: gamesPlayed ?? this.gamesPlayed,
-        gamesSolved: gamesSolved ?? this.gamesSolved,
-        roomsJoined: roomsJoined ?? this.roomsJoined,
-        roomsWon: roomsWon ?? this.roomsWon,
-        weeklyBestPlacement: weeklyBestPlacement ?? this.weeklyBestPlacement,
-      );
+  }) => InstallationProfile(
+    installationId: installationId,
+    profileId: profileId ?? this.profileId,
+    shortCode: shortCode,
+    displayName: displayName ?? this.displayName,
+    gamesPlayed: gamesPlayed ?? this.gamesPlayed,
+    gamesSolved: gamesSolved ?? this.gamesSolved,
+    roomsJoined: roomsJoined ?? this.roomsJoined,
+    roomsWon: roomsWon ?? this.roomsWon,
+    weeklyBestPlacement: weeklyBestPlacement ?? this.weeklyBestPlacement,
+  );
 }

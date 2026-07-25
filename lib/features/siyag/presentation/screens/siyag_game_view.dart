@@ -114,10 +114,7 @@ class _SiyagGameViewState extends State<SiyagGameView> {
           bottom: false,
           child: Column(
             children: [
-              SiyagTopBar(
-                title: widget.title,
-                subtitle: '${g.length} GUESSES',
-              ),
+              SiyagTopBar(title: widget.title, subtitle: '${g.length} GUESSES'),
               // Input
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
@@ -142,8 +139,9 @@ class _SiyagGameViewState extends State<SiyagGameView> {
                             hintText: 'اكتب كلمتك...',
                             hintStyle: ST.ar(20, color: SC.textFaint),
                             border: InputBorder.none,
-                            contentPadding:
-                                const EdgeInsets.symmetric(vertical: 16),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 16,
+                            ),
                           ),
                         ),
                       ),
@@ -158,14 +156,23 @@ class _SiyagGameViewState extends State<SiyagGameView> {
                             color: SC.coral,
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          child: widget.submitting
-                              ? SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2.2, color: SC.bg))
-                              : Icon(Icons.send_rounded,
-                                  size: 18, color: SC.bg),
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            child: widget.submitting
+                                ? SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.2,
+                                      color: SC.onGold,
+                                    ),
+                                  )
+                                : Icon(
+                                    Icons.send_rounded,
+                                    size: 18,
+                                    color: SC.onGold,
+                                  ),
+                          ),
                         ),
                       ),
                     ],
@@ -178,8 +185,11 @@ class _SiyagGameViewState extends State<SiyagGameView> {
                 child: widget.flash == null
                     ? null
                     : Center(
-                        child: Text(widget.flash!,
-                            style: ST.ar(13, color: SC.coral))),
+                        child: Text(
+                          widget.flash!,
+                          style: ST.ar(13, color: SC.coral),
+                        ),
+                      ),
               ),
               // Unknown suggestions (edge state extended in-grammar)
               if (widget.unknownSuggestions.isNotEmpty)
@@ -194,7 +204,9 @@ class _SiyagGameViewState extends State<SiyagGameView> {
                           onTap: () => widget.onSuggestionTap?.call(w),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 8),
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
                               color: SC.surfaceHi,
                               borderRadius: BorderRadius.circular(999),
@@ -242,8 +254,9 @@ class _SiyagGameViewState extends State<SiyagGameView> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
                 child: Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: const Kicker('Hints')),
+                  alignment: AlignmentDirectional.centerStart,
+                  child: const Kicker('Hints'),
+                ),
               ),
               SizedBox(
                 height: 44,
@@ -321,8 +334,10 @@ class _SiyagGameViewState extends State<SiyagGameView> {
           color: active ? SC.coral : SC.surface,
           borderRadius: BorderRadius.circular(999),
         ),
-        child: Text(labels[m]!,
-            style: ST.ar(12, color: active ? SC.bg : SC.textMute)),
+        child: Text(
+          labels[m]!,
+          style: ST.ar(12, color: active ? SC.bg : SC.textMute),
+        ),
       ),
     );
   }

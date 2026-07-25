@@ -119,14 +119,18 @@ class _RoomGameScreenState extends ConsumerState<RoomGameScreen> {
           : Pressable(
               onTap: () async {
                 try {
-                  await ref.read(roomRepositoryProvider).hint(
-                      roomId: room.roomId, mode: room.hintMode);
+                  await ref
+                      .read(roomRepositoryProvider)
+                      .hint(roomId: room.roomId, mode: room.hintMode);
                 } catch (e) {
                   _snack(loc.errorMessage(e));
                 }
               },
-              child: const Icon(Icons.lightbulb_outline,
-                  size: 20, color: AppColors.secondary),
+              child: const Icon(
+                Icons.lightbulb_outline,
+                size: 20,
+                color: AppColors.secondary,
+              ),
             ),
       child: Stack(
         children: [

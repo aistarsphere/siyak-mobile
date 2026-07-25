@@ -26,26 +26,30 @@ class SiyagMultiplayerHubScreen extends ConsumerWidget {
           bottom: false,
           child: Column(
             children: [
-              SiyagTopBar(
-                  kicker: 'Multiplayer', kickerColor: SC.emerald),
+              SiyagTopBar(kicker: 'Multiplayer', kickerColor: SC.emerald),
               const SizedBox(height: 8),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                   children: [
-                    Text('الغرفة المباشرة',
-                        style: ST.ar(26, weight: FontWeight.w700, height: 1.1)),
+                    Text(
+                      'الغرفة المباشرة',
+                      style: ST.ar(26, weight: FontWeight.w700, height: 1.1),
+                    ),
                     const SizedBox(height: 4),
-                    Text('العب نفس الكلمة مع أصدقائك في الوقت الفعلي',
-                        style: ST.ar(14, color: SC.textMute)),
+                    Text(
+                      'العب نفس الكلمة مع أصدقائك في الوقت الفعلي',
+                      style: ST.ar(14, color: SC.textMute),
+                    ),
                     const SizedBox(height: 20),
                     _row(
                       icon: Icons.add_circle_outline_rounded,
                       color: SC.emerald,
                       ar: 'إنشاء غرفة',
                       en: 'Create Room',
-                      onTap: () => Navigator.of(context)
-                          .push(siyagRoute(const SiyagCreateRoomScreen())),
+                      onTap: () => Navigator.of(
+                        context,
+                      ).push(siyagRoute(const SiyagCreateRoomScreen())),
                     ),
                     const SizedBox(height: 12),
                     _row(
@@ -53,8 +57,9 @@ class SiyagMultiplayerHubScreen extends ConsumerWidget {
                       color: SC.cyan,
                       ar: 'انضمام برمز',
                       en: 'Join by code',
-                      onTap: () => Navigator.of(context)
-                          .push(siyagRoute(const SiyagJoinRoomScreen())),
+                      onTap: () => Navigator.of(
+                        context,
+                      ).push(siyagRoute(const SiyagJoinRoomScreen())),
                     ),
                     if (active != null) ...[
                       const SizedBox(height: 12),
@@ -63,8 +68,9 @@ class SiyagMultiplayerHubScreen extends ConsumerWidget {
                         color: SC.coral,
                         ar: 'متابعة الغرفة',
                         en: 'Code ${active.joinCode}',
-                        onTap: () => Navigator.of(context)
-                            .push(siyagRoute(const SiyagRoomLobbyScreen())),
+                        onTap: () => Navigator.of(
+                          context,
+                        ).push(siyagRoute(const SiyagRoomLobbyScreen())),
                       ),
                     ],
                   ],
@@ -83,43 +89,41 @@ class SiyagMultiplayerHubScreen extends ConsumerWidget {
     required String ar,
     required String en,
     required VoidCallback onTap,
-  }) =>
-      SiyagTap(
-        onTap: onTap,
-        scale: 0.98,
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: SC.surface,
-            borderRadius: BorderRadius.circular(24),
+  }) => SiyagTap(
+    onTap: onTap,
+    scale: 0.98,
+    child: Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: SC.surface,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.13),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(icon, size: 20, color: color),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.13),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(icon, size: 20, color: color),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(ar, style: ST.ar(16, weight: FontWeight.w600)),
-                    const SizedBox(height: 2),
-                    Text(en, style: ST.mono(10, color: SC.textMute)),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_left_rounded,
-                  size: 18, color: SC.textFaint),
-            ],
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(ar, style: ST.ar(16, weight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                Text(en, style: ST.mono(10, color: SC.textMute)),
+              ],
+            ),
           ),
-        ),
-      );
+          Icon(Icons.chevron_left_rounded, size: 18, color: SC.textFaint),
+        ],
+      ),
+    ),
+  );
 }

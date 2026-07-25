@@ -10,7 +10,7 @@ import '../domain/repositories/auth_repository.dart';
 /// backend verifies the token (RS256/JWKS). No email/sub is read locally.
 class RealGoogleAuthGateway implements GoogleAuthGateway {
   RealGoogleAuthGateway({String? serverClientId})
-      : _serverClientId = serverClientId ?? AppConfig.googleServerClientId;
+    : _serverClientId = serverClientId ?? AppConfig.googleServerClientId;
 
   final String _serverClientId;
   bool _initialized = false;
@@ -47,7 +47,8 @@ class RealGoogleAuthGateway implements GoogleAuthGateway {
       return idToken;
     } on GoogleSignInException catch (e) {
       if (e.code == GoogleSignInExceptionCode.canceled) return null;
-      final isConfig = e.code == GoogleSignInExceptionCode.clientConfigurationError ||
+      final isConfig =
+          e.code == GoogleSignInExceptionCode.clientConfigurationError ||
           e.code == GoogleSignInExceptionCode.providerConfigurationError;
       throw GoogleAuthException(
         e.description ?? e.code.name,

@@ -92,8 +92,10 @@ class SiyagGuessRow extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.04),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Text(solved ? '✓' : '#$rank',
-                style: ST.mono(12, color: SC.textDim)),
+            child: Text(
+              solved ? '✓' : '#$rank',
+              style: ST.mono(12, color: SC.textDim),
+            ),
           ),
           const SizedBox(width: 12),
           // Word + bar (RTL)
@@ -107,14 +109,18 @@ class SiyagGuessRow extends StatelessWidget {
                   textBaseline: TextBaseline.alphabetic,
                   children: [
                     Expanded(
-                      child: Text(word,
-                          textDirection: TextDirection.rtl,
-                          overflow: TextOverflow.ellipsis,
-                          style: ST.ar(19, weight: FontWeight.w500)),
+                      child: Text(
+                        word,
+                        textDirection: TextDirection.rtl,
+                        overflow: TextOverflow.ellipsis,
+                        style: ST.ar(19, weight: FontWeight.w500),
+                      ),
                     ),
                     const SizedBox(width: 8),
-                    Text(SiyagHeat.labelAr(heat, solved: solved),
-                        style: ST.mono(11, color: color)),
+                    Text(
+                      SiyagHeat.labelAr(heat, solved: solved),
+                      style: ST.mono(11, color: color),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -138,8 +144,8 @@ class SiyagGuessRow extends StatelessWidget {
                       ),
                     )
                   : (isClosest
-                      ? const Text('🔥', style: TextStyle(fontSize: 12))
-                      : const SizedBox.shrink()),
+                        ? const Text('🔥', style: TextStyle(fontSize: 12))
+                        : const SizedBox.shrink()),
             ),
           ),
         ],
@@ -153,7 +159,10 @@ class SiyagGuessRow extends StatelessWidget {
         curve: SM.easeOutQuint,
         builder: (context, t, child) => Opacity(
           opacity: t,
-          child: Transform.translate(offset: Offset(0, -12 * (1 - t)), child: child),
+          child: Transform.translate(
+            offset: Offset(0, -12 * (1 - t)),
+            child: child,
+          ),
         ),
         child: row,
       );
@@ -194,11 +203,13 @@ class SiyagSummaryChip extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(children: [
-            Text(emoji, style: const TextStyle(fontSize: 11)),
-            const SizedBox(width: 6),
-            Text(label.toUpperCase(), style: ST.mono(10, color: color)),
-          ]),
+          Row(
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 11)),
+              const SizedBox(width: 6),
+              Text(label.toUpperCase(), style: ST.mono(10, color: color)),
+            ],
+          ),
           const SizedBox(height: 6),
           Row(
             textDirection: TextDirection.rtl,
@@ -206,13 +217,18 @@ class SiyagSummaryChip extends StatelessWidget {
             textBaseline: TextBaseline.alphabetic,
             children: [
               Expanded(
-                child: Text(word,
-                    textDirection: TextDirection.rtl,
-                    overflow: TextOverflow.ellipsis,
-                    style: ST.ar(22, weight: FontWeight.w600)),
+                child: Text(
+                  word,
+                  textDirection: TextDirection.rtl,
+                  overflow: TextOverflow.ellipsis,
+                  style: ST.ar(22, weight: FontWeight.w600),
+                ),
               ),
               const SizedBox(width: 8),
-              Text(solved ? '✓' : '#$rank', style: ST.mono(12, color: SC.textMute)),
+              Text(
+                solved ? '✓' : '#$rank',
+                style: ST.mono(12, color: SC.textMute),
+              ),
             ],
           ),
         ],
@@ -245,39 +261,59 @@ class SiyagHintPill extends StatelessWidget {
       onTap: revealed ? null : onReveal,
       scale: 0.95,
       child: Container(
-        padding: const EdgeInsetsDirectional.only(start: 16, end: 12, top: 10, bottom: 10),
+        padding: const EdgeInsetsDirectional.only(
+          start: 16,
+          end: 12,
+          top: 10,
+          bottom: 10,
+        ),
         decoration: BoxDecoration(
           color: revealed ? SC.cyanDim : SC.surfaceHi,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-              color: revealed ? SC.cyan.withValues(alpha: 0.33) : SC.line),
+            color: revealed ? SC.cyan.withValues(alpha: 0.33) : SC.line,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(revealed ? '💡' : '🔒', style: const TextStyle(fontSize: 14)),
             const SizedBox(width: 10),
-            if (loading)
-              SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: SC.cyan))
-            else if (revealed)
-              Row(
-                textDirection: TextDirection.rtl,
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(word ?? '',
-                      textDirection: TextDirection.rtl,
-                      style: ST.ar(17, weight: FontWeight.w500)),
-                  const SizedBox(width: 8),
-                  Text('#${rank ?? 0}', style: ST.mono(11, color: SC.cyan)),
-                ],
-              )
-            else
-              Text('افتح تلميحاً', style: ST.ar(13, color: SC.textDim)),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: loading
+                  ? SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: SC.cyan,
+                      ),
+                    )
+                  : (revealed
+                        ? Row(
+                            textDirection: TextDirection.rtl,
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                word ?? '',
+                                textDirection: TextDirection.rtl,
+                                style: ST.ar(17, weight: FontWeight.w500),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '#${rank ?? 0}',
+                                style: ST.mono(11, color: SC.cyan),
+                              ),
+                            ],
+                          )
+                        : Text(
+                            'افتح تلميحاً',
+                            style: ST.ar(13, color: SC.textDim),
+                          )),
+            ),
           ],
         ),
       ),

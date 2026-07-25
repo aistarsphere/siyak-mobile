@@ -62,26 +62,26 @@ class V2Mappers {
     Map<String, dynamic> j, {
     required String installationId,
     InstallationProfile? mergeStats,
-  }) =>
-      InstallationProfile(
-        installationId: installationId,
-        profileId: j['profile_id']?.toString(),
-        shortCode: (j['short_code'] ?? '').toString(),
-        displayName: j['display_name'] as String?,
-        gamesPlayed: mergeStats?.gamesPlayed ?? 0,
-        gamesSolved: mergeStats?.gamesSolved ?? 0,
-        roomsJoined: mergeStats?.roomsJoined ?? 0,
-        roomsWon: mergeStats?.roomsWon ?? 0,
-      );
+  }) => InstallationProfile(
+    installationId: installationId,
+    profileId: j['profile_id']?.toString(),
+    shortCode: (j['short_code'] ?? '').toString(),
+    displayName: j['display_name'] as String?,
+    gamesPlayed: mergeStats?.gamesPlayed ?? 0,
+    gamesSolved: mergeStats?.gamesSolved ?? 0,
+    roomsJoined: mergeStats?.roomsJoined ?? 0,
+    roomsWon: mergeStats?.roomsWon ?? 0,
+  );
 
   static InstallationProfile withStats(
-          InstallationProfile p, Map<String, dynamic> s) =>
-      p.copyWith(
-        gamesPlayed: _int(s['weekly_played']) ?? p.gamesPlayed,
-        gamesSolved: _int(s['weekly_solved']) ?? p.gamesSolved,
-        roomsJoined: _int(s['rooms_joined']) ?? p.roomsJoined,
-        roomsWon: _int(s['rooms_won']) ?? p.roomsWon,
-      );
+    InstallationProfile p,
+    Map<String, dynamic> s,
+  ) => p.copyWith(
+    gamesPlayed: _int(s['weekly_played']) ?? p.gamesPlayed,
+    gamesSolved: _int(s['weekly_solved']) ?? p.gamesSolved,
+    roomsJoined: _int(s['rooms_joined']) ?? p.roomsJoined,
+    roomsWon: _int(s['rooms_won']) ?? p.roomsWon,
+  );
 
   // ---- heat / guess --------------------------------------------------------
   static Guess guessEntry(Map<String, dynamic> j) {
@@ -100,7 +100,9 @@ class V2Mappers {
   static WeeklyChallenge weeklyChallenge(Map<String, dynamic> j) {
     final end = _date(j['end_at']);
     final now = DateTime.now().toUtc();
-    final remaining = end != null && end.isAfter(now) ? end.difference(now) : null;
+    final remaining = end != null && end.isAfter(now)
+        ? end.difference(now)
+        : null;
     final status = (j['status'] ?? 'active').toString();
     final cat = (j['category'] ?? 'general').toString();
     return WeeklyChallenge(
@@ -131,7 +133,8 @@ class V2Mappers {
       solved: j['status'] == 'solved' || j['solved_at'] != null,
       attempts: _int(j['user_guess_count']) ?? guesses.length,
       hintsUsed: _int(j['hint_count']) ?? 0,
-      hintsRemaining: _int(j['hints_remaining']) ??
+      hintsRemaining:
+          _int(j['hints_remaining']) ??
           (5 - (_int(j['hint_count']) ?? 0)).clamp(0, 5),
       maxHints: 5,
       bestUserGeneratedRank: _int(j['best_rank']),
@@ -144,26 +147,26 @@ class V2Mappers {
 
   /// Guess outcome from the top-level fields of a weekly/room guess response.
   static V2GuessOutcome guessOutcome(Map<String, dynamic> j) => V2GuessOutcome(
-        accepted: j['accepted'] != false,
-        duplicate: j['duplicate'] == true,
-        unknown: false,
-        canonicalWord:
-            (j['canonical_word'] ?? j['display_word'] ?? j['word'])?.toString(),
-        originalWord: j['original_guess'] as String?,
-        rank: _int(j['rank']),
-        proximity: j['proximity'] == null ? null : _dbl(j['proximity']),
-        heatLevel: j['heat_level'] as String?,
-        solved: j['solved'] == true,
-        secretWord: j['secret_word'] as String?,
-      );
+    accepted: j['accepted'] != false,
+    duplicate: j['duplicate'] == true,
+    unknown: false,
+    canonicalWord: (j['canonical_word'] ?? j['display_word'] ?? j['word'])
+        ?.toString(),
+    originalWord: j['original_guess'] as String?,
+    rank: _int(j['rank']),
+    proximity: j['proximity'] == null ? null : _dbl(j['proximity']),
+    heatLevel: j['heat_level'] as String?,
+    solved: j['solved'] == true,
+    secretWord: j['secret_word'] as String?,
+  );
 
   static AdaptiveHint adaptiveHint(Map<String, dynamic> j) => AdaptiveHint(
-        number: _int(j['hints_used']) ?? 0,
-        word: (j['revealed_word'] ?? '').toString(),
-        semanticRank: _int(j['semantic_rank']) ?? 0,
-        hintsRemaining: _int(j['hints_remaining']) ?? 0,
-        bestUserGeneratedRank: _int(j['best_user_generated_rank']),
-      );
+    number: _int(j['hints_used']) ?? 0,
+    word: (j['revealed_word'] ?? '').toString(),
+    semanticRank: _int(j['semantic_rank']) ?? 0,
+    hintsRemaining: _int(j['hints_remaining']) ?? 0,
+    bestUserGeneratedRank: _int(j['best_user_generated_rank']),
+  );
 
   // ---- leaderboard ---------------------------------------------------------
   static LeaderboardPage leaderboard(
@@ -186,7 +189,9 @@ class V2Mappers {
   }
 
   static LeaderboardEntry leaderboardEntry(
-      Map<String, dynamic> j, String? myProfileId) {
+    Map<String, dynamic> j,
+    String? myProfileId,
+  ) {
     final name = j['display_name'] as String?;
     final short = (j['short_code'] ?? '').toString();
     return LeaderboardEntry(
@@ -207,14 +212,16 @@ class V2Mappers {
   static HintMode hintMode(String? code) => HintMode.fromCode(code);
 
   static RoomState roomState(String? s) => switch (s) {
-        'active' => RoomState.playing,
-        'solved' || 'finished' => RoomState.solved,
-        'cancelled' || 'expired' => RoomState.expired,
-        _ => RoomState.lobby,
-      };
+    'active' => RoomState.playing,
+    'solved' || 'finished' => RoomState.solved,
+    'cancelled' || 'expired' => RoomState.expired,
+    _ => RoomState.lobby,
+  };
 
   static RoomParticipant participant(
-      Map<String, dynamic> j, String? myProfileId) {
+    Map<String, dynamic> j,
+    String? myProfileId,
+  ) {
     final pid = (j['profile_id'] ?? '').toString();
     final name = j['display_name'] as String?;
     final short = (j['short_code'] ?? '').toString();
@@ -228,8 +235,10 @@ class V2Mappers {
   }
 
   static SharedGuess sharedFromRoomGuess(
-      Map<String, dynamic> j, String? myProfileId,
-      {bool systemHint = false}) {
+    Map<String, dynamic> j,
+    String? myProfileId, {
+    bool systemHint = false,
+  }) {
     final by = (j['by'] as Map<String, dynamic>?) ?? const {};
     final byId = (by['profile_id'] ?? '').toString();
     final byName = by['display_name'] as String?;
@@ -237,12 +246,13 @@ class V2Mappers {
     final prox = _dbl(j['proximity']);
     return SharedGuess(
       guess: Guess(
-        word: (j['word'] ??
-                j['canonical_word'] ??
-                j['revealed_word'] ??
-                j['guess'] ??
-                '')
-            .toString(),
+        word:
+            (j['word'] ??
+                    j['canonical_word'] ??
+                    j['revealed_word'] ??
+                    j['guess'] ??
+                    '')
+                .toString(),
         rank: _int(j['rank'] ?? j['semantic_rank']) ?? 0,
         proximity: prox,
         tier: Heat.fromLevel(j['heat_level'] as String?, prox),
@@ -264,8 +274,11 @@ class V2Mappers {
       for (final g in (j['guesses'] as List<dynamic>? ?? const []))
         sharedFromRoomGuess(g as Map<String, dynamic>, myProfileId),
       for (final h in (j['hints'] as List<dynamic>? ?? const []))
-        sharedFromRoomGuess(h as Map<String, dynamic>, myProfileId,
-            systemHint: true),
+        sharedFromRoomGuess(
+          h as Map<String, dynamic>,
+          myProfileId,
+          systemHint: true,
+        ),
     ];
     final winnerJson = j['winner'];
     RoomParticipant? winner;
@@ -303,7 +316,9 @@ class V2Mappers {
           seq: seq,
           type: RoomEventType.snapshot,
           snapshot: room(
-              (j['snapshot'] as Map<String, dynamic>?) ?? const {}, myProfileId),
+            (j['snapshot'] as Map<String, dynamic>?) ?? const {},
+            myProfileId,
+          ),
           raw: j,
         );
       case 'participant.joined':
@@ -312,8 +327,9 @@ class V2Mappers {
           seq: seq,
           type: RoomEventType.participantJoined,
           participant: participant(
-              (j['participant'] as Map<String, dynamic>?) ?? const {},
-              myProfileId),
+            (j['participant'] as Map<String, dynamic>?) ?? const {},
+            myProfileId,
+          ),
           raw: j,
         );
       case 'participant.left':
@@ -323,8 +339,9 @@ class V2Mappers {
           seq: seq,
           type: RoomEventType.participantLeft,
           participant: participant(
-              (j['participant'] as Map<String, dynamic>?) ?? const {},
-              myProfileId),
+            (j['participant'] as Map<String, dynamic>?) ?? const {},
+            myProfileId,
+          ),
           raw: j,
         );
       case 'host.changed':
@@ -333,14 +350,19 @@ class V2Mappers {
           seq: seq,
           type: RoomEventType.hostChanged,
           participant: participant(
-              (j['participant'] as Map<String, dynamic>?) ??
-                  {'profile_id': j['host_profile_id']},
-              myProfileId),
+            (j['participant'] as Map<String, dynamic>?) ??
+                {'profile_id': j['host_profile_id']},
+            myProfileId,
+          ),
           raw: j,
         );
       case 'room.started':
         return RoomEvent(
-            id: id, seq: seq, type: RoomEventType.roomStarted, raw: j);
+          id: id,
+          seq: seq,
+          type: RoomEventType.roomStarted,
+          raw: j,
+        );
       case 'guess.accepted':
         return RoomEvent(
           id: id,
@@ -364,7 +386,9 @@ class V2Mappers {
           id: id,
           seq: seq,
           type: RoomEventType.roomSolved,
-          winner: w is Map<String, dynamic> ? participant(w, myProfileId) : null,
+          winner: w is Map<String, dynamic>
+              ? participant(w, myProfileId)
+              : null,
           snapshot: j['winning_word'] != null || j['secret_word'] != null
               ? Room(
                   roomId: (j['room_id'] ?? '').toString(),
@@ -387,7 +411,11 @@ class V2Mappers {
       case 'room.cancelled':
       case 'room.expired':
         return RoomEvent(
-            id: id, seq: seq, type: RoomEventType.roomExpired, raw: j);
+          id: id,
+          seq: seq,
+          type: RoomEventType.roomExpired,
+          raw: j,
+        );
       case 'pong':
       case 'ping':
         return RoomEvent(id: id, seq: seq, type: RoomEventType.pong, raw: j);

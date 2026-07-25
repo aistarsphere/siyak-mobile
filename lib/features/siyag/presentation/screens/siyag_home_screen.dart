@@ -53,8 +53,10 @@ class SiyagHomeScreen extends ConsumerWidget {
                     children: [
                       const Kicker('Semantic Word Game'),
                       const SizedBox(height: 8),
-                      Text('سياق',
-                          style: ST.ar(54, weight: FontWeight.w700, height: 1)),
+                      Text(
+                        'سياق',
+                        style: ST.ar(54, weight: FontWeight.w700, height: 1),
+                      ),
                     ],
                   ),
                 ),
@@ -77,8 +79,11 @@ class SiyagHomeScreen extends ConsumerWidget {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.local_fire_department_rounded,
-                      size: 15, color: SC.coral),
+                  Icon(
+                    Icons.local_fire_department_rounded,
+                    size: 15,
+                    color: SC.coral,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     profile == null
@@ -103,16 +108,17 @@ class SiyagHomeScreen extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
             child: SiyagTap(
               scale: 0.98,
-              onTap: () => Navigator.of(context)
-                  .push(siyagRoute(const SiyagWeeklyScreen())),
+              onTap: () => Navigator.of(
+                context,
+              ).push(siyagRoute(const SiyagWeeklyScreen())),
               child: _WeeklyHeroCard(
                 remaining: _fmtRemaining(weekly?.timeRemaining),
                 subtitle: weekly == null
                     ? 'التحدي الأسبوعي'
                     : weekly.categoryLabel(true) +
-                        (weekly.placement != null
-                            ? ' · مركزك #${weekly.placement}'
-                            : ''),
+                          (weekly.placement != null
+                              ? ' · مركزك #${weekly.placement}'
+                              : ''),
                 cta: 'ابدأ التحدي الأسبوعي',
               ),
             ),
@@ -129,8 +135,9 @@ class SiyagHomeScreen extends ConsumerWidget {
                     en: 'Solo Practice',
                     icon: Icons.bolt_rounded,
                     color: SC.cyan,
-                    onTap: () => Navigator.of(context)
-                        .push(siyagRoute(const SiyagPracticeSetupScreen())),
+                    onTap: () => Navigator.of(
+                      context,
+                    ).push(siyagRoute(const SiyagPracticeSetupScreen())),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -141,8 +148,9 @@ class SiyagHomeScreen extends ConsumerWidget {
                     icon: Icons.groups_rounded,
                     color: SC.emerald,
                     enabled: caps?.multiplayerEnabled ?? true,
-                    onTap: () => Navigator.of(context)
-                        .push(siyagRoute(const SiyagMultiplayerHubScreen())),
+                    onTap: () => Navigator.of(
+                      context,
+                    ).push(siyagRoute(const SiyagMultiplayerHubScreen())),
                   ),
                 ),
               ],
@@ -177,8 +185,11 @@ class SiyagHomeScreen extends ConsumerWidget {
 }
 
 class _WeeklyHeroCard extends StatelessWidget {
-  const _WeeklyHeroCard(
-      {required this.remaining, required this.subtitle, required this.cta});
+  const _WeeklyHeroCard({
+    required this.remaining,
+    required this.subtitle,
+    required this.cta,
+  });
 
   final String remaining;
   final String subtitle;
@@ -190,9 +201,14 @@ class _WeeklyHeroCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(24),
       child: Container(
         decoration: BoxDecoration(
-          color: SC.surface,
+          // Elevated surface + stronger gold border → reads as the primary
+          // (featured) action without becoming a solid-gold card.
+          color: SC.surfaceHi,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: SC.coral.withValues(alpha: 0.27)),
+          border: Border.all(
+            color: SC.coral.withValues(alpha: 0.38),
+            width: 1.5,
+          ),
         ),
         child: Stack(
           children: [
@@ -207,9 +223,10 @@ class _WeeklyHeroCard extends StatelessWidget {
                   color: SC.coral.withValues(alpha: 0.14),
                   boxShadow: [
                     BoxShadow(
-                        color: SC.coral.withValues(alpha: 0.14),
-                        blurRadius: 60,
-                        spreadRadius: 20),
+                      color: SC.coral.withValues(alpha: 0.14),
+                      blurRadius: 60,
+                      spreadRadius: 20,
+                    ),
                   ],
                 ),
               ),
@@ -229,8 +246,11 @@ class _WeeklyHeroCard extends StatelessWidget {
                           color: SC.coral,
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: Icon(Icons.emoji_events_rounded,
-                            size: 20, color: SC.bg),
+                        child: Icon(
+                          Icons.emoji_events_rounded,
+                          size: 20,
+                          color: SC.onGold,
+                        ),
                       ),
                       const Spacer(),
                       Column(
@@ -243,26 +263,16 @@ class _WeeklyHeroCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Text('التحدي الأسبوعي',
-                      style: ST.ar(24, weight: FontWeight.w700, height: 1.1)),
+                  Text(
+                    'التحدي الأسبوعي',
+                    style: ST.ar(24, weight: FontWeight.w700, height: 1.1),
+                  ),
                   const SizedBox(height: 4),
                   Text(subtitle, style: ST.ar(14, color: SC.textMute)),
                   const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    decoration: BoxDecoration(
-                      color: SC.coral,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.play_arrow_rounded, size: 18, color: SC.bg),
-                        const SizedBox(width: 8),
-                        Text(cta,
-                            style: ST.ar(15, weight: FontWeight.w600, color: SC.bg)),
-                      ],
-                    ),
+                  SiyagPrimaryButton(
+                    label: cta,
+                    icon: Icons.play_arrow_rounded,
                   ),
                 ],
               ),
@@ -330,11 +340,12 @@ class _ModeTile extends StatelessWidget {
 }
 
 class _Launcher extends StatelessWidget {
-  const _Launcher(
-      {required this.label,
-      required this.en,
-      required this.icon,
-      required this.onTap});
+  const _Launcher({
+    required this.label,
+    required this.en,
+    required this.icon,
+    required this.onTap,
+  });
 
   final String label;
   final String en;

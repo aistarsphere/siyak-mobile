@@ -20,8 +20,9 @@ import 'profile_controller.dart';
 /// abstract repository interfaces are the only coupling the UI ever sees.
 /// ─────────────────────────────────────────────────────────────────────────
 
-final installationIdStoreProvider =
-    Provider<InstallationIdStore>((ref) => InstallationIdStore());
+final installationIdStoreProvider = Provider<InstallationIdStore>(
+  (ref) => InstallationIdStore(),
+);
 
 /// Account session-token store (`sess_…` bearer). Empty for guests.
 final sessionStoreProvider = Provider<SessionStore>((ref) => SessionStore());
@@ -33,7 +34,9 @@ final sessionRevokedProvider = StateProvider<int>((ref) => 0);
 /// Shared live REST client. Injects `X-Installation-ID` (guest) + `Authorization:
 /// Bearer` (account) + `X-Request-ID`; drops a rejected session on 401.
 final v2ApiClientProvider = Provider<V2ApiClient>((ref) {
-  final override = ref.watch(appSettingsProvider.select((s) => s.baseUrlOverride));
+  final override = ref.watch(
+    appSettingsProvider.select((s) => s.baseUrlOverride),
+  );
   final session = ref.read(sessionStoreProvider);
   return V2ApiClient(
     baseUrl: AppConfig.resolveV2BaseUrl(override),
@@ -59,24 +62,32 @@ final capabilitiesRepositoryProvider = Provider<CapabilitiesRepository>((ref) {
 
 final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
   final uiLang = ref.read(appSettingsProvider).lang;
-  return RemoteProfileRepository(ref.watch(v2ApiClientProvider),
-      uiLanguage: uiLang);
+  return RemoteProfileRepository(
+    ref.watch(v2ApiClientProvider),
+    uiLanguage: uiLang,
+  );
 });
 
 final weeklyRepositoryProvider = Provider<WeeklyRepository>((ref) {
-  return RemoteWeeklyRepository(ref.watch(v2ApiClientProvider),
-      myProfileId: () => _myProfileId(ref));
+  return RemoteWeeklyRepository(
+    ref.watch(v2ApiClientProvider),
+    myProfileId: () => _myProfileId(ref),
+  );
 });
 
 /// Single shared room repo instance per config.
 final roomRepositoryProvider = Provider<RoomRepository>((ref) {
-  return RemoteRoomRepository(ref.watch(v2ApiClientProvider),
-      myProfileId: () => _myProfileId(ref));
+  return RemoteRoomRepository(
+    ref.watch(v2ApiClientProvider),
+    myProfileId: () => _myProfileId(ref),
+  );
 });
 
 /// Realtime gateway factory (a fresh gateway per connection).
 final realtimeGatewayProvider = Provider<RealtimeGateway>((ref) {
-  final override = ref.watch(appSettingsProvider.select((s) => s.baseUrlOverride));
+  final override = ref.watch(
+    appSettingsProvider.select((s) => s.baseUrlOverride),
+  );
   return RemoteRealtimeGateway(
     socketBase: AppConfig.resolveV2SocketBase(override),
     myProfileId: () => _myProfileId(ref),

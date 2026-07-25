@@ -47,8 +47,10 @@ class _SiyagPracticeGameScreenState
   void _showFlash(String msg) {
     setState(() => _flash = msg);
     _flashTimer?.cancel();
-    _flashTimer = Timer(const Duration(milliseconds: 2200),
-        () => mounted ? setState(() => _flash = null) : null);
+    _flashTimer = Timer(
+      const Duration(milliseconds: 2200),
+      () => mounted ? setState(() => _flash = null) : null,
+    );
   }
 
   @override
@@ -56,8 +58,10 @@ class _SiyagPracticeGameScreenState
     final loc = ref.watch(localizationsProvider);
     final state = ref.watch(gameControllerProvider);
 
-    ref.listen(gameControllerProvider.select((s) => s.guesses.length),
-        (prev, next) {
+    ref.listen(gameControllerProvider.select((s) => s.guesses.length), (
+      prev,
+      next,
+    ) {
       final s = ref.read(gameControllerProvider);
       if (s.guesses.isEmpty) return;
       final best = s.guesses
@@ -66,14 +70,17 @@ class _SiyagPracticeGameScreenState
       _showFlash(SiyagHeat.progressMessage(_prevBest, best));
       _prevBest = best;
     });
-    ref.listen(gameControllerProvider.select((s) => s.duplicateSeq),
-        (prev, next) {
+    ref.listen(gameControllerProvider.select((s) => s.duplicateSeq), (
+      prev,
+      next,
+    ) {
       if (next > (prev ?? 0)) {
         final w = ref.read(gameControllerProvider).duplicateWord;
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(
-              content: Text('${loc('duplicateGuess')} · $w')));
+          ..showSnackBar(
+            SnackBar(content: Text('${loc('duplicateGuess')} · $w')),
+          );
       }
     });
     ref.listen(gameControllerProvider.select((s) => s.error), (p, n) {
@@ -87,13 +94,18 @@ class _SiyagPracticeGameScreenState
     ref.listen(gameControllerProvider.select((s) => s.solved), (prev, next) {
       if (next == true && prev != true) {
         final s = ref.read(gameControllerProvider);
-        Navigator.of(context).pushReplacement(siyagRoute(SiyagResultScreen(
-          secretWord: s.secretWord ??
-              (s.guesses.where((g) => g.isSecret).firstOrNull?.word ?? ''),
-          attempts: s.attempts,
-          hintsUsed: s.hintsUsed,
-          showLeaderboard: false,
-        )));
+        Navigator.of(context).pushReplacement(
+          siyagRoute(
+            SiyagResultScreen(
+              secretWord:
+                  s.secretWord ??
+                  (s.guesses.where((g) => g.isSecret).firstOrNull?.word ?? ''),
+              attempts: s.attempts,
+              hintsUsed: s.hintsUsed,
+              showLeaderboard: false,
+            ),
+          ),
+        );
       }
     });
 
@@ -102,8 +114,12 @@ class _SiyagPracticeGameScreenState
       title: state.categoryLabel.isEmpty ? 'تدريب حر' : state.categoryLabel,
       guesses: [
         for (final g in state.guesses)
-          SiyagGuessVM(g.word, g.rank, _heat(g.rank, total, g.isSecret),
-              solved: g.isSecret),
+          SiyagGuessVM(
+            g.word,
+            g.rank,
+            _heat(g.rank, total, g.isSecret),
+            solved: g.isSecret,
+          ),
       ],
       controller: _input,
       onSubmit: _submit,
@@ -114,8 +130,9 @@ class _SiyagPracticeGameScreenState
       hintLoading: state.hintLoading,
       onRequestHint: () =>
           ref.read(gameControllerProvider.notifier).requestHint(),
-      unknownSuggestions:
-          state.unknown != null ? state.unknown!.suggestions : const [],
+      unknownSuggestions: state.unknown != null
+          ? state.unknown!.suggestions
+          : const [],
       onSuggestionTap: (w) {
         _input.text = w;
         _submit(w);

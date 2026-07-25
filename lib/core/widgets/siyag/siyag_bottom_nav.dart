@@ -31,7 +31,12 @@ class SiyagBottomNav extends StatelessWidget {
         color: SC.bg,
         border: Border(top: BorderSide(color: SC.line)),
       ),
-      padding: EdgeInsets.only(top: 8, bottom: 8 + bottomPad, left: 8, right: 8),
+      padding: EdgeInsets.only(
+        top: 8,
+        bottom: 8 + bottomPad,
+        left: 8,
+        right: 8,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
@@ -48,8 +53,11 @@ class SiyagBottomNav extends StatelessWidget {
 }
 
 class _NavButton extends StatelessWidget {
-  const _NavButton(
-      {required this.item, required this.active, required this.onTap});
+  const _NavButton({
+    required this.item,
+    required this.active,
+    required this.onTap,
+  });
 
   final SiyagNavItem item;
   final bool active;
@@ -57,8 +65,9 @@ class _NavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Active tab uses the gold primary accent; inactive stays soft gray.
-    final color = active ? SC.gold : SC.textMute;
+    // Active tab uses the deeper gold (goldStrong) — richer, higher-contrast
+    // selection in both themes; inactive stays soft gray.
+    final color = active ? SC.goldStrong : SC.textMute;
     return SiyagTap(
       onTap: onTap,
       scale: 0.9,
@@ -75,8 +84,10 @@ class _NavButton extends StatelessWidget {
                 child: Container(
                   width: 6,
                   height: 6,
-                  decoration:
-                      BoxDecoration(color: SC.gold, shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                    color: SC.gold,
+                    shape: BoxShape.circle,
+                  ),
                 ),
               ),
             ),

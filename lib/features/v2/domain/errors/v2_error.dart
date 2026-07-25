@@ -155,8 +155,7 @@ class V2Exception implements Exception {
     V2ErrorCode.settlementPending ||
     V2ErrorCode.settlementFailed ||
     V2ErrorCode.rateLimited ||
-    V2ErrorCode.internalError =>
-      V2Retry.backoff,
+    V2ErrorCode.internalError => V2Retry.backoff,
     V2ErrorCode.stateVersionConflict => V2Retry.resync,
     _ => V2Retry.none,
   };
@@ -165,20 +164,19 @@ class V2Exception implements Exception {
   /// a dedicated string fall back to a generic message.
   String get messageKey => switch (code) {
     V2ErrorCode.serverOffline => 'errNetwork',
-    V2ErrorCode.tunnelOffline || V2ErrorCode.backendUnavailable =>
-      'offlineTitle',
+    V2ErrorCode.tunnelOffline ||
+    V2ErrorCode.backendUnavailable => 'offlineTitle',
     V2ErrorCode.socketReconnecting => 'v2Reconnecting',
     V2ErrorCode.unsupportedApiVersion => 'v2ErrUnsupported',
     V2ErrorCode.profileBlocked => 'v2ErrProfileBlocked',
-    V2ErrorCode.displayNameInvalid || V2ErrorCode.displayNameRejected =>
-      'v2ErrDisplayName',
+    V2ErrorCode.displayNameInvalid ||
+    V2ErrorCode.displayNameRejected => 'v2ErrDisplayName',
     V2ErrorCode.authenticationRequired ||
     V2ErrorCode.authTokenInvalid ||
     V2ErrorCode.authTokenExpired ||
     V2ErrorCode.sessionInvalid ||
     V2ErrorCode.sessionExpired ||
-    V2ErrorCode.unauthorized =>
-      'v2ErrSignInRequired',
+    V2ErrorCode.unauthorized => 'v2ErrSignInRequired',
     V2ErrorCode.accountDisabled => 'v2ErrAccountDisabled',
     V2ErrorCode.weeklyUnavailable => 'v2ErrWeeklyUnavailable',
     V2ErrorCode.weeklyExpired => 'v2ErrWeeklyExpired',
@@ -190,8 +188,8 @@ class V2Exception implements Exception {
     V2ErrorCode.roomSolved => 'v2ErrRoomSolved',
     V2ErrorCode.roomExpired => 'v2ErrRoomExpired',
     V2ErrorCode.roomNotActive => 'v2ErrRoomNotActive',
-    V2ErrorCode.duplicateRoomGuess || V2ErrorCode.guessDuplicate =>
-      'v2ErrDuplicateRoomGuess',
+    V2ErrorCode.duplicateRoomGuess ||
+    V2ErrorCode.guessDuplicate => 'v2ErrDuplicateRoomGuess',
     V2ErrorCode.hintLimit => 'noMoreHints',
     V2ErrorCode.adaptiveHintUnavailable => 'v2ErrAdaptiveUnavailable',
     V2ErrorCode.insufficientCoins => 'v2ErrInsufficientCoins',
@@ -208,8 +206,8 @@ class V2Exception implements Exception {
     V2ErrorCode.playerInvitesDisabled => 'v2ErrInvitesDisabled',
     V2ErrorCode.cannotInviteSelf => 'v2ErrInviteSelf',
     V2ErrorCode.invitationExpired => 'v2ErrInvitationExpired',
-    V2ErrorCode.roomNotAcceptingRequests || V2ErrorCode.roomNotOpen =>
-      'v2ErrRequestsClosed',
+    V2ErrorCode.roomNotAcceptingRequests ||
+    V2ErrorCode.roomNotOpen => 'v2ErrRequestsClosed',
     V2ErrorCode.notRoomHost => 'v2ErrNotHost',
     V2ErrorCode.activeRoomExists => 'v2ErrActiveRoomExists',
     V2ErrorCode.stateVersionConflict => 'v2ErrStateConflict',

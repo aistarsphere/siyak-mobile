@@ -35,17 +35,23 @@ class RemoteProfileRepository implements ProfileRepository {
     required String installationId,
     String? displayName,
   }) async {
-    final body = await _client.post('/profiles/register', body: {
-      'ui_language': uiLanguage,
-      if (displayName != null && displayName.trim().isNotEmpty)
-        'display_name': displayName.trim(),
-    });
-    var profile =
-        V2Mappers.profile(body, installationId: installationId);
+    final body = await _client.post(
+      '/profiles/register',
+      body: {
+        'ui_language': uiLanguage,
+        if (displayName != null && displayName.trim().isNotEmpty)
+          'display_name': displayName.trim(),
+      },
+    );
+    var profile = V2Mappers.profile(body, installationId: installationId);
     try {
       profile = V2Mappers.withStats(
-          profile, await _client.get('/profiles/me/stats'));
-    } catch (_) {/* stats are best-effort */}
+        profile,
+        await _client.get('/profiles/me/stats'),
+      );
+    } catch (_) {
+      /* stats are best-effort */
+    }
     return profile;
   }
 
@@ -54,8 +60,10 @@ class RemoteProfileRepository implements ProfileRepository {
     required String installationId,
     required String displayName,
   }) async {
-    final body = await _client
-        .patch('/profiles/me', body: {'display_name': displayName.trim()});
+    final body = await _client.patch(
+      '/profiles/me',
+      body: {'display_name': displayName.trim()},
+    );
     return V2Mappers.profile(body, installationId: installationId);
   }
 }
@@ -68,16 +76,23 @@ class RemoteWeeklyRepository implements WeeklyRepository {
   @override
   Future<WeeklyChallenge> current({required GameplayLanguage language}) async =>
       V2Mappers.weeklyChallenge(
-          await _client.get('/weekly/current', query: {'language': language.code}));
+        await _client.get(
+          '/weekly/current',
+          query: {'language': language.code},
+        ),
+      );
 
   @override
   Future<WeeklyRun> startRun({
     required String weekId,
     required GameplayLanguage language,
     HintMode hintMode = HintMode.standard,
-  }) async =>
-      V2Mappers.weeklyRun(await _client
-          .post('/weekly/current/join', body: {'language': language.code}));
+  }) async => V2Mappers.weeklyRun(
+    await _client.post(
+      '/weekly/current/join',
+      body: {'language': language.code},
+    ),
+  );
 
   @override
   Future<WeeklyRun> resumeRun({required String runId}) async =>
@@ -89,9 +104,14 @@ class RemoteWeeklyRepository implements WeeklyRepository {
     required String word,
   }) async {
     try {
-      final body =
-          await _client.post('/weekly/runs/$runId/guess', body: {'guess': word});
-      return (run: V2Mappers.weeklyRun(body), outcome: V2Mappers.guessOutcome(body));
+      final body = await _client.post(
+        '/weekly/runs/$runId/guess',
+        body: {'guess': word},
+      );
+      return (
+        run: V2Mappers.weeklyRun(body),
+        outcome: V2Mappers.guessOutcome(body),
+      );
     } on NotInVocabularyException catch (e) {
       // Unknown word (422): the run is unchanged — fetch it to keep state.
       final run = await resumeRun(runId: runId);
@@ -112,9 +132,12 @@ class RemoteWeeklyRepository implements WeeklyRepository {
   Future<AdaptiveHint> hint({
     required String runId,
     required HintMode mode,
-  }) async =>
-      V2Mappers.adaptiveHint(await _client.post('/weekly/runs/$runId/hint',
-          body: {'mode': mode.code, 'difficulty': 'medium'}));
+  }) async => V2Mappers.adaptiveHint(
+    await _client.post(
+      '/weekly/runs/$runId/hint',
+      body: {'mode': mode.code, 'difficulty': 'medium'},
+    ),
+  );
 
   @override
   Future<LeaderboardPage> leaderboard({
@@ -125,17 +148,23 @@ class RemoteWeeklyRepository implements WeeklyRepository {
     final lang = 'ar'; // leaderboard is per weekly language; server infers run
     int? currentPlacement;
     try {
-      final pos =
-          await _client.get('/weekly/current/my-position', query: {'language': lang});
+      final pos = await _client.get(
+        '/weekly/current/my-position',
+        query: {'language': lang},
+      );
       currentPlacement = (pos['placement'] as num?)?.toInt();
-    } catch (_) {/* optional */}
-    final body = await _client.get('/weekly/current/leaderboard', query: {
-      'language': lang,
-      'limit': pageSize,
-      'offset': page * pageSize,
-    });
-    return V2Mappers.leaderboard(body,
-        myProfileId: myProfileId?.call(), currentPlacement: currentPlacement);
+    } catch (_) {
+      /* optional */
+    }
+    final body = await _client.get(
+      '/weekly/current/leaderboard',
+      query: {'language': lang, 'limit': pageSize, 'offset': page * pageSize},
+    );
+    return V2Mappers.leaderboard(
+      body,
+      myProfileId: myProfileId?.call(),
+      currentPlacement: currentPlacement,
+    );
   }
 }
 
@@ -152,23 +181,27 @@ class RemoteRoomRepository implements RoomRepository {
     required String category,
     HintMode hintMode = HintMode.standard,
     int? maxPlayers,
-  }) async =>
-      V2Mappers.room(
-        await _client.post('/rooms', body: {
-          'language': language.code,
-          'category': category,
-          'hint_mode': hintMode == HintMode.adaptive ? 'adaptive' : 'medium',
-          'max_players': ?maxPlayers,
-        }),
-        _me,
-      );
+  }) async => V2Mappers.room(
+    await _client.post(
+      '/rooms',
+      body: {
+        'language': language.code,
+        'category': category,
+        'hint_mode': hintMode == HintMode.adaptive ? 'adaptive' : 'medium',
+        'max_players': ?maxPlayers,
+      },
+    ),
+    _me,
+  );
 
   @override
   Future<Room> join({required String joinCode}) async => V2Mappers.room(
-        await _client
-            .post('/rooms/join', body: {'code': joinCode.trim().toUpperCase()}),
-        _me,
-      );
+    await _client.post(
+      '/rooms/join',
+      body: {'code': joinCode.trim().toUpperCase()},
+    ),
+    _me,
+  );
 
   @override
   Future<Room> snapshot({required String roomId}) async =>
@@ -184,8 +217,10 @@ class RemoteRoomRepository implements RoomRepository {
     required String word,
   }) async {
     try {
-      final body =
-          await _client.post('/rooms/$roomId/guess', body: {'guess': word});
+      final body = await _client.post(
+        '/rooms/$roomId/guess',
+        body: {'guess': word},
+      );
       return V2Mappers.guessOutcome(body);
     } on NotInVocabularyException catch (e) {
       return V2GuessOutcome(
@@ -203,9 +238,12 @@ class RemoteRoomRepository implements RoomRepository {
     required String roomId,
     HintMode mode = HintMode.adaptive,
     String difficulty = 'medium',
-  }) async =>
-      V2Mappers.adaptiveHint(await _client.post('/rooms/$roomId/hint',
-          body: {'mode': mode.code, 'difficulty': difficulty}));
+  }) async => V2Mappers.adaptiveHint(
+    await _client.post(
+      '/rooms/$roomId/hint',
+      body: {'mode': mode.code, 'difficulty': difficulty},
+    ),
+  );
 
   @override
   Future<void> leave({required String roomId}) =>

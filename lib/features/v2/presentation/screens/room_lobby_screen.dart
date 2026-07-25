@@ -106,7 +106,8 @@ class _RoomLobbyScreenState extends ConsumerState<RoomLobbyScreen> {
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(loc.errorMessage(e))));
+                      SnackBar(content: Text(loc.errorMessage(e))),
+                    );
                   }
                 }
               },

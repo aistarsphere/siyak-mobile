@@ -53,15 +53,18 @@ class _ConfettiOverlayState extends State<ConfettiOverlay>
   void initState() {
     super.initState();
     final rng = math.Random();
-    final palette = widget.colors ??
+    final palette =
+        widget.colors ??
         const [
           Color(0xFFFF6B4A), // coral
           Color(0xFF2DD4E8), // cyan
           Color(0xFF34D399), // emerald
           Color(0xFFF1ECE3), // text
         ];
-    _pieces =
-        List.generate(widget.pieceCount, (_) => _ConfettiPiece(rng, palette));
+    _pieces = List.generate(
+      widget.pieceCount,
+      (_) => _ConfettiPiece(rng, palette),
+    );
     _controller = AnimationController(
       vsync: this,
       duration: AppMotion.confettiMax,

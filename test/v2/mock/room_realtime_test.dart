@@ -67,9 +67,12 @@ class _FakeRoomRepo implements RoomRepository {
     required String roomId,
     HintMode mode = HintMode.adaptive,
     String difficulty = 'medium',
-  }) async =>
-      const AdaptiveHint(
-          number: 1, word: 'x', semanticRank: 50, hintsRemaining: 4);
+  }) async => const AdaptiveHint(
+    number: 1,
+    word: 'x',
+    semanticRank: 50,
+    hintsRemaining: 4,
+  );
   @override
   Future<void> leave({required String roomId}) async {}
 }

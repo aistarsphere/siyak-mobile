@@ -53,8 +53,9 @@ void main() {
     );
   });
 
-  testWidgets('V2 unavailable → modes gated with "coming soon" (V1 kept)',
-      (tester) async {
+  testWidgets('V2 unavailable → modes gated with "coming soon" (V1 kept)', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(1000, 2600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);

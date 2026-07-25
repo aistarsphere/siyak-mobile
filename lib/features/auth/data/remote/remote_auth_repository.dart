@@ -17,11 +17,14 @@ class RemoteAuthRepository implements AuthRepository {
     String? installationId,
     String? deviceLabel,
   }) async {
-    final res = await _api.post('/auth/google', body: {
-      'id_token': idToken,
-      'installation_id': ?installationId,
-      'device_label': ?deviceLabel,
-    });
+    final res = await _api.post(
+      '/auth/google',
+      body: {
+        'id_token': idToken,
+        'installation_id': ?installationId,
+        'device_label': ?deviceLabel,
+      },
+    );
     return AuthMappers.signIn(res);
   }
 
@@ -30,7 +33,9 @@ class RemoteAuthRepository implements AuthRepository {
     try {
       final res = await _api.get('/auth/session');
       if (res['authenticated'] != true || res['account'] is! Map) return null;
-      return AuthMappers.account((res['account'] as Map).cast<String, dynamic>());
+      return AuthMappers.account(
+        (res['account'] as Map).cast<String, dynamic>(),
+      );
     } on V2Exception catch (e) {
       if (e.isAuthFailure) return null; // 401 → guest
       rethrow;
@@ -41,6 +46,8 @@ class RemoteAuthRepository implements AuthRepository {
   Future<void> logout() => _api.post('/auth/logout');
 
   @override
-  Future<void> migrateGuest({required String installationId}) =>
-      _api.post('/auth/migrate-guest', body: {'installation_id': installationId});
+  Future<void> migrateGuest({required String installationId}) => _api.post(
+    '/auth/migrate-guest',
+    body: {'installation_id': installationId},
+  );
 }

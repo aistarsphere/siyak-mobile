@@ -11,9 +11,8 @@ class AuthMappers {
     displayName: j['display_name'] as String?,
     avatarUrl: j['avatar_url'] as String?,
     status: (j['status'] ?? 'active').toString(),
-    linkedProviders: (j['linked_providers'] as List?)
-            ?.map((e) => e.toString())
-            .toList() ??
+    linkedProviders:
+        (j['linked_providers'] as List?)?.map((e) => e.toString()).toList() ??
         const [],
     createdAt: _date(j['created_at']),
     lastActiveAt: _date(j['last_active_at']),

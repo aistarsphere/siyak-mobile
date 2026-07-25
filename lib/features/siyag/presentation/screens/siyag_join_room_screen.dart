@@ -28,18 +28,22 @@ class _S extends ConsumerState<SiyagJoinRoomScreen> {
   }
 
   Future<void> _join() async {
-    final room =
-        await ref.read(roomLifecycleControllerProvider.notifier).join(_c.text);
+    final room = await ref
+        .read(roomLifecycleControllerProvider.notifier)
+        .join(_c.text);
     if (!mounted) return;
     if (room != null) {
-      Navigator.of(context)
-          .pushReplacement(siyagRoute(const SiyagRoomLobbyScreen()));
+      Navigator.of(
+        context,
+      ).pushReplacement(siyagRoute(const SiyagRoomLobbyScreen()));
     } else {
       final err = ref.read(roomLifecycleControllerProvider).error;
       if (err != null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content:
-                Text(ref.read(localizationsProvider).errorMessage(err))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ref.read(localizationsProvider).errorMessage(err)),
+          ),
+        );
       }
     }
   }
@@ -63,9 +67,12 @@ class _S extends ConsumerState<SiyagJoinRoomScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Align(
-                          alignment: AlignmentDirectional.centerStart,
-                          child: Text('أدخل رمز الغرفة',
-                              style: ST.ar(13, color: SC.textDim))),
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Text(
+                          'أدخل رمز الغرفة',
+                          style: ST.ar(13, color: SC.textDim),
+                        ),
+                      ),
                       const SizedBox(height: 12),
                       TextField(
                         controller: _c,
@@ -73,17 +80,24 @@ class _S extends ConsumerState<SiyagJoinRoomScreen> {
                         textAlign: TextAlign.center,
                         textCapitalization: TextCapitalization.characters,
                         inputFormatters: [
-                          TextInputFormatter.withFunction((o, n) => n.copyWith(
-                              text: n.text
-                                  .toUpperCase()
-                                  .replaceAll(RegExp(r'[^A-Z0-9]'), ''))),
+                          TextInputFormatter.withFunction(
+                            (o, n) => n.copyWith(
+                              text: n.text.toUpperCase().replaceAll(
+                                RegExp(r'[^A-Z0-9]'),
+                                '',
+                              ),
+                            ),
+                          ),
                           LengthLimitingTextInputFormatter(8),
                         ],
                         style: ST.mono(30, letterSpacing: 8),
                         decoration: InputDecoration(
                           hintText: 'ABCD12',
-                          hintStyle:
-                              ST.mono(30, color: SC.textFaint, letterSpacing: 8),
+                          hintStyle: ST.mono(
+                            30,
+                            color: SC.textFaint,
+                            letterSpacing: 8,
+                          ),
                           filled: true,
                           fillColor: SC.surface,
                           border: OutlineInputBorder(

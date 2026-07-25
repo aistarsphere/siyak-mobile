@@ -36,7 +36,7 @@
              icon and accent tint. The FCM SDK auto-creates this channel. -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="siyaq_general" />
+            android:value="high_importance_channel" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
             android:resource="@drawable/ic_stat_siyaq" />

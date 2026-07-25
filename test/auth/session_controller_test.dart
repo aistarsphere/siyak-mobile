@@ -1,9 +1,9 @@
-import 'package:context_game/core/notifications/notification_runtime.dart';
-import 'package:context_game/core/notifications/push_notifications.dart';
 import 'package:context_game/features/auth/domain/entities/account.dart';
 import 'package:context_game/features/auth/domain/entities/sign_in_result.dart';
 import 'package:context_game/features/auth/domain/repositories/auth_repository.dart';
+import 'package:context_game/features/auth/domain/repositories/installation_repository.dart';
 import 'package:context_game/features/auth/presentation/controllers/auth_providers.dart';
+import 'package:context_game/features/auth/presentation/controllers/installation_providers.dart';
 import 'package:context_game/features/auth/presentation/controllers/session_controller.dart';
 import 'package:context_game/features/v2/data/installation_id_store.dart';
 import 'package:context_game/features/v2/data/session_store.dart';
@@ -126,32 +126,39 @@ class _FakeApple implements AppleAuthGateway {
   bool get isSupported => true;
 }
 
-class _FakeNotificationRuntime implements NotificationRuntimeCoordinator {
+class _NoopInstallation implements InstallationRepository {
   @override
-  NotificationRuntimeState get currentState => const NotificationRuntimeState();
-
+  Future<void> register({
+    required String installationId,
+    required String platform,
+    String? appVersion,
+    String? buildNumber,
+    String? locale,
+    String? timezone,
+    String? notificationPermission,
+  }) async {}
   @override
-  Future<String?> currentTokenForDebug() async => null;
-
+  Future<void> heartbeat(String installationId) async {}
   @override
-  Future<void> initialize() async {}
-
+  Future<void> attach(String installationId) async {}
   @override
-  Future<void> maybeRunFirstPermissionFlow() async {}
-
+  Future<void> detach(String installationId) async {}
   @override
-  Future<void> openSettings() async {}
-
+  Future<void> registerPushToken({
+    required String installationId,
+    required String platform,
+    required String token,
+    String? appVersion,
+    String? buildNumber,
+    String? locale,
+    String? timezone,
+    String? notificationPermission,
+  }) async {}
   @override
-  Future<void> onSessionAuthenticated(String accountId) async {}
-
-  @override
-  Future<void> onSessionBecameGuest() async {}
-
-  @override
-  Future<NotificationPermissionStatus?> setNotificationsEnabled(
-    bool value,
-  ) async => null;
+  Future<void> invalidatePushToken({
+    required String installationId,
+    required String platform,
+  }) async {}
 }
 
 const _account = Account(publicPlayerId: 'SYG-TEST1', displayName: 'سالم');
@@ -170,9 +177,7 @@ ProviderContainer _container({
     authRepositoryProvider.overrideWithValue(auth),
     googleAuthGatewayProvider.overrideWithValue(google),
     appleAuthGatewayProvider.overrideWithValue(apple ?? _FakeApple(null)),
-    notificationRuntimeActionsProvider.overrideWithValue(
-      _FakeNotificationRuntime(),
-    ),
+    installationRepositoryProvider.overrideWithValue(_NoopInstallation()),
   ],
 );
 

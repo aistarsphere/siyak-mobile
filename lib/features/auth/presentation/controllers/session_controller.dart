@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import '../../../../core/notifications/notification_runtime.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/notifications/notification_service.dart';
 import '../../../v2/data/session_store.dart';
 import '../../../v2/presentation/controllers/profile_controller.dart';
 import '../../../v2/presentation/controllers/v2_providers.dart';
@@ -11,6 +11,7 @@ import '../../../v2/presentation/controllers/wallet_controller.dart';
 import '../../domain/entities/account.dart';
 import '../../domain/repositories/auth_repository.dart';
 import 'auth_providers.dart';
+import 'installation_providers.dart';
 
 /// Signed-in state. `account == null` means the user is a **guest** (still fully
 /// playable via `X-Installation-ID`).
@@ -51,32 +52,27 @@ class SessionState {
   );
 }
 
-/// Owns account session lifecycle: cold-start restore, Google sign-in (with
-/// one-shot guest migration), and logout. Re-evaluates to guest whenever the
-/// server rejects the session (via [sessionRevokedProvider]).
+/// Owns account session lifecycle: cold-start restore, Google/Apple sign-in
+/// (with one-shot guest migration), and logout. Re-evaluates to guest whenever
+/// the server rejects the session (via [sessionRevokedProvider]).
 class SessionController extends AsyncNotifier<SessionState> {
   AuthRepository get _auth => ref.read(authRepositoryProvider);
   GoogleAuthGateway get _google => ref.read(googleAuthGatewayProvider);
   AppleAuthGateway get _apple => ref.read(appleAuthGatewayProvider);
   SessionStore get _sessions => ref.read(sessionStoreProvider);
 
+  String get _platform =>
+      defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android';
+
   @override
   Future<SessionState> build() async {
     // Any 401 rejection bumps this → rebuild restores guest without a network hit.
     ref.watch(sessionRevokedProvider);
     final token = await _sessions.load();
-    if (token == null || token.isEmpty) {
-      unawaited(
-        ref.read(notificationRuntimeActionsProvider).onSessionBecameGuest(),
-      );
-      return const SessionState();
-    }
+    if (token == null || token.isEmpty) return const SessionState();
     final account = await _auth.currentSession();
     if (account == null) {
       await _sessions.clear();
-      unawaited(
-        ref.read(notificationRuntimeActionsProvider).onSessionBecameGuest(),
-      );
       if (kDebugMode) {
         debugPrint('[Auth] stored session invalid → guest (token cleared)');
       }
@@ -88,11 +84,7 @@ class SessionController extends AsyncNotifier<SessionState> {
         'providers=${account.linkedProviders}',
       );
     }
-    unawaited(
-      ref
-          .read(notificationRuntimeActionsProvider)
-          .onSessionAuthenticated(account.publicPlayerId),
-    );
+    unawaited(_onAuthenticated());
     return SessionState(account: account);
   }
 
@@ -108,12 +100,6 @@ class SessionController extends AsyncNotifier<SessionState> {
         state = AsyncData(prev.copyWith(signingIn: false));
         return false; // cancelled
       }
-      if (kDebugMode) {
-        debugPrint(
-          '[Auth] Google ID token obtained (redacted); '
-          'submitting to backend /v2/auth/google',
-        );
-      }
       final installationId = await ref
           .read(installationIdStoreProvider)
           .getOrCreate();
@@ -125,8 +111,7 @@ class SessionController extends AsyncNotifier<SessionState> {
       if (kDebugMode) {
         debugPrint(
           '[Auth] Google sign-in OK: player=${result.account.publicPlayerId} '
-          'created=${result.created} providers=${result.account.linkedProviders} '
-          '(session token stored securely, redacted)',
+          'created=${result.created} providers=${result.account.linkedProviders}',
         );
       }
       state = AsyncData(
@@ -137,13 +122,7 @@ class SessionController extends AsyncNotifier<SessionState> {
           justCreated: result.created,
         ),
       );
-      // Attach this installation to the account + (re)register its push token.
-      unawaited(
-        ref
-            .read(notificationRuntimeActionsProvider)
-            .onSessionAuthenticated(result.account.publicPlayerId),
-      );
-      // Account's current_profile is now bearer-scoped — refresh dependent state.
+      unawaited(_onAuthenticated());
       ref.invalidate(profileControllerProvider);
       ref.invalidate(walletControllerProvider);
       return true;
@@ -152,15 +131,13 @@ class SessionController extends AsyncNotifier<SessionState> {
         debugPrint('[Auth] Google sign-in FAILED: ${e.runtimeType}');
       }
       state = AsyncError(e, st);
-      // Keep a usable (guest) state so the UI can recover.
       state = AsyncData(prev.copyWith(signingIn: false));
       rethrow;
     }
   }
 
   /// Interactive Apple sign-in (iOS/macOS). Same one-shot guest migration as
-  /// Google. No-op if the user cancels. Whether the account is new or recovered,
-  /// the backend account/profile response is the source of truth.
+  /// Google. No-op if the user cancels.
   Future<bool> signInWithApple() async {
     final prev = state.asData?.value ?? const SessionState();
     state = AsyncData(prev.copyWith(signingIn: true));
@@ -196,11 +173,7 @@ class SessionController extends AsyncNotifier<SessionState> {
           justCreated: result.created,
         ),
       );
-      unawaited(
-        ref
-            .read(notificationRuntimeActionsProvider)
-            .onSessionAuthenticated(result.account.publicPlayerId),
-      );
+      unawaited(_onAuthenticated());
       ref.invalidate(profileControllerProvider);
       ref.invalidate(walletControllerProvider);
       return true;
@@ -227,7 +200,6 @@ class SessionController extends AsyncNotifier<SessionState> {
       avatarUrl: avatarUrl,
     );
     state = AsyncData(prev.copyWith(account: updated, justCreated: false));
-    // Account display name feeds bearer-scoped profile views.
     ref.invalidate(profileControllerProvider);
     ref.invalidate(walletControllerProvider);
     if (kDebugMode) {
@@ -245,9 +217,11 @@ class SessionController extends AsyncNotifier<SessionState> {
     state = AsyncData(prev.copyWith(justCreated: false));
   }
 
-  /// Sign out: revoke server session, drop the local Google session + token.
+  /// Sign out: revoke server session, drop the local session + Google session,
+  /// detach the installation and delete the FCM token (Tamweeniya-style).
   Future<void> logout() async {
-    await ref.read(notificationRuntimeActionsProvider).onSessionBecameGuest();
+    // Detach + drop the push token while the bearer is still valid.
+    await _onGuest();
     try {
       await _auth.logout();
     } catch (_) {
@@ -261,6 +235,47 @@ class SessionController extends AsyncNotifier<SessionState> {
     ref.invalidate(walletControllerProvider);
     if (kDebugMode) debugPrint('[Auth] logged out → guest (session cleared)');
     state = const AsyncData(SessionState());
+  }
+
+  /// On login / cold-start restore: attach the installation to the account and
+  /// (re)register its FCM token with the backend. Best-effort.
+  Future<void> _onAuthenticated() async {
+    try {
+      final installationId = await ref
+          .read(installationIdStoreProvider)
+          .getOrCreate();
+      final repo = ref.read(installationRepositoryProvider);
+      await repo.attach(installationId);
+      final token = await NotificationService.instance.ensureToken();
+      if (token.isNotEmpty) {
+        await repo.registerPushToken(
+          installationId: installationId,
+          platform: _platform,
+          token: token,
+        );
+      }
+    } catch (_) {
+      // best-effort; retries on next token refresh
+    }
+  }
+
+  /// On logout: delete the FCM token, invalidate it server-side, and detach the
+  /// installation (while the bearer is still valid).
+  Future<void> _onGuest() async {
+    try {
+      final installationId = await ref
+          .read(installationIdStoreProvider)
+          .getOrCreate();
+      final repo = ref.read(installationRepositoryProvider);
+      await NotificationService.instance.unsubscribeFromAllTopics();
+      await repo.invalidatePushToken(
+        installationId: installationId,
+        platform: _platform,
+      );
+      await repo.detach(installationId);
+    } catch (_) {
+      // best-effort
+    }
   }
 }
 

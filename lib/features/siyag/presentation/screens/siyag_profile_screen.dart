@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/notifications/notification_runtime.dart';
-import '../../../../core/notifications/push_notifications.dart';
 import '../../../../core/theme/siyag_theme.dart';
 import '../../../../core/widgets/siyag/siyag_common.dart';
 import '../../../../core/widgets/siyag/siyag_tap.dart';
@@ -57,8 +55,6 @@ class SiyagProfileScreen extends ConsumerWidget {
           const _IdentityNote(),
           const SizedBox(height: 28),
           _AppearanceSelector(),
-          const SizedBox(height: 24),
-          const _NotificationsSelector(),
           const SizedBox(height: 24),
         ],
       ),
@@ -511,175 +507,6 @@ Future<void> _showNameSheet(
       );
     },
   );
-}
-
-/// Notifications opt-in: a single toggle that requests permission + subscribes
-/// (the deliberate product moment for the OS prompt), plus a copy-token action
-/// for testing. Reflects the live OS permission (e.g. blocked in settings).
-class _NotificationsSelector extends ConsumerWidget {
-  const _NotificationsSelector();
-
-  Future<void> _copyToken(BuildContext context, WidgetRef ref) async {
-    final loc = ref.read(localizationsProvider);
-    final token = await ref
-        .read(notificationRuntimeActionsProvider)
-        .currentTokenForDebug();
-    if (!context.mounted) return;
-    final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
-    if (token == null) {
-      messenger.showSnackBar(SnackBar(content: Text(loc('tokenUnavailable'))));
-      return;
-    }
-    await Clipboard.setData(ClipboardData(text: token));
-    if (context.mounted) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(loc('tokenCopied'))));
-    }
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final loc = ref.watch(localizationsProvider);
-    final state = ref.watch(notificationRuntimeProvider);
-    final ctrl = ref.read(notificationRuntimeActionsProvider);
-    final statusText = switch (state.readiness) {
-      NotificationRuntimeStatus.waitingForPlatformToken => loc(
-        'notificationsWaiting',
-      ),
-      NotificationRuntimeStatus.registeringWithBackend ||
-      NotificationRuntimeStatus.requestingPermission ||
-      NotificationRuntimeStatus.synchronizing => loc(
-        'notificationsRegistering',
-      ),
-      NotificationRuntimeStatus.recoverableError => loc(
-        'notificationsRecoverableError',
-      ),
-      NotificationRuntimeStatus.blockedBySystem => loc('notificationsBlocked'),
-      NotificationRuntimeStatus.ready => loc('notificationsReady'),
-      NotificationRuntimeStatus.disabledByUser => loc('notificationsHint'),
-      NotificationRuntimeStatus.permissionNotDetermined => loc(
-        'notificationsHint',
-      ),
-      NotificationRuntimeStatus.unavailable ||
-      NotificationRuntimeStatus.configurationError => loc(
-        'notificationsRecoverableError',
-      ),
-    };
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Kicker(loc('notifications')),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: SC.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: SC.line),
-          ),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.notifications_active_outlined,
-                    size: 18,
-                    color: SC.textMute,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          loc('notifications'),
-                          style: ST.ar(14, weight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          statusText,
-                          style: ST.ar(
-                            11,
-                            color:
-                                state.blockedBySystem ||
-                                    state.readiness ==
-                                        NotificationRuntimeStatus
-                                            .recoverableError
-                                ? SC.coral
-                                : SC.textMute,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (state.busy)
-                    SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: SC.gold,
-                      ),
-                    )
-                  else
-                    Switch(
-                      value: state.enabled,
-                      activeThumbColor: SC.onGold,
-                      activeTrackColor: SC.gold,
-                      onChanged: (v) async {
-                        final perm = await ctrl.setNotificationsEnabled(v);
-                        if (v &&
-                            perm != null &&
-                            !perm.isGranted &&
-                            context.mounted) {
-                          ScaffoldMessenger.of(context)
-                            ..hideCurrentSnackBar()
-                            ..showSnackBar(
-                              SnackBar(
-                                content: Text(loc('notificationsDenied')),
-                                action: SnackBarAction(
-                                  label: loc('openSettings'),
-                                  onPressed: ctrl.openSettings,
-                                ),
-                              ),
-                            );
-                        }
-                      },
-                    ),
-                ],
-              ),
-              if (state.enabled) ...[
-                const SizedBox(height: 14),
-                Divider(height: 1, color: SC.line),
-                const SizedBox(height: 14),
-                SiyagTap(
-                  onTap: () => _copyToken(context, ref),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.vpn_key_outlined,
-                        size: 14,
-                        color: SC.textMute,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        loc('copyToken'),
-                        style: ST.ar(12, color: SC.textDim),
-                      ),
-                      const Spacer(),
-                      Icon(Icons.copy_rounded, size: 12, color: SC.textMute),
-                    ],
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 /// System / Light / Dark segmented selector. Persists via [AppSettings] and

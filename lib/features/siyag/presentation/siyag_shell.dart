@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
-import '../../../core/notifications/notification_runtime.dart';
 import '../../../core/theme/siyag_theme.dart';
 import '../../../core/widgets/siyag/siyag_bottom_nav.dart';
 import '../../auth/presentation/controllers/session_controller.dart';
@@ -24,16 +23,6 @@ class SiyagShell extends ConsumerStatefulWidget {
 }
 
 class _SiyagShellState extends ConsumerState<SiyagShell> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref
-          .read(notificationRuntimeActionsProvider)
-          .maybeRunFirstPermissionFlow();
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final index = ref.watch(siyagTabProvider);

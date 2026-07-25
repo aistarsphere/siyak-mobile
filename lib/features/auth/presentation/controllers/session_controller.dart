@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +9,7 @@ import '../../../v2/presentation/controllers/v2_providers.dart';
 import '../../domain/entities/account.dart';
 import '../../domain/repositories/auth_repository.dart';
 import 'auth_providers.dart';
+import 'installation_service.dart';
 
 /// Signed-in state. `account == null` means the user is a **guest** (still fully
 /// playable via `X-Installation-ID`).
@@ -117,6 +120,8 @@ class SessionController extends AsyncNotifier<SessionState> {
           justCreated: result.created,
         ),
       );
+      // Attach this installation to the account + (re)register its push token.
+      unawaited(ref.read(installationServiceProvider).onLogin());
       // Account's current_profile is now bearer-scoped — refresh dependent state.
       ref.invalidate(profileControllerProvider);
       return true;
@@ -161,6 +166,9 @@ class SessionController extends AsyncNotifier<SessionState> {
 
   /// Sign out: revoke server session, drop the local Google session + token.
   Future<void> logout() async {
+    // Detach the installation + invalidate its push token while the bearer is
+    // still valid; the installation UUID itself survives logout.
+    await ref.read(installationServiceProvider).onLogout();
     try {
       await _auth.logout();
     } catch (_) {

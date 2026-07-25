@@ -8,6 +8,7 @@ import '../../../../core/theme/siyag_theme.dart';
 import '../../../../core/widgets/siyag/siyag_common.dart';
 import '../../../../core/widgets/siyag/siyag_tap.dart';
 import '../../../auth/domain/repositories/auth_repository.dart';
+import '../../../auth/presentation/controllers/installation_service.dart';
 import '../../../auth/presentation/controllers/session_controller.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../v2/domain/entities/installation_profile.dart';
@@ -543,6 +544,12 @@ class _NotificationsSelector extends ConsumerWidget {
                       activeTrackColor: SC.gold,
                       onChanged: (v) async {
                         final perm = await ctrl.toggle(v);
+                        if (v && perm != null && perm.isGranted) {
+                          // Permission just granted → a token is now available.
+                          ref
+                              .read(installationServiceProvider)
+                              .syncPushToken();
+                        }
                         if (v &&
                             perm != null &&
                             !perm.isGranted &&

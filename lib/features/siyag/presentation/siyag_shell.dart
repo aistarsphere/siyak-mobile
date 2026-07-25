@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import '../../../core/notifications/notifications_controller.dart';
 import '../../../core/theme/siyag_theme.dart';
 import '../../../core/widgets/siyag/siyag_bottom_nav.dart';
+import '../../auth/presentation/controllers/installation_service.dart';
 import '../../auth/presentation/controllers/session_controller.dart';
 import 'screens/siyag_home_screen.dart';
 import 'screens/siyag_leaderboard_screen.dart';
@@ -27,8 +28,10 @@ class _SiyagShellState extends ConsumerState<SiyagShell> {
   @override
   void initState() {
     super.initState();
-    // One-time notification permission prompt on first launch (self-guarded).
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Register the guest installation + push token with the backend.
+      ref.read(installationServiceProvider).bootstrap();
+      // One-time notification permission prompt on first launch (self-guarded).
       ref
           .read(notificationsControllerProvider.notifier)
           .maybePromptOnFirstRun();

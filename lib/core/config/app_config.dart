@@ -61,6 +61,13 @@ class AppConfig {
   /// The V2 API generation served at the V2 base.
   static const String apiVersion = '2.0';
 
+  /// App marketing/build version reported to the installation registry.
+  /// Overridable at build time with `--dart-define`.
+  static const String appVersion =
+      String.fromEnvironment('APP_VERSION', defaultValue: '1.0.0');
+  static const String buildNumber =
+      String.fromEnvironment('BUILD_NUMBER', defaultValue: '1');
+
   // ── Google Sign-In ───────────────────────────────────────────────────────
   /// The Google **Web/Server OAuth client ID** for project `siyag-503420`.
   /// Passed as `serverClientId` so Google issues an ID token whose audience is

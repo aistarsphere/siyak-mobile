@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
+import '../../../core/notifications/notifications_controller.dart';
 import '../../../core/theme/siyag_theme.dart';
 import '../../../core/widgets/siyag/siyag_bottom_nav.dart';
 import '../../auth/presentation/controllers/session_controller.dart';
@@ -15,11 +16,27 @@ final siyagTabProvider = StateProvider<int>((ref) => 0);
 /// App shell — three destinations with the sliding coral dot; full-screen
 /// flows (gameplay, weekly, multiplayer, result) are pushed as routes and hide
 /// the nav, per App.tsx.
-class SiyagShell extends ConsumerWidget {
+class SiyagShell extends ConsumerStatefulWidget {
   const SiyagShell({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SiyagShell> createState() => _SiyagShellState();
+}
+
+class _SiyagShellState extends ConsumerState<SiyagShell> {
+  @override
+  void initState() {
+    super.initState();
+    // One-time notification permission prompt on first launch (self-guarded).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref
+          .read(notificationsControllerProvider.notifier)
+          .maybePromptOnFirstRun();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final index = ref.watch(siyagTabProvider);
     // Bootstrap account session on launch (cold-start restore). The result is
     // consumed on the Profile tab; watching here also primes the bearer token

@@ -19,6 +19,26 @@ Future<void> main() async {
   // never requests notification permission here.
   await initializeFirebase();
 
+  // FCM background/terminated handler — must be registered on a top-level
+  // function before the app runs (it executes in its own isolate).
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+  // Foreground presentation (iOS banner) + notification-tap routing. No
+  // permission prompt here — that is the in-app Notifications toggle's job.
+  final push = PushMessagingService(FirebaseMessaging.instance);
+  unawaited(
+    push.configure(
+      onOpened: (m) {
+        if (kDebugMode) {
+          debugPrint(
+            '[FCM] notification tapped → id=${m.messageId} '
+            'data=${m.data.keys.toList()}',
+          );
+        }
+      },
+    ),
+  );
+
   final prefs = await SharedPreferences.getInstance();
   // Debug-only: surface the effective backend base URL (from CG_BASE define,
   // saved override, or the documented default).
@@ -28,9 +48,7 @@ Future<void> main() async {
       '[Siyaq] effective CG_BASE = ${AppConfig.resolveBaseUrl(override)}',
     );
     // Prove FCM is installed (redacted token only) — non-blocking, no prompt.
-    unawaited(
-      verifyFcmInstallation(PushMessagingService(FirebaseMessaging.instance)),
-    );
+    unawaited(verifyFcmInstallation(push));
   }
   runApp(
     ProviderScope(

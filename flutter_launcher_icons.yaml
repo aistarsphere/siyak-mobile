@@ -5,9 +5,10 @@ flutter_launcher_icons:
   ios: true
   remove_alpha_ios: true
   image_path: "assets/branding/app_icon.png"
-  # Adaptive icon: warm graphite background + padded metallic-S foreground.
-  adaptive_icon_background: "#EDEAE4"
+  # Adaptive icon: pure-white background (defined in XML only) + transparent
+  # metallic-S foreground (no baked-in background).
+  adaptive_icon_background: "#FFFFFF"
   adaptive_icon_foreground: "assets/branding/adaptive_foreground.png"
   # Android 13+ themed (monochrome) icon: white silhouette.
   adaptive_icon_monochrome: "assets/branding/notification_icon.png"
-  background_color_ios: "#F4F2EE"
+  background_color_ios: "#FFFFFF"

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../data/installation_id_store.dart';
+import '../../data/remote/ranked_realtime_nudge.dart';
 import '../../data/remote/remote_realtime_gateway.dart';
 import '../../data/remote/remote_repositories.dart';
 import '../../data/remote/v2_api_client.dart';
@@ -83,6 +84,17 @@ final roomRepositoryProvider = Provider<RoomRepository>((ref) {
   return RemoteRoomRepository(
     ref.watch(v2ApiClientProvider),
     myProfileId: () => _myProfileId(ref),
+  );
+});
+
+/// Ranked-match realtime nudge factory (§11). Content-agnostic — signals the
+/// ranked match stream to refetch the authoritative REST snapshot on any frame.
+final rankedRealtimeNudgeProvider = Provider<RankedRealtimeNudge>((ref) {
+  final override = ref.watch(
+    appSettingsProvider.select((s) => s.baseUrlOverride),
+  );
+  return RankedRealtimeNudge(
+    socketBase: AppConfig.resolveV2SocketBase(override),
   );
 });
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,26 +9,70 @@ import '../../../../core/widgets/siyag/siyag_tap.dart';
 import '../../../v2/domain/entities/ranked.dart';
 import '../../../v2/domain/repositories/ranked_repository.dart';
 import '../../../v2/presentation/controllers/ranked_controller.dart';
+import '../../../v2/presentation/controllers/v2_providers.dart';
 import '../../../v2/presentation/controllers/wallet_controller.dart';
 
-/// Polls the authoritative match snapshot until it ends (contract §8). A future
-/// hardening step swaps this for the ranked realtime channel (§11); the REST
-/// snapshot stays the reconciliation source of truth either way.
+/// Live match snapshot until it ends (contract §8). The authoritative REST
+/// snapshot is the reconciliation source of truth; the ranked realtime channel
+/// (§11) is a best-effort *nudge* that refetches the instant the match changes.
+/// A steady safety poll runs underneath, so a dropped/absent socket degrades to
+/// the previous poll-only behaviour with no correctness or liveness loss.
 final rankedMatchStreamProvider = StreamProvider.autoDispose
-    .family<RankedMatch, String>((ref, matchId) async* {
+    .family<RankedMatch, String>((ref, matchId) {
       final repo = ref.watch(rankedRepositoryProvider);
-      var m = await repo.getMatch(matchId);
-      yield m;
-      while (!m.isOver) {
-        await Future<void>.delayed(const Duration(seconds: 2));
+      final controller = StreamController<RankedMatch>();
+      var over = false;
+      var inFlight = false;
+
+      Future<void> refetch() async {
+        if (over || inFlight || controller.isClosed) return;
+        inFlight = true;
         try {
-          m = await repo.getMatch(matchId);
+          final m = await repo.getMatch(matchId);
+          if (controller.isClosed) return;
+          controller.add(m);
+          if (m.isOver) {
+            over = true;
+            ref.invalidate(walletControllerProvider); // settlement/payout
+            await controller.close();
+          }
         } catch (_) {
-          continue;
+          // Transient — the next nudge or safety-poll tick retries.
+        } finally {
+          inFlight = false;
         }
-        yield m;
       }
-      ref.invalidate(walletControllerProvider); // reflect settlement/payout
+
+      // Realtime nudge: refetch immediately on any ranked-channel frame.
+      StreamSubscription<void>? nudgeSub;
+      unawaited(() async {
+        try {
+          final iid = await ref.read(installationIdStoreProvider).getOrCreate();
+          if (controller.isClosed) return;
+          nudgeSub = ref
+              .read(rankedRealtimeNudgeProvider)
+              .watch(matchId: matchId, installationId: iid)
+              .listen((_) => refetch(), onError: (_) {});
+        } catch (_) {
+          // No socket → the safety poll below keeps the match live.
+        }
+      }());
+
+      // Safety net: unchanged 2s cadence so behaviour never regresses when the
+      // socket is unavailable; the nudge just makes updates feel instant.
+      final timer = Timer.periodic(
+        const Duration(seconds: 2),
+        (_) => refetch(),
+      );
+
+      ref.onDispose(() {
+        timer.cancel();
+        nudgeSub?.cancel();
+        if (!controller.isClosed) controller.close();
+      });
+
+      refetch(); // initial snapshot
+      return controller.stream;
     });
 
 class SiyagRankedMatchScreen extends ConsumerWidget {

@@ -7,6 +7,7 @@ import '../../../v2/presentation/controllers/room_controller.dart';
 import '../siyag_route.dart';
 import 'siyag_create_room_screen.dart';
 import 'siyag_join_room_screen.dart';
+import 'siyag_ranked_screen.dart';
 import 'siyag_room_lobby_screen.dart';
 import 'siyag_topbar.dart';
 
@@ -60,6 +61,16 @@ class SiyagMultiplayerHubScreen extends ConsumerWidget {
                       onTap: () => Navigator.of(
                         context,
                       ).push(siyagRoute(const SiyagJoinRoomScreen())),
+                    ),
+                    const SizedBox(height: 12),
+                    _row(
+                      icon: Icons.military_tech_rounded,
+                      color: SC.gold,
+                      ar: 'المصنّفة 1v1',
+                      en: 'Ranked 1v1 · staked',
+                      onTap: () => Navigator.of(
+                        context,
+                      ).push(siyagRoute(const SiyagRankedScreen())),
                     ),
                     if (active != null) ...[
                       const SizedBox(height: 12),

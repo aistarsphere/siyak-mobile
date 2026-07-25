@@ -126,7 +126,9 @@ class _SiyagPracticeGameScreenState
       submitting: state.submitting,
       flash: _flash,
       hints: [for (final h in state.hints) SiyagHintVM(h.word, h.rank)],
-      hintsRemaining: state.hintsExhausted ? 0 : (5 - state.hintsUsed),
+      // Server-authoritative (contract §6 `hints_remaining`), reconciled in the
+      // controller on each guess/hint — not a hard-coded client cap.
+      hintsRemaining: state.hintsRemaining,
       hintLoading: state.hintLoading,
       onRequestHint: () =>
           ref.read(gameControllerProvider.notifier).requestHint(),

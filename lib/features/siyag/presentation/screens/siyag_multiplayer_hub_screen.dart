@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/siyag_theme.dart';
 import '../../../../core/widgets/siyag/siyag_tap.dart';
 import '../../../v2/presentation/controllers/room_controller.dart';
+import '../../../v2/presentation/controllers/social_controller.dart';
 import '../siyag_route.dart';
 import 'siyag_create_room_screen.dart';
 import 'siyag_join_room_screen.dart';
+import 'siyag_players_screen.dart';
 import 'siyag_ranked_screen.dart';
 import 'siyag_room_lobby_screen.dart';
 import 'siyag_topbar.dart';
@@ -19,6 +21,8 @@ class SiyagMultiplayerHubScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final active = ref.watch(roomLifecycleControllerProvider).room;
+    final pendingInvites =
+        ref.watch(incomingInvitationsProvider).asData?.value.length ?? 0;
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
@@ -72,6 +76,17 @@ class SiyagMultiplayerHubScreen extends ConsumerWidget {
                         context,
                       ).push(siyagRoute(const SiyagRankedScreen())),
                     ),
+                    const SizedBox(height: 12),
+                    _row(
+                      icon: Icons.groups_rounded,
+                      color: SC.cyan,
+                      ar: 'اللاعبون',
+                      en: 'Players online · invites',
+                      badge: pendingInvites,
+                      onTap: () => Navigator.of(
+                        context,
+                      ).push(siyagRoute(const SiyagPlayersScreen())),
+                    ),
                     if (active != null) ...[
                       const SizedBox(height: 12),
                       _row(
@@ -100,6 +115,7 @@ class SiyagMultiplayerHubScreen extends ConsumerWidget {
     required String ar,
     required String en,
     required VoidCallback onTap,
+    int badge = 0,
   }) => SiyagTap(
     onTap: onTap,
     scale: 0.98,
@@ -132,6 +148,19 @@ class SiyagMultiplayerHubScreen extends ConsumerWidget {
               ],
             ),
           ),
+          if (badge > 0)
+            Container(
+              margin: const EdgeInsetsDirectional.only(end: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: SC.coral,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                '$badge',
+                style: ST.mono(11, color: SC.onAccent),
+              ),
+            ),
           Icon(Icons.chevron_left_rounded, size: 18, color: SC.textFaint),
         ],
       ),

@@ -69,6 +69,20 @@ class RoomLifecycleController extends Notifier<RoomLifecycleState> {
     }
   }
 
+  /// Adopt a room the player has already joined out-of-band (e.g. by accepting a
+  /// social invitation, which joins server-side) by pulling its REST snapshot.
+  Future<Room?> openById(String roomId) async {
+    state = state.copyWith(busy: true, clearError: true);
+    try {
+      final room = await _rooms.snapshot(roomId: roomId);
+      state = RoomLifecycleState(room: room);
+      return room;
+    } catch (e) {
+      state = state.copyWith(busy: false, error: e);
+      return null;
+    }
+  }
+
   Future<void> leave() async {
     final room = state.room;
     if (room != null) {

@@ -64,6 +64,19 @@ class _FakeAuth implements AuthRepository {
   }
 
   @override
+  Future<SignInResult> signInWithApple({
+    required String identityToken,
+    String? authorizationCode,
+    String? givenName,
+    String? familyName,
+    String? installationId,
+    String? deviceLabel,
+  }) async {
+    lastInstallation = installationId;
+    return signInResult!;
+  }
+
+  @override
   Future<Account?> currentSession() async => sessionAccount;
 
   String? lastUpdatedName;
@@ -99,12 +112,22 @@ class _FakeGoogle implements GoogleAuthGateway {
   bool get isSupported => true;
 }
 
+class _FakeApple implements AppleAuthGateway {
+  _FakeApple(this.credential);
+  AppleCredential? credential; // null → user cancelled
+  @override
+  Future<AppleCredential?> obtainCredential() async => credential;
+  @override
+  bool get isSupported => true;
+}
+
 const _account = Account(publicPlayerId: 'SYG-TEST1', displayName: 'سالم');
 
 ProviderContainer _container({
   required SessionStore session,
   required _FakeAuth auth,
   required _FakeGoogle google,
+  _FakeApple? apple,
 }) => ProviderContainer(
   overrides: [
     sessionStoreProvider.overrideWithValue(session),
@@ -113,6 +136,7 @@ ProviderContainer _container({
     ),
     authRepositoryProvider.overrideWithValue(auth),
     googleAuthGatewayProvider.overrideWithValue(google),
+    appleAuthGatewayProvider.overrideWithValue(apple ?? _FakeApple(null)),
   ],
 );
 
@@ -192,6 +216,55 @@ void main() {
       );
     },
   );
+
+  test('Apple sign-in saves the session and migrates the installation', () async {
+    final store = SessionStore(storage: _Mem());
+    final auth = _FakeAuth()
+      ..signInResult = const SignInResult(
+        sessionToken: 'sess_apple',
+        account: Account(
+          publicPlayerId: 'SYG-APPLE',
+          displayName: 'سالم',
+          linkedProviders: ['apple'],
+        ),
+      );
+    final c = _container(
+      session: store,
+      auth: auth,
+      google: _FakeGoogle(null),
+      apple: _FakeApple(
+        const AppleCredential(identityToken: 'apple-idtoken', givenName: 'سالم'),
+      ),
+    );
+    addTearDown(c.dispose);
+    await c.read(sessionControllerProvider.future);
+    final ok = await c
+        .read(sessionControllerProvider.notifier)
+        .signInWithApple();
+    expect(ok, isTrue);
+    final s = c.read(sessionControllerProvider).value!;
+    expect(s.account!.publicPlayerId, 'SYG-APPLE');
+    expect(s.account!.linkedProviders, contains('apple'));
+    expect(store.cachedToken, 'sess_apple');
+    expect(auth.lastInstallation, isNotNull);
+  });
+
+  test('cancelled Apple sign-in keeps the guest state', () async {
+    final store = SessionStore(storage: _Mem());
+    final c = _container(
+      session: store,
+      auth: _FakeAuth(),
+      google: _FakeGoogle(null),
+      apple: _FakeApple(null),
+    );
+    addTearDown(c.dispose);
+    await c.read(sessionControllerProvider.future);
+    final ok = await c
+        .read(sessionControllerProvider.notifier)
+        .signInWithApple();
+    expect(ok, isFalse);
+    expect(c.read(sessionControllerProvider).value!.isSignedIn, isFalse);
+  });
 
   test('cancelled Google sign-in keeps the guest state', () async {
     final store = SessionStore(storage: _Mem());

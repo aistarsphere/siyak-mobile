@@ -217,9 +217,24 @@ class PushMessagingService {
   Future<void> deleteToken() => _fm.deleteToken();
 
   // ── Topics ──────────────────────────────────────────────────────────────────
-  Future<void> subscribeToTopic(String topic) => _fm.subscribeToTopic(topic);
-  Future<void> unsubscribeFromTopic(String topic) =>
-      _fm.unsubscribeFromTopic(topic);
+  Future<void> subscribeToTopic(String topic) async {
+    try {
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        await _fm.getAPNSToken();
+      }
+      await _fm.subscribeToTopic(topic);
+    } catch (e) {
+      debugPrint('[FCM] subscribeToTopic failed: $e');
+    }
+  }
+
+  Future<void> unsubscribeFromTopic(String topic) async {
+    try {
+      await _fm.unsubscribeFromTopic(topic);
+    } catch (e) {
+      debugPrint('[FCM] unsubscribeFromTopic failed: $e');
+    }
+  }
 
   static PushPermissionStatus _map(AuthorizationStatus s) => switch (s) {
     AuthorizationStatus.authorized => PushPermissionStatus.authorized,

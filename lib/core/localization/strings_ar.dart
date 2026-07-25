@@ -163,6 +163,7 @@ const Map<String, String> stringsAr = {
   'account': 'الحساب',
   'guestMode': 'ضيف',
   'signInWithGoogle': 'تسجيل الدخول عبر Google',
+  'signInWithApple': 'تسجيل الدخول عبر Apple',
   'signInBenefit': 'احفظ تقدمك والعب المصنّفة والغرف الاجتماعية.',
   'signOut': 'تسجيل الخروج',
   'linkedGoogle': 'مرتبط بحساب Google',

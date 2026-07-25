@@ -29,6 +29,29 @@ class RemoteAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<SignInResult> signInWithApple({
+    required String identityToken,
+    String? authorizationCode,
+    String? givenName,
+    String? familyName,
+    String? installationId,
+    String? deviceLabel,
+  }) async {
+    final res = await _api.post(
+      '/auth/apple',
+      body: {
+        'identity_token': identityToken,
+        'authorization_code': ?authorizationCode,
+        'given_name': ?givenName,
+        'family_name': ?familyName,
+        'installation_id': ?installationId,
+        'device_label': ?deviceLabel,
+      },
+    );
+    return AuthMappers.signIn(res);
+  }
+
+  @override
   Future<Account?> currentSession() async {
     try {
       final res = await _api.get('/auth/session');

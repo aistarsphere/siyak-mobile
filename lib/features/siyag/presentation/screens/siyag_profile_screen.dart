@@ -8,6 +8,7 @@ import '../../../../core/theme/siyag_theme.dart';
 import '../../../../core/widgets/siyag/siyag_common.dart';
 import '../../../../core/widgets/siyag/siyag_tap.dart';
 import '../../../auth/domain/repositories/auth_repository.dart';
+import '../../../auth/presentation/controllers/auth_providers.dart';
 import '../../../auth/presentation/controllers/installation_service.dart';
 import '../../../auth/presentation/controllers/session_controller.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
@@ -198,13 +199,24 @@ class _PlayerIdChip extends ConsumerWidget {
 class _AccountSection extends ConsumerWidget {
   const _AccountSection();
 
-  Future<void> _signIn(BuildContext context, WidgetRef ref) async {
+  Future<void> _signIn(BuildContext context, WidgetRef ref) =>
+      _runSignIn(context, ref, (n) => n.signInWithGoogle());
+
+  Future<void> _signInApple(BuildContext context, WidgetRef ref) =>
+      _runSignIn(context, ref, (n) => n.signInWithApple());
+
+  /// Shared sign-in flow (Google/Apple): run the provider, then offer the
+  /// one-shot welcome name setup for a brand-new account; surface real errors.
+  Future<void> _runSignIn(
+    BuildContext context,
+    WidgetRef ref,
+    Future<bool> Function(SessionController) run,
+  ) async {
     final loc = ref.read(localizationsProvider);
     try {
       final notifier = ref.read(sessionControllerProvider.notifier);
-      final ok = await notifier.signInWithGoogle();
+      final ok = await run(notifier);
       if (!ok) return; // user cancelled — stay guest silently, no error
-      // Brand-new account → offer the one-shot welcome name setup.
       final s = ref.read(sessionControllerProvider).asData?.value;
       if (s != null && s.justCreated && context.mounted) {
         await _showNameSheet(
@@ -222,9 +234,10 @@ class _AccountSection extends ConsumerWidget {
         );
       }
     } catch (e) {
-      final msg = e is GoogleAuthException && e.isConfiguration
-          ? loc('signInConfigError')
-          : loc.errorMessage(e);
+      final isConfig =
+          (e is GoogleAuthException && e.isConfiguration) ||
+          (e is AppleAuthException && e.isConfiguration);
+      final msg = isConfig ? loc('signInConfigError') : loc.errorMessage(e);
       if (context.mounted) {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
@@ -241,8 +254,12 @@ class _AccountSection extends ConsumerWidget {
     final loc = ref.watch(localizationsProvider);
     final session = ref.watch(sessionControllerProvider);
     final state = session.asData?.value;
-    final signedIn = state?.account != null;
+    final account = state?.account;
+    final signedIn = account != null;
     final signingIn = state?.signingIn ?? false;
+    final appleSupported = ref.watch(appleAuthGatewayProvider).isSupported;
+    final linkedApple = account?.linkedProviders.contains('apple') ?? false;
+    final blocked = signedIn && !account.isActive;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -252,30 +269,63 @@ class _AccountSection extends ConsumerWidget {
         border: Border.all(color: SC.line),
       ),
       child: signedIn
-          // ── Signed in → compact linked + sign out (identity is in the header)
-          ? Row(
+          // ── Signed in → optional blocked banner + provider-aware linked row
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.verified_rounded, size: 16, color: SC.emerald),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    loc('linkedGoogle'),
-                    style: ST.ar(13, color: SC.emerald),
+                if (blocked) ...[
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.report_gmailerrorred_rounded,
+                        size: 16,
+                        color: SC.coral,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          loc(switch (account.status) {
+                            'suspended' => 'v2ErrAccountSuspended',
+                            'banned' => 'v2ErrAccountBanned',
+                            'verification_required' => 'v2ErrAccountVerification',
+                            'deletion_pending' => 'v2ErrAccountDeletionPending',
+                            'deleted' => 'v2ErrAccountDeleted',
+                            _ => 'v2ErrAccountDisabled',
+                          }),
+                          style: ST.ar(12, color: SC.coral),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                SiyagTap(
-                  onTap: () => _signOut(ref),
-                  child: Padding(
-                    padding: const EdgeInsets.all(4),
-                    child: Text(
-                      loc('signOut'),
-                      style: ST.ar(13, color: SC.textDim),
+                  const SizedBox(height: 12),
+                  Divider(height: 1, color: SC.line),
+                  const SizedBox(height: 12),
+                ],
+                Row(
+                  children: [
+                    Icon(Icons.verified_rounded, size: 16, color: SC.emerald),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        linkedApple ? loc('linkedApple') : loc('linkedGoogle'),
+                        style: ST.ar(13, color: SC.emerald),
+                      ),
                     ),
-                  ),
+                    SiyagTap(
+                      onTap: () => _signOut(ref),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Text(
+                          loc('signOut'),
+                          style: ST.ar(13, color: SC.textDim),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             )
-          // ── Guest → offer Google sign-in ──────────────────────────────────
+          // ── Guest → offer Google (+ Apple on iOS) sign-in ─────────────────
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -289,6 +339,16 @@ class _AccountSection extends ConsumerWidget {
                   busy: signingIn,
                   onTap: () => _signIn(context, ref),
                 ),
+                if (appleSupported) ...[
+                  const SizedBox(height: 8),
+                  SiyagPrimaryButton(
+                    label: loc('signInWithApple'),
+                    icon: Icons.apple,
+                    color: const Color(0xFF1B1D22),
+                    busy: signingIn,
+                    onTap: () => _signInApple(context, ref),
+                  ),
+                ],
               ],
             ),
     );

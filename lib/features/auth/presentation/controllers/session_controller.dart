@@ -56,6 +56,7 @@ class SessionState {
 class SessionController extends AsyncNotifier<SessionState> {
   AuthRepository get _auth => ref.read(authRepositoryProvider);
   GoogleAuthGateway get _google => ref.read(googleAuthGatewayProvider);
+  AppleAuthGateway get _apple => ref.read(appleAuthGatewayProvider);
   SessionStore get _sessions => ref.read(sessionStoreProvider);
 
   @override
@@ -129,6 +130,55 @@ class SessionController extends AsyncNotifier<SessionState> {
       if (kDebugMode) debugPrint('[Auth] Google sign-in FAILED: ${e.runtimeType}');
       state = AsyncError(e, st);
       // Keep a usable (guest) state so the UI can recover.
+      state = AsyncData(prev.copyWith(signingIn: false));
+      rethrow;
+    }
+  }
+
+  /// Interactive Apple sign-in (iOS/macOS). Same one-shot guest migration as
+  /// Google. No-op if the user cancels. Whether the account is new or recovered,
+  /// the backend account/profile response is the source of truth.
+  Future<bool> signInWithApple() async {
+    final prev = state.asData?.value ?? const SessionState();
+    state = AsyncData(prev.copyWith(signingIn: true));
+    try {
+      final cred = await _apple.obtainCredential();
+      if (cred == null) {
+        if (kDebugMode) debugPrint('[Auth] Apple sign-in cancelled by user');
+        state = AsyncData(prev.copyWith(signingIn: false));
+        return false; // cancelled
+      }
+      final installationId = await ref
+          .read(installationIdStoreProvider)
+          .getOrCreate();
+      final result = await _auth.signInWithApple(
+        identityToken: cred.identityToken,
+        authorizationCode: cred.authorizationCode,
+        givenName: cred.givenName,
+        familyName: cred.familyName,
+        installationId: installationId,
+      );
+      await _sessions.save(result.sessionToken);
+      if (kDebugMode) {
+        debugPrint(
+          '[Auth] Apple sign-in OK: player=${result.account.publicPlayerId} '
+          'created=${result.created} providers=${result.account.linkedProviders}',
+        );
+      }
+      state = AsyncData(
+        SessionState(
+          account: result.account,
+          suggestedDisplayName: result.suggestedDisplayName,
+          suggestedAvatarUrl: result.suggestedAvatarUrl,
+          justCreated: result.created,
+        ),
+      );
+      unawaited(ref.read(installationServiceProvider).onLogin());
+      ref.invalidate(profileControllerProvider);
+      return true;
+    } catch (e, st) {
+      if (kDebugMode) debugPrint('[Auth] Apple sign-in FAILED: ${e.runtimeType}');
+      state = AsyncError(e, st);
       state = AsyncData(prev.copyWith(signingIn: false));
       rethrow;
     }

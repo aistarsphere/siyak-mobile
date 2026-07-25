@@ -164,9 +164,11 @@ const Map<String, String> stringsEn = {
   'account': 'Account',
   'guestMode': 'Guest',
   'signInWithGoogle': 'Sign in with Google',
+  'signInWithApple': 'Sign in with Apple',
   'signInBenefit': 'Save your progress and play Ranked & Social Rooms.',
   'signOut': 'Sign out',
   'linkedGoogle': 'Linked with Google',
+  'linkedApple': 'Linked with Apple',
   'playerId': 'Player ID',
   'idCopied': 'Player ID copied',
   'signedInNote':

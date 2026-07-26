@@ -37,7 +37,7 @@ class ContextGameApi {
   );
 
   Future<GameSnapshot> game(String gameId) async =>
-      GameSnapshot.fromJson(await _client.getJson('/game/$gameId'));
+      GameSnapshot.fromJson(await _client.getJson('/$gameId'));
 
   Future<GuessResponse> guess({
     required String gameId,

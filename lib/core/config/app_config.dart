@@ -1,31 +1,28 @@
 /// Single source of truth for backend configuration.
 ///
-/// The base URL **includes** the service path prefix `/api/context-game`,
-/// so gameplay endpoints are relative to it (`/health`, `/new-game`, …).
+/// The unified production backend serves everything under one API root
+/// `…/api/v1`:
+///  - **Gameplay / semantic engine** under `…/api/v1/game/*`
+///    (`/modes`, `/new-game`, `/guess`, `/hint`, `/suggest`).
+///  - **Platform** under `…/api/v1/*` (auth, account, installations, wallet,
+///    rooms, social, ranked, weekly, capabilities, notifications).
 ///
-/// Resolution order:
+/// Resolution order for the API root:
 ///  1. Runtime developer override saved in Settings (SharedPreferences).
 ///  2. `--dart-define=CG_BASE=...` at build time.
-///  3. The documented public Cloudflare URL below.
+///  3. The documented public URL below.
 class AppConfig {
   AppConfig._();
 
-  /// Production Runtime base URL for the "Arabic English Context Game" service.
-  /// INCLUDES the `/api/context-game` prefix. This is the stable production
-  /// host — not a temporary tunnel. Override via Settings or
-  /// `--dart-define=CG_BASE` only for local/staging testing.
+  /// Production API **root** — includes the `/api/v1` prefix. Override via
+  /// Settings or `--dart-define=CG_BASE` only for local/staging testing.
   static const String documentedPublicUrl =
-      'https://siyak-api.aljoodnet.info/api/context-game';
+      'https://siyak-api.aljoodnet.info/api/v1';
 
   /// Build-time override. Primary key is `CG_BASE`; `API_BASE_URL` is kept as
   /// a backward-compatible alias.
   static const String _cgBase = String.fromEnvironment('CG_BASE');
   static const String _apiBaseUrl = String.fromEnvironment('API_BASE_URL');
-
-  /// Optional explicit V2 base (`--dart-define=CG_V2_BASE=...`). When empty,
-  /// the V2 base is derived from the gameplay base (`<base>/v2`) so there is
-  /// only ONE URL to configure in the common case.
-  static const String _cgV2Base = String.fromEnvironment('CG_V2_BASE');
 
   static String get baseUrlFromEnv {
     if (_cgBase.isNotEmpty) return _cgBase;
@@ -33,33 +30,32 @@ class AppConfig {
     return documentedPublicUrl;
   }
 
-  /// Resolve the effective V2 REST base URL. Order: explicit `CG_V2_BASE`
-  /// override → `<effective gameplay base>/v2`.
-  static String resolveV2BaseUrl(String? runtimeOverride) {
-    if (_cgV2Base.isNotEmpty) return normalizeBaseUrl(_cgV2Base);
-    return '${resolveBaseUrl(runtimeOverride)}/v2';
+  /// The effective API root (`…/api/v1`) given an optional runtime override.
+  static String _apiRoot(String? runtimeOverride) {
+    final o = runtimeOverride?.trim() ?? '';
+    return normalizeBaseUrl(o.isNotEmpty ? o : baseUrlFromEnv);
   }
 
-  /// WebSocket origin derived from the V2 base (http→ws, https→wss).
-  /// The concrete room path is appended by the realtime gateway once the V2
-  /// contract is known.
+  /// Platform REST base (`…/api/v1`) — auth, account, installations, wallet,
+  /// rooms, social, ranked, weekly, capabilities.
+  static String resolveV2BaseUrl(String? runtimeOverride) =>
+      _apiRoot(runtimeOverride);
+
+  /// WebSocket origin derived from the platform base (http→ws, https→wss). The
+  /// concrete channel path (`/rooms/{id}/events`, `/ranked-matches/{id}/events`)
+  /// is appended by the realtime gateway.
   static String resolveV2SocketBase(String? runtimeOverride) {
-    final v2 = resolveV2BaseUrl(runtimeOverride);
-    if (v2.startsWith('https://')) return 'wss://${v2.substring(8)}';
-    if (v2.startsWith('http://')) return 'ws://${v2.substring(7)}';
-    return v2;
+    final b = resolveV2BaseUrl(runtimeOverride);
+    if (b.startsWith('https://')) return 'wss://${b.substring(8)}';
+    if (b.startsWith('http://')) return 'ws://${b.substring(7)}';
+    return b;
   }
 
-  /// Documented capability-detection endpoint (relative to the V2 base).
+  /// Documented capability-detection endpoint (relative to the platform base).
   static const String capabilitiesPath = '/capabilities';
 
-  // ── Frozen backend contract identity (bundle `2026-07.1`) ────────────────
-  /// The contract revision this client targets. The backend echoes
-  /// `contract_version` / `X-Contract-Version`; surfaced for telemetry only.
-  static const String contractVersion = '2026-07.1';
-
-  /// The V2 API generation served at the V2 base.
-  static const String apiVersion = '2.0';
+  /// The API generation served at the API root.
+  static const String apiVersion = '1.0';
 
   /// App marketing/build version reported to the installation registry.
   /// Overridable at build time with `--dart-define`.
@@ -71,7 +67,7 @@ class AppConfig {
   // ── Google Sign-In ───────────────────────────────────────────────────────
   /// The Google **Web/Server OAuth client ID** for project `siyag-503420`.
   /// Passed as `serverClientId` so Google issues an ID token whose audience is
-  /// the backend (which verifies it in `POST /v2/auth/google`). This is a
+  /// the backend (which verifies it in `POST /api/v1/auth/google`). This is a
   /// client *ID*, not a secret — safe to ship; the client *secret* never is.
   /// Overridable at build time with `--dart-define=GOOGLE_SERVER_CLIENT_ID=`.
   static const String googleServerClientId = String.fromEnvironment(
@@ -100,11 +96,10 @@ class AppConfig {
     return u;
   }
 
-  /// Resolve the effective base URL given an optional runtime override.
-  static String resolveBaseUrl(String? runtimeOverride) {
-    final o = runtimeOverride?.trim() ?? '';
-    return normalizeBaseUrl(o.isNotEmpty ? o : baseUrlFromEnv);
-  }
+  /// Gameplay / semantic-engine base (`…/api/v1/game`) — used by the Solo game
+  /// client for `/modes`, `/new-game`, `/guess`, `/hint`, `/suggest`.
+  static String resolveBaseUrl(String? runtimeOverride) =>
+      '${_apiRoot(runtimeOverride)}/game';
 
   static const Duration connectTimeout = Duration(seconds: 10);
 

@@ -7,20 +7,37 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('AppConfig base URL resolution', () {
-    test('defaults to the documented public URL', () {
-      expect(AppConfig.resolveBaseUrl(null), AppConfig.documentedPublicUrl);
-      expect(AppConfig.resolveBaseUrl(''), AppConfig.documentedPublicUrl);
-      expect(AppConfig.resolveBaseUrl('   '), AppConfig.documentedPublicUrl);
-    });
-
-    test('runtime override wins and is normalized', () {
+    // The unified backend is one API root (`…/api/v1`): the gameplay/engine
+    // base (`resolveBaseUrl`) is `<root>/game`; the platform base
+    // (`resolveV2BaseUrl`) is the root itself.
+    test('gameplay base is the root + /game', () {
       expect(
-        AppConfig.resolveBaseUrl('http://10.0.2.2:8000/'),
-        'http://10.0.2.2:8000',
+        AppConfig.resolveBaseUrl(null),
+        '${AppConfig.documentedPublicUrl}/game',
       );
       expect(
-        AppConfig.resolveBaseUrl(' https://x.example.com// '),
+        AppConfig.resolveBaseUrl(''),
+        '${AppConfig.documentedPublicUrl}/game',
+      );
+    });
+
+    test('platform base is the API root', () {
+      expect(AppConfig.resolveV2BaseUrl(null), AppConfig.documentedPublicUrl);
+      expect(AppConfig.documentedPublicUrl, endsWith('/api/v1'));
+    });
+
+    test('runtime override wins, is normalized, and derives both bases', () {
+      expect(
+        AppConfig.resolveBaseUrl('http://10.0.2.2:8000/'),
+        'http://10.0.2.2:8000/game',
+      );
+      expect(
+        AppConfig.resolveV2BaseUrl(' https://x.example.com// '),
         'https://x.example.com',
+      );
+      expect(
+        AppConfig.resolveV2SocketBase('https://x.example.com'),
+        'wss://x.example.com',
       );
     });
   });

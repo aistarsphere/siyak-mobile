@@ -61,3 +61,7 @@ android/key.properties
 **/*.p12
 .env
 .env.*
+
+# QA artifacts — local reports & device screenshots, not part of the source tree
+docs/qa/
+UX_ISSUES_REPORT.md

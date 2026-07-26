@@ -111,7 +111,8 @@ class _SiyagPracticeGameScreenState
 
     final total = state.totalWords;
     return SiyagGameView(
-      title: state.categoryLabel.isEmpty ? 'تدريب حر' : state.categoryLabel,
+      loc: loc,
+      title: state.categoryLabel.isEmpty ? loc('modeSolo') : state.categoryLabel,
       guesses: [
         for (final g in state.guesses)
           SiyagGuessVM(

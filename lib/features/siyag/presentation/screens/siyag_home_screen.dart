@@ -96,8 +96,8 @@ class SiyagHomeScreen extends ConsumerWidget {
                   const SizedBox(width: 8),
                   Text(
                     profile == null
-                        ? 'لاعب مجهول'
-                        : '${profile.gamesSolved} حلول · ${profile.gamesPlayed} ألعاب',
+                        ? loc('unknownPlayer')
+                        : '${profile.gamesSolved} ${loc('gamesSolved')} · ${profile.gamesPlayed} ${loc('gamesPlayed')}',
                     style: ST.ar(13, color: SC.textDim),
                   ),
                   const Spacer(),
@@ -127,9 +127,10 @@ class SiyagHomeScreen extends ConsumerWidget {
                     ? loc('modeWeekly')
                     : weekly.categoryLabel(true) +
                           (weekly.placement != null
-                              ? ' · مركزك #${weekly.placement}'
+                              ? ' · ${loc('yourPlacement')} #${weekly.placement}'
                               : ''),
                 cta: loc('startWeekly'),
+                heroTitle: loc('modeWeekly'),
                 onPlay: () => Navigator.of(
                   context,
                 ).push(siyagRoute(const SiyagWeeklyScreen())),
@@ -203,6 +204,7 @@ class _WeeklyHeroCard extends StatelessWidget {
     required this.subtitle,
     required this.cta,
     required this.endsInLabel,
+    required this.heroTitle,
     required this.onPlay,
   });
 
@@ -210,6 +212,7 @@ class _WeeklyHeroCard extends StatelessWidget {
   final String subtitle;
   final String cta;
   final String endsInLabel;
+  final String heroTitle;
   final VoidCallback onPlay;
 
   @override
@@ -281,7 +284,7 @@ class _WeeklyHeroCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'التحدي الأسبوعي',
+                    heroTitle,
                     style: ST.ar(24, weight: FontWeight.w700, height: 1.1),
                   ),
                   const SizedBox(height: 4),
@@ -326,7 +329,7 @@ class _ModeTile extends StatelessWidget {
       child: Opacity(
         opacity: enabled ? 1 : 0.5,
         child: Container(
-          height: 140,
+          height: 168,
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: SC.surface,
@@ -346,7 +349,12 @@ class _ModeTile extends StatelessWidget {
                 child: Icon(icon, size: 19, color: color),
               ),
               const Spacer(),
-              Text(title, style: ST.ar(16, weight: FontWeight.w600)),
+              Text(
+                title,
+                style: ST.ar(16, weight: FontWeight.w600),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
               const SizedBox(height: 4),
               Text(
                 subtitle,

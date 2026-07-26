@@ -130,12 +130,13 @@ class SiyagRankedMatchScreen extends ConsumerWidget {
               : ListView(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                   children: [
-                    _Players(match: match),
+                    _Players(loc: loc, match: match),
                     const SizedBox(height: 16),
                     if (match.isOver)
-                      _Result(match: match)
+                      _Result(loc: loc, match: match)
                     else if (match.isPreparing)
                       _Preparing(
+                        loc: loc,
                         match: match,
                         onReady: () => _act(ref, (r) => r.ready(matchId)),
                       )
@@ -159,7 +160,8 @@ class SiyagRankedMatchScreen extends ConsumerWidget {
 }
 
 class _Players extends StatelessWidget {
-  const _Players({required this.match});
+  const _Players({required this.loc, required this.match});
+  final AppLocalizations loc;
   final RankedMatch match;
 
   @override
@@ -168,13 +170,16 @@ class _Players extends StatelessWidget {
     final opp = match.opponent;
     return Row(
       children: [
-        Expanded(child: _Chip(p: you, highlight: match.isMyTurn, isYou: true)),
+        Expanded(
+          child: _Chip(loc: loc, p: you, highlight: match.isMyTurn, isYou: true),
+        ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Text('ضد', style: ST.ar(13, color: SC.textMute)),
+          child: Text(loc('vs'), style: ST.ar(13, color: SC.textMute)),
         ),
         Expanded(
           child: _Chip(
+            loc: loc,
             p: opp,
             highlight: match.isActive && !match.isMyTurn,
             isYou: false,
@@ -186,7 +191,13 @@ class _Players extends StatelessWidget {
 }
 
 class _Chip extends StatelessWidget {
-  const _Chip({required this.p, required this.highlight, required this.isYou});
+  const _Chip({
+    required this.loc,
+    required this.p,
+    required this.highlight,
+    required this.isYou,
+  });
+  final AppLocalizations loc;
   final MatchPlayer? p;
   final bool highlight;
   final bool isYou;
@@ -207,10 +218,10 @@ class _Chip extends StatelessWidget {
           active: true,
         ),
         const SizedBox(height: 8),
-        Text(isYou ? 'أنت' : (p?.label ?? '—'),
+        Text(isYou ? loc('you') : (p?.label ?? '—'),
             maxLines: 1, overflow: TextOverflow.ellipsis, style: ST.ar(13, weight: FontWeight.w600)),
         Text(
-          (p?.ready ?? false) ? 'جاهز' : (p?.connectionState ?? ''),
+          (p?.ready ?? false) ? loc('ready') : (p?.connectionState ?? ''),
           style: ST.ar(10, color: (p?.ready ?? false) ? SC.emerald : SC.textMute),
         ),
       ],
@@ -219,7 +230,12 @@ class _Chip extends StatelessWidget {
 }
 
 class _Preparing extends StatelessWidget {
-  const _Preparing({required this.match, required this.onReady});
+  const _Preparing({
+    required this.loc,
+    required this.match,
+    required this.onReady,
+  });
+  final AppLocalizations loc;
   final RankedMatch match;
   final VoidCallback onReady;
 
@@ -228,10 +244,10 @@ class _Preparing extends StatelessWidget {
     final ready = match.you?.ready ?? false;
     return Column(
       children: [
-        Text('استعدّ لبدء المباراة', style: ST.ar(16, weight: FontWeight.w600)),
+        Text(loc('getReady'), style: ST.ar(16, weight: FontWeight.w600)),
         const SizedBox(height: 12),
         SiyagPrimaryButton(
-          label: ready ? 'بانتظار الخصم…' : 'أنا جاهز',
+          label: ready ? loc('waitingOpponent') : loc('imReady'),
           icon: ready ? null : Icons.check_rounded,
           onTap: ready ? null : onReady,
         ),
@@ -357,7 +373,8 @@ class _ActiveState extends ConsumerState<_Active> {
 }
 
 class _Result extends StatelessWidget {
-  const _Result({required this.match});
+  const _Result({required this.loc, required this.match});
+  final AppLocalizations loc;
   final RankedMatch match;
 
   @override
@@ -369,20 +386,22 @@ class _Result extends StatelessWidget {
         Icon(won ? Icons.emoji_events_rounded : Icons.flag_outlined,
             size: 56, color: won ? SC.gold : SC.textMute),
         const SizedBox(height: 12),
-        Text(won ? 'فزت!' : 'انتهت المباراة',
+        Text(won ? loc('youWon') : loc('matchEnded'),
             style: ST.ar(22, weight: FontWeight.w700)),
         if (match.secretWord != null) ...[
           const SizedBox(height: 6),
-          Text('الكلمة: ${match.secretWord}', style: ST.ar(14, color: SC.textDim)),
+          Text('${loc('theWordLabel')}: ${match.secretWord}',
+              style: ST.ar(14, color: SC.textDim)),
         ],
         if (match.ratingDelta != null) ...[
           const SizedBox(height: 4),
-          Text('${match.ratingDelta! >= 0 ? '+' : ''}${match.ratingDelta} تقييم',
+          Text(
+              '${match.ratingDelta! >= 0 ? '+' : ''}${match.ratingDelta} ${loc('ratingPts')}',
               style: ST.mono(14, color: won ? SC.emerald : SC.coral)),
         ],
         const SizedBox(height: 20),
         SiyagPrimaryButton(
-          label: 'العودة',
+          label: loc('back'),
           onTap: () => Navigator.of(context).popUntil((r) => r.isFirst),
         ),
       ],

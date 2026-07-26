@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/siyag_theme.dart';
 import '../../../../core/widgets/siyag/siyag_common.dart';
 import '../../../../core/widgets/siyag/siyag_guess.dart';
@@ -29,6 +30,7 @@ enum SiyagSort { closest, newest, timeline }
 class SiyagGameView extends StatefulWidget {
   const SiyagGameView({
     super.key,
+    required this.loc,
     required this.title,
     required this.guesses,
     required this.controller,
@@ -44,6 +46,7 @@ class SiyagGameView extends StatefulWidget {
     this.lastWord,
   });
 
+  final AppLocalizations loc;
   final String title;
   final List<SiyagGuessVM> guesses; // attempt order (oldest first)
   final TextEditingController controller;
@@ -106,7 +109,7 @@ class _SiyagGameViewState extends State<SiyagGameView> {
     }
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: widget.loc.direction,
       child: Scaffold(
         backgroundColor: SC.bg,
         resizeToAvoidBottomInset: true,
@@ -131,12 +134,12 @@ class _SiyagGameViewState extends State<SiyagGameView> {
                         child: TextField(
                           controller: widget.controller,
                           focusNode: _focus,
-                          textDirection: TextDirection.rtl,
+                          textDirection: widget.loc.direction,
                           onSubmitted: (_) => _submit(),
                           textInputAction: TextInputAction.send,
                           style: ST.ar(20),
                           decoration: InputDecoration(
-                            hintText: 'اكتب كلمتك...',
+                            hintText: widget.loc('enterYourWord'),
                             hintStyle: ST.ar(20, color: SC.textFaint),
                             border: InputBorder.none,
                             contentPadding: const EdgeInsets.symmetric(
@@ -226,7 +229,7 @@ class _SiyagGameViewState extends State<SiyagGameView> {
                     children: [
                       Expanded(
                         child: SiyagSummaryChip(
-                          label: 'Closest',
+                          label: widget.loc('closest'),
                           emoji: '🔥',
                           word: closest.word,
                           rank: closest.rank,
@@ -238,7 +241,7 @@ class _SiyagGameViewState extends State<SiyagGameView> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: SiyagSummaryChip(
-                            label: 'Latest',
+                            label: widget.loc('latest'),
                             emoji: '🆕',
                             word: newest.word,
                             rank: newest.rank,
@@ -255,7 +258,7 @@ class _SiyagGameViewState extends State<SiyagGameView> {
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
                 child: Align(
                   alignment: AlignmentDirectional.centerStart,
-                  child: const Kicker('Hints'),
+                  child: Kicker(widget.loc('hints')),
                 ),
               ),
               SizedBox(
@@ -316,10 +319,10 @@ class _SiyagGameViewState extends State<SiyagGameView> {
   }
 
   Widget _sortTab(SiyagSort m) {
-    const labels = {
-      SiyagSort.closest: 'الأقرب',
-      SiyagSort.newest: 'الأحدث',
-      SiyagSort.timeline: 'زمني',
+    final labels = {
+      SiyagSort.closest: widget.loc('closest'),
+      SiyagSort.newest: widget.loc('latest'),
+      SiyagSort.timeline: widget.loc('timeline'),
     };
     final active = _sort == m;
     return SiyagTap(

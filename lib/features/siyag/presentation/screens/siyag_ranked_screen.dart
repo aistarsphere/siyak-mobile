@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/siyag_theme.dart';
 import '../../../../core/widgets/siyag/siyag_common.dart';
 import '../../../../core/widgets/siyag/siyag_tap.dart';
@@ -51,12 +52,12 @@ class SiyagRankedScreen extends ConsumerWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
             children: [
-              _RatingCard(stats: stats),
+              _RatingCard(stats: stats, loc: loc),
               const SizedBox(height: 20),
-              Kicker('اختر الرهان'),
+              Kicker(loc('chooseStake')),
               const SizedBox(height: 10),
               if (tiers.isEmpty)
-                Text('لا توجد مستويات متاحة حالياً',
+                Text(loc('noTiers'),
                     style: ST.ar(13, color: SC.textMute))
               else
                 for (final t in tiers) ...[
@@ -65,6 +66,7 @@ class SiyagRankedScreen extends ConsumerWidget {
                     affordable:
                         wallet == null || wallet.availableBalance >= t.entryCost,
                     busy: mm.isSearching,
+                    loc: loc,
                     onPlay: () => ref
                         .read(matchmakingControllerProvider.notifier)
                         .findMatch(
@@ -77,13 +79,14 @@ class SiyagRankedScreen extends ConsumerWidget {
               if (mm.isSearching) ...[
                 const SizedBox(height: 8),
                 _SearchingCard(
+                  loc: loc,
                   onCancel: () =>
                       ref.read(matchmakingControllerProvider.notifier).cancel(),
                 ),
               ],
               if (mm.phase == MatchmakingPhase.error) ...[
                 const SizedBox(height: 8),
-                Text('تعذّر بدء البحث. حاول مرة أخرى.',
+                Text(loc('searchFailed'),
                     style: ST.ar(12, color: SC.coral)),
               ],
             ],
@@ -95,8 +98,9 @@ class SiyagRankedScreen extends ConsumerWidget {
 }
 
 class _RatingCard extends StatelessWidget {
-  const _RatingCard({required this.stats});
+  const _RatingCard({required this.stats, required this.loc});
   final RankedStats? stats;
+  final AppLocalizations loc;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -114,16 +118,16 @@ class _RatingCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('${stats?.rating ?? 1000}', style: ST.mono(28)),
-            Text('التقييم', style: ST.ar(11, color: SC.textMute)),
+            Text(loc('rating'), style: ST.ar(11, color: SC.textMute)),
           ],
         ),
         const Spacer(),
         Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text('${stats?.wins ?? 0}ف · ${stats?.losses ?? 0}خ',
+            Text('${stats?.wins ?? 0}${loc('winShort')} · ${stats?.losses ?? 0}${loc('lossShort')}',
                 style: ST.ar(14, weight: FontWeight.w600)),
-            Text('السجل', style: ST.ar(11, color: SC.textMute)),
+            Text(loc('record'), style: ST.ar(11, color: SC.textMute)),
           ],
         ),
       ],
@@ -137,11 +141,13 @@ class _TierRow extends StatelessWidget {
     required this.affordable,
     required this.busy,
     required this.onPlay,
+    required this.loc,
   });
   final RankedTier tier;
   final bool affordable;
   final bool busy;
   final VoidCallback onPlay;
+  final AppLocalizations loc;
 
   @override
   Widget build(BuildContext context) {
@@ -161,10 +167,10 @@ class _TierRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('دخول ${tier.entryCost} · الجائزة ${tier.payout}',
+                Text(loc.fill('entryPrize', {'e': '${tier.entryCost}', 'p': '${tier.payout}'}),
                     style: ST.ar(15, weight: FontWeight.w600)),
                 Text(
-                  affordable ? 'الفائز يأخذ الرهان' : 'رصيد غير كافٍ',
+                  affordable ? loc('winnerTakesStake') : loc('insufficientBalance'),
                   style: ST.ar(11,
                       color: affordable ? SC.textMute : SC.coral),
                 ),
@@ -172,7 +178,7 @@ class _TierRow extends StatelessWidget {
             ),
           ),
           SiyagPrimaryButton(
-            label: 'ابحث',
+            label: loc('search'),
             busy: busy,
             onTap: enabled ? onPlay : null,
             fullWidth: false,
@@ -184,8 +190,9 @@ class _TierRow extends StatelessWidget {
 }
 
 class _SearchingCard extends StatelessWidget {
-  const _SearchingCard({required this.onCancel});
+  const _SearchingCard({required this.onCancel, required this.loc});
   final VoidCallback onCancel;
+  final AppLocalizations loc;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -204,11 +211,11 @@ class _SearchingCard extends StatelessWidget {
         ),
         const SizedBox(width: 14),
         Expanded(
-          child: Text('نبحث عن خصم…', style: ST.ar(15, weight: FontWeight.w600)),
+          child: Text(loc('searchingOpponent'), style: ST.ar(15, weight: FontWeight.w600)),
         ),
         SiyagTap(
           onTap: onCancel,
-          child: Text('إلغاء', style: ST.ar(13, color: SC.coral)),
+          child: Text(loc('cancel'), style: ST.ar(13, color: SC.coral)),
         ),
       ],
     ),

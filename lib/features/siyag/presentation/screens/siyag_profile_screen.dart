@@ -240,8 +240,18 @@ class _AccountSection extends ConsumerWidget {
     }
   }
 
-  Future<void> _signOut(WidgetRef ref) =>
-      ref.read(sessionControllerProvider.notifier).logout();
+  Future<void> _signOut(BuildContext context, WidgetRef ref) async {
+    final loc = ref.read(localizationsProvider);
+    final ok = await showSiyagConfirm(
+      context,
+      direction: loc.direction,
+      title: loc('confirmLogoutTitle'),
+      body: loc('confirmLogoutBody'),
+      confirmLabel: loc('signOut'),
+      cancelLabel: loc('cancel'),
+    );
+    if (ok) await ref.read(sessionControllerProvider.notifier).logout();
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -307,7 +317,7 @@ class _AccountSection extends ConsumerWidget {
                       ),
                     ),
                     SiyagTap(
-                      onTap: () => _signOut(ref),
+                      onTap: () => _signOut(context, ref),
                       child: Padding(
                         padding: const EdgeInsets.all(4),
                         child: Text(

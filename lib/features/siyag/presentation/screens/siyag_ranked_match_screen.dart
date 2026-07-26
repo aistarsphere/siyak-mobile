@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/siyag_theme.dart';
 import '../../../../core/widgets/siyag/siyag_common.dart';
 import '../../../../core/widgets/siyag/siyag_tap.dart';
+import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../v2/domain/entities/ranked.dart';
 import '../../../v2/domain/repositories/ranked_repository.dart';
 import '../../../v2/presentation/controllers/ranked_controller.dart';
@@ -89,19 +91,37 @@ class SiyagRankedMatchScreen extends ConsumerWidget {
     ref.invalidate(rankedMatchStreamProvider(matchId)); // immediate refresh
   }
 
+  /// Confirm before forfeiting — a forfeit counts as a loss and forfeits the stake.
+  Future<void> _confirmForfeit(BuildContext context, WidgetRef ref) async {
+    final loc = ref.read(localizationsProvider);
+    final ok = await showSiyagConfirm(
+      context,
+      direction: loc.direction,
+      title: loc('confirmForfeitTitle'),
+      body: loc('confirmForfeitBody'),
+      confirmLabel: loc('leave'),
+      cancelLabel: loc('back'),
+    );
+    if (ok) await _act(ref, (r) => r.forfeit(matchId));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationsProvider);
     final async = ref.watch(rankedMatchStreamProvider(matchId));
     final match = async.value;
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: loc.direction,
       child: Scaffold(
         backgroundColor: SC.bg,
         appBar: AppBar(
           backgroundColor: SC.bg,
           elevation: 0,
-          title: Text('المصنّفة', style: ST.ar(18, weight: FontWeight.w700)),
+          title: Text(
+            loc('competitive'),
+            style: ST.ar(18, weight: FontWeight.w700),
+          ),
           centerTitle: true,
         ),
         body: SafeArea(
@@ -121,13 +141,14 @@ class SiyagRankedMatchScreen extends ConsumerWidget {
                       )
                     else
                       _Active(
+                        loc: loc,
                         match: match,
                         onGuess: (w) => _act(
                           ref,
                           (r) =>
                               r.guess(matchId, w, language: match.language),
                         ),
-                        onForfeit: () => _act(ref, (r) => r.forfeit(matchId)),
+                        onForfeit: () => _confirmForfeit(context, ref),
                       ),
                   ],
                 ),
@@ -220,7 +241,13 @@ class _Preparing extends StatelessWidget {
 }
 
 class _Active extends ConsumerStatefulWidget {
-  const _Active({required this.match, required this.onGuess, required this.onForfeit});
+  const _Active({
+    required this.loc,
+    required this.match,
+    required this.onGuess,
+    required this.onForfeit,
+  });
+  final AppLocalizations loc;
   final RankedMatch match;
   final void Function(String) onGuess;
   final VoidCallback onForfeit;
@@ -278,7 +305,9 @@ class _ActiveState extends ConsumerState<_Active> {
                 style: ST.ar(18),
                 onSubmitted: (_) => _submit(),
                 decoration: InputDecoration(
-                  hintText: myTurn ? 'خمّن كلمة' : 'انتظر دورك',
+                  hintText: myTurn
+                      ? widget.loc('guessAWord')
+                      : widget.loc('waitYourTurn'),
                   filled: true,
                   fillColor: SC.surfaceHi,
                   border: OutlineInputBorder(
@@ -290,7 +319,7 @@ class _ActiveState extends ConsumerState<_Active> {
             ),
             const SizedBox(width: 10),
             SiyagPrimaryButton(
-              label: 'أرسل',
+              label: widget.loc('send'),
               onTap: myTurn ? _submit : null,
               fullWidth: false,
             ),
@@ -316,7 +345,10 @@ class _ActiveState extends ConsumerState<_Active> {
         SiyagTap(
           onTap: widget.onForfeit,
           child: Center(
-            child: Text('انسحاب', style: ST.ar(12, color: SC.coral)),
+            child: Text(
+              widget.loc('leave'),
+              style: ST.ar(12, color: SC.coral),
+            ),
           ),
         ),
       ],

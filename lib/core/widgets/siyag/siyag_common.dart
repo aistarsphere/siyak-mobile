@@ -210,3 +210,61 @@ class SiyagScreenHeader extends StatelessWidget {
     );
   }
 }
+
+/// A consistent confirm/cancel dialog for destructive actions (leave, forfeit,
+/// sign-out). Returns `true` when the user confirms. The confirm button is
+/// coloured [SC.error] when [destructive] (the default).
+Future<bool> showSiyagConfirm(
+  BuildContext context, {
+  required TextDirection direction,
+  required String title,
+  required String body,
+  required String confirmLabel,
+  required String cancelLabel,
+  bool destructive = true,
+}) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    barrierColor: SC.scrim,
+    builder: (ctx) => Directionality(
+      textDirection: direction,
+      child: Dialog(
+        backgroundColor: SC.surface,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 32),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 24, 22, 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: ST.ar(18, weight: FontWeight.w700),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                body,
+                textAlign: TextAlign.center,
+                style: ST.ar(13.5, color: SC.textMute, height: 1.5),
+              ),
+              const SizedBox(height: 22),
+              SiyagPrimaryButton(
+                label: confirmLabel,
+                color: destructive ? SC.error : null,
+                onTap: () => Navigator.of(ctx).pop(true),
+              ),
+              const SizedBox(height: 8),
+              SiyagGhostButton(
+                label: cancelLabel,
+                onTap: () => Navigator.of(ctx).pop(false),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+  return ok ?? false;
+}

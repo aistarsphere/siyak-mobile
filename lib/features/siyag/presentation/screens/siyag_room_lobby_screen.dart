@@ -51,6 +51,23 @@ class _S extends ConsumerState<SiyagRoomLobbyScreen> {
     builder: (_) => _InvitePlayersSheet(roomId: roomId),
   );
 
+  /// Confirm, then leave the room (realtime + REST) and pop.
+  Future<void> _leave() async {
+    final loc = ref.read(localizationsProvider);
+    final ok = await showSiyagConfirm(
+      context,
+      direction: loc.direction,
+      title: loc('confirmLeaveTitle'),
+      body: loc('confirmLeaveBody'),
+      confirmLabel: loc('leave'),
+      cancelLabel: loc('stay'),
+    );
+    if (!ok) return;
+    await ref.read(realtimeRoomControllerProvider.notifier).leave();
+    await ref.read(roomLifecycleControllerProvider.notifier).leave();
+    if (mounted) Navigator.of(context).maybePop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final conn = ref.watch(realtimeRoomControllerProvider);
@@ -80,17 +97,9 @@ class _S extends ConsumerState<SiyagRoomLobbyScreen> {
                 : Column(
                     children: [
                       SiyagTopBar(
-                        kicker: 'Lobby',
+                        kicker: ref.read(localizationsProvider)('modeMultiplayer'),
                         kickerColor: SC.emerald,
-                        onBack: () async {
-                          await ref
-                              .read(realtimeRoomControllerProvider.notifier)
-                              .leave();
-                          await ref
-                              .read(roomLifecycleControllerProvider.notifier)
-                              .leave();
-                          if (context.mounted) Navigator.of(context).maybePop();
-                        },
+                        onBack: _leave,
                       ),
                       Expanded(
                         child: ListView(
@@ -154,23 +163,11 @@ class _S extends ConsumerState<SiyagRoomLobbyScreen> {
                               ),
                             const SizedBox(height: 10),
                             SiyagGhostButton(
-                              label: 'مغادرة الغرفة',
+                              label: ref.read(localizationsProvider)(
+                                'leaveRoom',
+                              ),
                               icon: Icons.logout_rounded,
-                              onTap: () async {
-                                await ref
-                                    .read(
-                                      realtimeRoomControllerProvider.notifier,
-                                    )
-                                    .leave();
-                                await ref
-                                    .read(
-                                      roomLifecycleControllerProvider.notifier,
-                                    )
-                                    .leave();
-                                if (context.mounted) {
-                                  Navigator.of(context).maybePop();
-                                }
-                              },
+                              onTap: _leave,
                             ),
                           ],
                         ),

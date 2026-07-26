@@ -149,10 +149,10 @@ class _NoopInstallation implements InstallationRepository {
     required String platform,
     required String token,
     String? appVersion,
-    String? buildNumber,
+    String? appBuild,
     String? locale,
     String? timezone,
-    String? notificationPermission,
+    bool? notificationsEnabled,
   }) async {}
   @override
   Future<void> invalidatePushToken({

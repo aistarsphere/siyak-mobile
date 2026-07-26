@@ -56,6 +56,11 @@ Future<void> _registerFcmToken(ProviderContainer container, String token) async 
               ? 'ios'
               : 'android',
           token: token,
+          appVersion: AppConfig.appVersion,
+          appBuild: AppConfig.buildNumber,
+          // A token is only registered once notifications are active for this
+          // install (on iOS the token requires user authorization).
+          notificationsEnabled: true,
         );
     if (kDebugMode) debugPrint('[Notifications] FCM token registered');
   } catch (_) {

@@ -22,16 +22,20 @@ abstract class InstallationRepository {
   /// Detach on logout (bearer) — the installation returns to guest ownership.
   Future<void> detach(String installationId);
 
-  /// Register/update the FCM push token for this installation.
+  /// Register/update the FCM push token for this installation
+  /// (`POST /installations/push/register` → `RegisterPushRequest`). Field names
+  /// match that contract exactly: `app_build` (not `build_number`) and
+  /// `notifications_enabled` (boolean, not the string `notification_permission`
+  /// used by the separate `/installations/register` endpoint).
   Future<void> registerPushToken({
     required String installationId,
     required String platform,
     required String token,
     String? appVersion,
-    String? buildNumber,
+    String? appBuild,
     String? locale,
     String? timezone,
-    String? notificationPermission,
+    bool? notificationsEnabled,
   });
 
   /// Invalidate the push token (e.g. on logout / notifications disabled).

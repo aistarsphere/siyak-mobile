@@ -54,10 +54,10 @@ class RemoteInstallationRepository implements InstallationRepository {
     required String platform,
     required String token,
     String? appVersion,
-    String? buildNumber,
+    String? appBuild,
     String? locale,
     String? timezone,
-    String? notificationPermission,
+    bool? notificationsEnabled,
   }) => _api.post(
     '/installations/push/register',
     body: {
@@ -65,10 +65,10 @@ class RemoteInstallationRepository implements InstallationRepository {
       'platform': platform,
       'token': token,
       'app_version': ?appVersion,
-      'build_number': ?buildNumber,
+      'app_build': ?appBuild,
       'locale': ?locale,
       'timezone': ?timezone,
-      'notification_permission': ?notificationPermission,
+      'notifications_enabled': ?notificationsEnabled,
     },
   );
 

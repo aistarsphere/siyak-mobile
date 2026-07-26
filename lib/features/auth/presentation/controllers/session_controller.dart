@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/config/app_config.dart';
 import '../../../../core/notifications/notification_service.dart';
 import '../../../v2/data/session_store.dart';
 import '../../../v2/presentation/controllers/profile_controller.dart';
@@ -252,6 +253,9 @@ class SessionController extends AsyncNotifier<SessionState> {
           installationId: installationId,
           platform: _platform,
           token: token,
+          appVersion: AppConfig.appVersion,
+          appBuild: AppConfig.buildNumber,
+          notificationsEnabled: true,
         );
       }
     } catch (_) {

@@ -23,8 +23,8 @@ class AppConfig {
   static const String _apiBaseUrl = String.fromEnvironment('API_BASE_URL');
 
   /// Optional explicit V2 base (`--dart-define=CG_V2_BASE=...`). When empty,
-  /// the V2 base is derived from the V1 base (`<base>/v2`) so there is only
-  /// ONE URL to configure in the common case.
+  /// the V2 base is derived from the gameplay base (`<base>/v2`) so there is
+  /// only ONE URL to configure in the common case.
   static const String _cgV2Base = String.fromEnvironment('CG_V2_BASE');
 
   static String get baseUrlFromEnv {
@@ -34,7 +34,7 @@ class AppConfig {
   }
 
   /// Resolve the effective V2 REST base URL. Order: explicit `CG_V2_BASE`
-  /// override → `<effective V1 base>/v2`.
+  /// override → `<effective gameplay base>/v2`.
   static String resolveV2BaseUrl(String? runtimeOverride) {
     if (_cgV2Base.isNotEmpty) return normalizeBaseUrl(_cgV2Base);
     return '${resolveBaseUrl(runtimeOverride)}/v2';

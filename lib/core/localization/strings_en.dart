@@ -221,7 +221,4 @@ const Map<String, String> stringsEn = {
   'v2ErrActiveRoomExists': 'Finish or leave your current room first.',
   'v2ErrStateConflict': 'That changed — refreshing…',
   'v2ErrNotInVocabulary': 'That word isn\'t in the dictionary.',
-  'v2MockPreview': 'Preview V2 (mock data)',
-  'v2MockPreviewHint':
-      'Shows Weekly & Multiplayer on mock data before the backend is available.',
 };

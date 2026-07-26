@@ -215,7 +215,4 @@ const Map<String, String> stringsAr = {
   'v2ErrActiveRoomExists': 'أنهِ غرفتك الحالية أو غادرها أولاً.',
   'v2ErrStateConflict': 'تغيّر ذلك — جارٍ التحديث…',
   'v2ErrNotInVocabulary': 'هذه الكلمة ليست في القاموس.',
-  'v2MockPreview': 'معاينة V2 (بيانات تجريبية)',
-  'v2MockPreviewHint':
-      'يعرض التحدي الأسبوعي واللعب الجماعي ببيانات تجريبية قبل توفّر الخادم.',
 };

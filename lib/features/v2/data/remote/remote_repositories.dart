@@ -10,7 +10,8 @@ import '../../domain/repositories/v2_repositories.dart';
 import 'v2_api_client.dart';
 import 'v2_mappers.dart';
 
-/// Live capability detection. Any failure → unavailable (V1 kept, V2 gated).
+/// Live capability detection. Any failure → unavailable (solo/gameplay kept,
+/// platform features gated).
 class RemoteCapabilitiesRepository implements CapabilitiesRepository {
   RemoteCapabilitiesRepository(this._client);
   final V2ApiClient _client;

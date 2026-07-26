@@ -8,8 +8,8 @@ import '../entities/room_event.dart';
 import '../entities/v2_capabilities.dart';
 import '../entities/weekly.dart';
 
-/// Guess outcome shared by weekly + room flows. Mirrors V1 semantics
-/// (accepted / duplicate-canonical / unknown) without a frozen wire schema.
+/// Guess outcome shared by weekly + room flows. Mirrors the gameplay-engine
+/// semantics (accepted / duplicate-canonical / unknown) without a frozen wire schema.
 class V2GuessOutcome {
   const V2GuessOutcome({
     required this.accepted,

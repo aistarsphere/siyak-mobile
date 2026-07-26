@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/siyag_theme.dart';
 import '../../../../core/widgets/siyag/siyag_common.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
@@ -16,22 +17,24 @@ import 'siyag_weekly_game_screen.dart';
 class SiyagWeeklyScreen extends ConsumerWidget {
   const SiyagWeeklyScreen({super.key});
 
-  List<(String, String)> _countdown(Duration? d) {
-    if (d == null) return [('--', 'أيام'), ('--', 'ساعة'), ('--', 'دقيقة')];
+  List<(String, String)> _countdown(AppLocalizations loc, Duration? d) {
+    final day = loc('uDayFull'), hr = loc('uHourFull'), min = loc('uMinFull');
+    if (d == null) return [('--', day), ('--', hr), ('--', min)];
     return [
-      (d.inDays.toString().padLeft(2, '0'), 'أيام'),
-      ((d.inHours % 24).toString().padLeft(2, '0'), 'ساعة'),
-      ((d.inMinutes % 60).toString().padLeft(2, '0'), 'دقيقة'),
+      (d.inDays.toString().padLeft(2, '0'), day),
+      ((d.inHours % 24).toString().padLeft(2, '0'), hr),
+      ((d.inMinutes % 60).toString().padLeft(2, '0'), min),
     ];
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationsProvider);
     final lang = GameplayLanguage.fromCode(ref.watch(appSettingsProvider).lang);
     final async = ref.watch(weeklyChallengeProvider(lang));
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: loc.direction,
       child: Scaffold(
         backgroundColor: SC.bg,
         body: SafeArea(
@@ -42,35 +45,39 @@ class SiyagWeeklyScreen extends ConsumerWidget {
               loading: () =>
                   Center(child: CircularProgressIndicator(color: SC.coral)),
               error: (e, _) => _Error(
+                loc: loc,
                 onRetry: () => ref.invalidate(weeklyChallengeProvider(lang)),
               ),
               data: (c) => Column(
                 children: [
-                  SiyagTopBar(kicker: 'Hero Mode', kickerColor: SC.coral),
+                  SiyagTopBar(kicker: loc('modeWeekly'), kickerColor: SC.coral),
                   Expanded(
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                       children: [
-                        _Hero(countdown: _countdown(c.timeRemaining)),
+                        _Hero(
+                          loc: loc,
+                          countdown: _countdown(loc, c.timeRemaining),
+                        ),
                         const SizedBox(height: 16),
                         Row(
                           children: [
                             _meta(
                               Icons.category_rounded,
                               c.categoryLabel(true),
-                              'التصنيف',
+                              loc('category'),
                             ),
                             const SizedBox(width: 10),
                             _meta(
                               Icons.emoji_events_rounded,
                               c.placement != null ? '#${c.placement}' : '—',
-                              'مركزك',
+                              loc('yourPlacement'),
                             ),
                             const SizedBox(width: 10),
                             _meta(
                               Icons.schedule_rounded,
-                              _state(c.state),
-                              'الحالة',
+                              _state(loc, c.state),
+                              loc('participation'),
                             ),
                           ],
                         ),
@@ -81,8 +88,8 @@ class SiyagWeeklyScreen extends ConsumerWidget {
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                     child: SiyagPrimaryButton(
                       label: c.participated
-                          ? 'متابعة التحدي'
-                          : 'ابدأ التحدي الأسبوعي',
+                          ? loc('resumeWeekly')
+                          : loc('startWeekly'),
                       icon: Icons.play_arrow_rounded,
                       onTap: () async {
                         await ref
@@ -105,10 +112,10 @@ class SiyagWeeklyScreen extends ConsumerWidget {
     );
   }
 
-  static String _state(WeeklyState s) => switch (s) {
-    WeeklyState.active => 'نشط',
-    WeeklyState.completed => 'مكتمل',
-    WeeklyState.notStarted => 'لم يبدأ',
+  static String _state(AppLocalizations loc, WeeklyState s) => switch (s) {
+    WeeklyState.active => loc('inProgress'),
+    WeeklyState.completed => loc('completed'),
+    WeeklyState.notStarted => loc('notStarted'),
   };
 
   Widget _meta(IconData icon, String v, String l) => Expanded(
@@ -137,7 +144,8 @@ class SiyagWeeklyScreen extends ConsumerWidget {
 }
 
 class _Hero extends StatelessWidget {
-  const _Hero({required this.countdown});
+  const _Hero({required this.loc, required this.countdown});
+  final AppLocalizations loc;
   final List<(String, String)> countdown;
 
   @override
@@ -191,12 +199,12 @@ class _Hero extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'التحدي الأسبوعي',
+                    loc('modeWeekly'),
                     style: ST.ar(28, weight: FontWeight.w700, height: 1.1),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'كلمة واحدة · أسبوع كامل · مجد للأفضل',
+                    loc('modeWeeklyDesc'),
                     style: ST.ar(14, color: SC.textMute),
                   ),
                   const SizedBox(height: 20),
@@ -236,7 +244,8 @@ class _Hero extends StatelessWidget {
 }
 
 class _Error extends StatelessWidget {
-  const _Error({required this.onRetry});
+  const _Error({required this.loc, required this.onRetry});
+  final AppLocalizations loc;
   final VoidCallback onRetry;
   @override
   Widget build(BuildContext context) => Center(
@@ -247,10 +256,10 @@ class _Error extends StatelessWidget {
         children: [
           Icon(Icons.cloud_off_rounded, size: 44, color: SC.textMute),
           const SizedBox(height: 16),
-          Text('تعذّر تحميل التحدي', style: ST.ar(16, color: SC.textDim)),
+          Text(loc('weeklyLoadError'), style: ST.ar(16, color: SC.textDim)),
           const SizedBox(height: 16),
           SiyagPrimaryButton(
-            label: 'إعادة المحاولة',
+            label: loc('retry'),
             icon: Icons.refresh_rounded,
             onTap: onRetry,
           ),

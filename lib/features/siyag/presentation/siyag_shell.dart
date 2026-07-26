@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import '../../../core/theme/siyag_theme.dart';
 import '../../../core/widgets/siyag/siyag_bottom_nav.dart';
 import '../../auth/presentation/controllers/session_controller.dart';
+import '../../game/presentation/controllers/app_settings_controller.dart';
 import 'screens/siyag_home_screen.dart';
 import 'screens/siyag_leaderboard_screen.dart';
 import 'screens/siyag_profile_screen.dart';
@@ -26,6 +27,7 @@ class _SiyagShellState extends ConsumerState<SiyagShell> {
   @override
   Widget build(BuildContext context) {
     final index = ref.watch(siyagTabProvider);
+    final loc = ref.watch(localizationsProvider);
     // Bootstrap account session on launch (cold-start restore). The result is
     // consumed on the Profile tab; watching here also primes the bearer token
     // for the API client before any authenticated call.
@@ -34,28 +36,34 @@ class _SiyagShellState extends ConsumerState<SiyagShell> {
     // stack by brightness so the visible tab repaints immediately (the custom
     // SC-token screens don't otherwise subscribe to Theme changes).
     final brightness = Theme.of(context).brightness;
-    return Scaffold(
-      backgroundColor: SC.bg,
-      body: SafeArea(
-        bottom: false,
-        child: IndexedStack(
-          key: ValueKey(brightness),
+    return Directionality(
+      textDirection: loc.direction,
+      child: Scaffold(
+        backgroundColor: SC.bg,
+        body: SafeArea(
+          bottom: false,
+          child: IndexedStack(
+            key: ValueKey(brightness),
+            index: index,
+            children: const [
+              SiyagHomeScreen(),
+              SiyagLeaderboardScreen(),
+              SiyagProfileScreen(),
+            ],
+          ),
+        ),
+        bottomNavigationBar: SiyagBottomNav(
           index: index,
-          children: const [
-            SiyagHomeScreen(),
-            SiyagLeaderboardScreen(),
-            SiyagProfileScreen(),
+          onChanged: (i) => ref.read(siyagTabProvider.notifier).state = i,
+          items: [
+            SiyagNavItem(icon: Icons.home_rounded, label: loc('home')),
+            SiyagNavItem(
+              icon: Icons.emoji_events_rounded,
+              label: loc('leaderboard'),
+            ),
+            SiyagNavItem(icon: Icons.person_rounded, label: loc('account')),
           ],
         ),
-      ),
-      bottomNavigationBar: SiyagBottomNav(
-        index: index,
-        onChanged: (i) => ref.read(siyagTabProvider.notifier).state = i,
-        items: const [
-          SiyagNavItem(icon: Icons.home_rounded, label: 'الرئيسية'),
-          SiyagNavItem(icon: Icons.emoji_events_rounded, label: 'الترتيب'),
-          SiyagNavItem(icon: Icons.person_rounded, label: 'حسابي'),
-        ],
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/siyag_theme.dart';
 import '../../../../core/widgets/siyag/siyag_common.dart';
+import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../game/presentation/widgets/confetti_overlay.dart';
 import '../siyag_shell.dart';
 
@@ -50,8 +51,9 @@ class _SiyagResultScreenState extends ConsumerState<SiyagResultScreen>
 
   @override
   Widget build(BuildContext context) {
+    final loc = ref.watch(localizationsProvider);
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: loc.direction,
       child: Scaffold(
         backgroundColor: SC.bg,
         body: Stack(
@@ -85,11 +87,11 @@ class _SiyagResultScreenState extends ConsumerState<SiyagResultScreen>
                       ),
                     ),
                     const SizedBox(height: 24),
-                    Center(child: Kicker('Solved!', color: SC.emerald)),
+                    Center(child: Kicker(loc('solved'), color: SC.emerald)),
                     const SizedBox(height: 8),
                     Center(
                       child: Text(
-                        'الكلمة كانت',
+                        loc('theWordWas'),
                         style: ST.ar(16, color: SC.textMute),
                       ),
                     ),
@@ -104,17 +106,17 @@ class _SiyagResultScreenState extends ConsumerState<SiyagResultScreen>
                     const SizedBox(height: 32),
                     Row(
                       children: [
-                        _stat('${widget.attempts}', 'محاولة'),
+                        _stat('${widget.attempts}', loc('attemptsLabel')),
                         const SizedBox(width: 12),
-                        _stat('${widget.hintsUsed}', 'تلميح'),
+                        _stat('${widget.hintsUsed}', loc('hintsLabel')),
                         const SizedBox(width: 12),
-                        _stat(_fmt(widget.elapsed), 'الوقت'),
+                        _stat(_fmt(widget.elapsed), loc('elapsed')),
                       ],
                     ),
                     const SizedBox(height: 40),
                     if (widget.showLeaderboard)
                       SiyagPrimaryButton(
-                        label: 'عرض ترتيبي',
+                        label: loc('viewMyRank'),
                         color: SC.emerald,
                         onTap: () {
                           ref.read(siyagTabProvider.notifier).state = 1;
@@ -123,7 +125,7 @@ class _SiyagResultScreenState extends ConsumerState<SiyagResultScreen>
                       ),
                     if (widget.showLeaderboard) const SizedBox(height: 10),
                     SiyagGhostButton(
-                      label: 'العودة للرئيسية',
+                      label: loc('returnHome'),
                       onTap: () =>
                           Navigator.of(context).popUntil((r) => r.isFirst),
                     ),

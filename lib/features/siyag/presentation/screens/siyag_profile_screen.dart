@@ -24,9 +24,10 @@ class SiyagProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(profileControllerProvider).value;
+    final loc = ref.watch(localizationsProvider);
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: loc.direction,
       child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 24),
         children: [
@@ -35,17 +36,17 @@ class SiyagProfileScreen extends ConsumerWidget {
           const SizedBox(height: 24),
           Row(
             children: [
-              _stat('${profile?.gamesPlayed ?? 0}', 'ألعاب'),
+              _stat('${profile?.gamesPlayed ?? 0}', loc('gamesPlayed')),
               const SizedBox(width: 8),
-              _stat('${profile?.gamesSolved ?? 0}', 'حلول'),
+              _stat('${profile?.gamesSolved ?? 0}', loc('gamesSolved')),
               const SizedBox(width: 8),
-              _stat('${profile?.roomsWon ?? 0}', 'غرف'),
+              _stat('${profile?.roomsWon ?? 0}', loc('roomsWon')),
               const SizedBox(width: 8),
               _stat(
                 profile?.weeklyBestPlacement != null
                     ? '#${profile!.weeklyBestPlacement}'
                     : '—',
-                'الأفضل',
+                loc('bestLabel'),
               ),
             ],
           ),
@@ -55,6 +56,8 @@ class SiyagProfileScreen extends ConsumerWidget {
           const _IdentityNote(),
           const SizedBox(height: 28),
           _AppearanceSelector(),
+          const SizedBox(height: 20),
+          const _LanguageSelector(),
           const SizedBox(height: 24),
         ],
       ),
@@ -240,8 +243,18 @@ class _AccountSection extends ConsumerWidget {
     }
   }
 
-  Future<void> _signOut(WidgetRef ref) =>
-      ref.read(sessionControllerProvider.notifier).logout();
+  Future<void> _signOut(BuildContext context, WidgetRef ref) async {
+    final loc = ref.read(localizationsProvider);
+    final ok = await showSiyagConfirm(
+      context,
+      direction: loc.direction,
+      title: loc('confirmLogoutTitle'),
+      body: loc('confirmLogoutBody'),
+      confirmLabel: loc('signOut'),
+      cancelLabel: loc('cancel'),
+    );
+    if (ok) await ref.read(sessionControllerProvider.notifier).logout();
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -307,7 +320,7 @@ class _AccountSection extends ConsumerWidget {
                       ),
                     ),
                     SiyagTap(
-                      onTap: () => _signOut(ref),
+                      onTap: () => _signOut(context, ref),
                       child: Padding(
                         padding: const EdgeInsets.all(4),
                         child: Text(
@@ -408,7 +421,7 @@ Future<void> _showNameSheet(
       var saving = false;
       return StatefulBuilder(
         builder: (ctx, setSheet) => Directionality(
-          textDirection: TextDirection.rtl,
+          textDirection: loc.direction,
           child: Padding(
             padding: EdgeInsets.only(
               bottom: MediaQuery.viewInsetsOf(ctx).bottom,
@@ -567,6 +580,65 @@ class _AppearanceSelector extends ConsumerWidget {
                             ),
                           ),
                         ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// App-language selector (Arabic / English) — the only control that switches the
+/// whole UI between the two complete localized experiences.
+class _LanguageSelector extends ConsumerWidget {
+  const _LanguageSelector();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationsProvider);
+    final lang = ref.watch(appSettingsProvider.select((s) => s.lang));
+    const options = [
+      ('ar', 'langArabic'),
+      ('en', 'langEnglish'),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Kicker(loc('languageLabel')),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: SC.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: SC.line),
+          ),
+          child: Row(
+            children: [
+              for (final (code, key) in options)
+                Expanded(
+                  child: SiyagTap(
+                    onTap: () =>
+                        ref.read(appSettingsProvider.notifier).setLang(code),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: code == lang ? SC.gold : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        loc(key),
+                        style: ST.ar(
+                          13,
+                          weight: FontWeight.w500,
+                          color: code == lang ? SC.onGold : SC.textDim,
+                        ),
                       ),
                     ),
                   ),

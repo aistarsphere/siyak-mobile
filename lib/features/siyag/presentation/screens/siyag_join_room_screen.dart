@@ -10,7 +10,8 @@ import '../siyag_route.dart';
 import 'siyag_room_lobby_screen.dart';
 import 'siyag_topbar.dart';
 
-/// Join by code (missing flow, in-grammar): uppercase-normalized code entry.
+/// Join Game by code (uppercase-normalized). Shows friendly loading + not-found/
+/// full/expired states inline (never a raw API error). Localized, direction-aware.
 class SiyagJoinRoomScreen extends ConsumerStatefulWidget {
   const SiyagJoinRoomScreen({super.key});
 
@@ -20,6 +21,7 @@ class SiyagJoinRoomScreen extends ConsumerStatefulWidget {
 
 class _S extends ConsumerState<SiyagJoinRoomScreen> {
   final _c = TextEditingController();
+  String? _error;
 
   @override
   void dispose() {
@@ -28,9 +30,13 @@ class _S extends ConsumerState<SiyagJoinRoomScreen> {
   }
 
   Future<void> _join() async {
+    final code = _c.text.trim();
+    if (code.isEmpty) return;
+    setState(() => _error = null);
+    final loc = ref.read(localizationsProvider);
     final room = await ref
         .read(roomLifecycleControllerProvider.notifier)
-        .join(_c.text);
+        .join(code);
     if (!mounted) return;
     if (room != null) {
       Navigator.of(
@@ -38,28 +44,27 @@ class _S extends ConsumerState<SiyagJoinRoomScreen> {
       ).pushReplacement(siyagRoute(const SiyagRoomLobbyScreen()));
     } else {
       final err = ref.read(roomLifecycleControllerProvider).error;
-      if (err != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(ref.read(localizationsProvider).errorMessage(err)),
-          ),
-        );
-      }
+      setState(
+        () => _error = err != null ? loc.errorMessage(err) : loc('gameNotFoundBody'),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final loc = ref.watch(localizationsProvider);
     final busy = ref.watch(roomLifecycleControllerProvider).busy;
+    final canJoin = _c.text.trim().isNotEmpty && !busy;
+
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: loc.direction,
       child: Scaffold(
         backgroundColor: SC.bg,
         body: SafeArea(
           bottom: false,
           child: Column(
             children: [
-              SiyagTopBar(kicker: 'Join by code', kickerColor: SC.cyan),
+              SiyagTopBar(kicker: loc('joinRoom'), kickerColor: SC.cyan),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
@@ -69,7 +74,7 @@ class _S extends ConsumerState<SiyagJoinRoomScreen> {
                       Align(
                         alignment: AlignmentDirectional.centerStart,
                         child: Text(
-                          'أدخل رمز الغرفة',
+                          loc('enterGameCode'),
                           style: ST.ar(13, color: SC.textDim),
                         ),
                       ),
@@ -79,6 +84,7 @@ class _S extends ConsumerState<SiyagJoinRoomScreen> {
                         autofocus: true,
                         textAlign: TextAlign.center,
                         textCapitalization: TextCapitalization.characters,
+                        enabled: !busy,
                         inputFormatters: [
                           TextInputFormatter.withFunction(
                             (o, n) => n.copyWith(
@@ -92,7 +98,7 @@ class _S extends ConsumerState<SiyagJoinRoomScreen> {
                         ],
                         style: ST.mono(30, letterSpacing: 8),
                         decoration: InputDecoration(
-                          hintText: 'ABCD12',
+                          hintText: 'ABCD',
                           hintStyle: ST.mono(
                             30,
                             color: SC.textFaint,
@@ -109,8 +115,52 @@ class _S extends ConsumerState<SiyagJoinRoomScreen> {
                             borderSide: BorderSide(color: SC.cyan, width: 2),
                           ),
                         ),
+                        onChanged: (_) {
+                          if (_error != null) setState(() => _error = null);
+                          setState(() {}); // refresh Join enabled state
+                        },
                         onSubmitted: (_) => _join(),
                       ),
+                      const SizedBox(height: 16),
+                      // Loading / error states — never a raw API error.
+                      if (busy)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: SC.cyan,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              loc('searchingGame'),
+                              style: ST.ar(13, color: SC.textMute),
+                            ),
+                          ],
+                        )
+                      else if (_error != null)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.error_outline_rounded,
+                              size: 18,
+                              color: SC.coral,
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                _error!,
+                                textAlign: TextAlign.center,
+                                style: ST.ar(13, color: SC.coral),
+                              ),
+                            ),
+                          ],
+                        ),
                     ],
                   ),
                 ),
@@ -118,11 +168,11 @@ class _S extends ConsumerState<SiyagJoinRoomScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                 child: SiyagPrimaryButton(
-                  label: 'انضمام',
+                  label: loc('join'),
                   color: SC.cyan,
                   icon: Icons.login_rounded,
                   busy: busy,
-                  onTap: _join,
+                  onTap: canJoin ? _join : null,
                 ),
               ),
             ],

@@ -124,7 +124,8 @@ class _SiyagWeeklyGameScreenState extends ConsumerState<SiyagWeeklyGameScreen> {
 
     final total = run.totalWords;
     return SiyagGameView(
-      title: 'التحدي الأسبوعي',
+      loc: loc,
+      title: loc('modeWeekly'),
       guesses: [
         for (final g in run.guesses)
           SiyagGuessVM(

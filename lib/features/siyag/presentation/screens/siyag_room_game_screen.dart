@@ -49,12 +49,12 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
           .guess(roomId: room.roomId, word: word);
       final ctrl = ref.read(realtimeRoomControllerProvider.notifier);
       if (res.unknown) {
-        _snack('هذه الكلمة غير موجودة في القاموس');
+        _snack(loc('v2ErrNotInVocabulary'));
       } else if (res.duplicate) {
         _snack(
           res.firstByLabel != null
-              ? 'خمّنها أولاً: ${res.firstByLabel}'
-              : 'خُمّنت هذه الكلمة سابقاً',
+              ? loc.fill('sharedDuplicateBy', {'name': res.firstByLabel!})
+              : loc('v2ErrDuplicateRoomGuess'),
         );
       } else {
         final me = room.me;
@@ -69,7 +69,7 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
           SharedGuess(
             guess: g,
             byParticipantId: me?.participantId ?? 'me',
-            byLabel: me?.label ?? 'أنت',
+            byLabel: me?.label ?? loc('you'),
             isMine: true,
           ),
         );
@@ -89,6 +89,7 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = ref.watch(localizationsProvider);
     final conn = ref.watch(realtimeRoomControllerProvider);
     final room = conn.room;
     if (room == null) {
@@ -103,7 +104,7 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
         conn.status == RoomConnStatus.recovering;
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: loc.direction,
       child: Scaffold(
         backgroundColor: SC.bg,
         body: SafeArea(
@@ -114,7 +115,7 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
                 children: [
                   SiyagTopBar(
                     title: room.categoryLabel(true),
-                    subtitle: '${room.participants.length} PLAYERS',
+                    subtitle: '${room.participants.length} ${loc('playersLabel')}',
                     trailing: solved
                         ? null
                         : SiyagTap(
@@ -151,7 +152,7 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'إعادة الاتصال...',
+                            loc('reconnecting'),
                             style: ST.ar(13, color: SC.coral),
                           ),
                         ],
@@ -179,7 +180,7 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
                                 onSubmitted: (_) => _submit(),
                                 style: ST.ar(20),
                                 decoration: InputDecoration(
-                                  hintText: 'اكتب كلمتك...',
+                                  hintText: loc('enterYourWord'),
                                   hintStyle: ST.ar(20, color: SC.textFaint),
                                   border: InputBorder.none,
                                   contentPadding: const EdgeInsets.symmetric(
@@ -306,6 +307,7 @@ class _Winner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationsProvider);
     return Container(
       color: SC.scrim,
       alignment: Alignment.center,
@@ -329,7 +331,7 @@ class _Winner extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
-            Kicker('Winner', color: SC.emerald),
+            Kicker(loc('winner'), color: SC.emerald),
             const SizedBox(height: 6),
             Text(
               room.winner?.label ?? '—',
@@ -338,13 +340,13 @@ class _Winner extends ConsumerWidget {
             if (room.secretWord != null) ...[
               const SizedBox(height: 12),
               Text(
-                'الكلمة: ${room.secretWord}',
+                '${loc('theWordLabel')}: ${room.secretWord}',
                 style: ST.ar(16, color: SC.textDim),
               ),
             ],
             const SizedBox(height: 24),
             SiyagPrimaryButton(
-              label: 'العودة للرئيسية',
+              label: loc('returnHome'),
               color: SC.emerald,
               onTap: () async {
                 await ref.read(realtimeRoomControllerProvider.notifier).leave();

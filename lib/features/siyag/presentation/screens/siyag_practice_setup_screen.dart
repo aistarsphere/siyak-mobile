@@ -26,19 +26,20 @@ class SiyagPracticeSetupScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationsProvider);
     final lang = ref.watch(_practiceLangProvider);
     final modes = ref.watch(modesByLanguageProvider(lang.code));
     var busy = false;
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: loc.direction,
       child: Scaffold(
         backgroundColor: SC.bg,
         body: SafeArea(
           bottom: false,
           child: Column(
             children: [
-              SiyagTopBar(kicker: 'Solo Practice', kickerColor: SC.cyan),
+              SiyagTopBar(kicker: loc('modeSolo'), kickerColor: SC.cyan),
               Expanded(
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
@@ -48,7 +49,7 @@ class SiyagPracticeSetupScreen extends ConsumerWidget {
                     ),
                     error: (e, _) => Center(
                       child: Text(
-                        'تعذّر التحميل',
+                        loc('somethingWrong'),
                         style: ST.ar(15, color: SC.textMute),
                       ),
                     ),
@@ -61,15 +62,15 @@ class SiyagPracticeSetupScreen extends ConsumerWidget {
                       return ListView(
                         padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                         children: [
-                          _label('لغة اللعب'),
+                          _label(loc('chooseGameLang')),
                           const SizedBox(height: 8),
                           Row(
                             children: [
                               for (final l in GameplayLanguage.values) ...[
                                 _chip(
                                   l == GameplayLanguage.arabic
-                                      ? 'العربية'
-                                      : 'الإنجليزية',
+                                      ? loc('langArabic')
+                                      : loc('langEnglish'),
                                   l == lang,
                                   () {
                                     ref
@@ -89,7 +90,7 @@ class SiyagPracticeSetupScreen extends ConsumerWidget {
                             ],
                           ),
                           const SizedBox(height: 20),
-                          _label('التصنيف'),
+                          _label(loc('category')),
                           const SizedBox(height: 8),
                           Wrap(
                             spacing: 8,
@@ -108,7 +109,7 @@ class SiyagPracticeSetupScreen extends ConsumerWidget {
                             ],
                           ),
                           const SizedBox(height: 20),
-                          _label('الصعوبة'),
+                          _label(loc('difficulty')),
                           const SizedBox(height: 8),
                           Row(
                             children: [
@@ -119,10 +120,10 @@ class SiyagPracticeSetupScreen extends ConsumerWidget {
                               ]) ...[
                                 _chip(
                                   d == 'easy'
-                                      ? 'سهل'
+                                      ? loc('diffEasy')
                                       : d == 'hard'
-                                      ? 'صعب'
-                                      : 'متوسط',
+                                      ? loc('diffHard')
+                                      : loc('diffMedium'),
                                   d == selDiff,
                                   () =>
                                       ref
@@ -148,7 +149,7 @@ class SiyagPracticeSetupScreen extends ConsumerWidget {
                 child: StatefulBuilder(
                   builder: (context, setLocal) {
                     return SiyagPrimaryButton(
-                      label: 'ابدأ اللعب',
+                      label: loc('startGame'),
                       color: SC.cyan,
                       icon: Icons.play_arrow_rounded,
                       busy: busy,

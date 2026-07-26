@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/siyag_theme.dart';
 import '../../../../core/widgets/siyag/siyag_common.dart';
 import '../../../../core/widgets/siyag/siyag_tap.dart';
+import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../v2/domain/entities/ranked.dart';
 import '../../../v2/domain/repositories/ranked_repository.dart';
 import '../../../v2/presentation/controllers/ranked_controller.dart';
@@ -89,19 +91,37 @@ class SiyagRankedMatchScreen extends ConsumerWidget {
     ref.invalidate(rankedMatchStreamProvider(matchId)); // immediate refresh
   }
 
+  /// Confirm before forfeiting — a forfeit counts as a loss and forfeits the stake.
+  Future<void> _confirmForfeit(BuildContext context, WidgetRef ref) async {
+    final loc = ref.read(localizationsProvider);
+    final ok = await showSiyagConfirm(
+      context,
+      direction: loc.direction,
+      title: loc('confirmForfeitTitle'),
+      body: loc('confirmForfeitBody'),
+      confirmLabel: loc('leave'),
+      cancelLabel: loc('back'),
+    );
+    if (ok) await _act(ref, (r) => r.forfeit(matchId));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationsProvider);
     final async = ref.watch(rankedMatchStreamProvider(matchId));
     final match = async.value;
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: loc.direction,
       child: Scaffold(
         backgroundColor: SC.bg,
         appBar: AppBar(
           backgroundColor: SC.bg,
           elevation: 0,
-          title: Text('المصنّفة', style: ST.ar(18, weight: FontWeight.w700)),
+          title: Text(
+            loc('competitive'),
+            style: ST.ar(18, weight: FontWeight.w700),
+          ),
           centerTitle: true,
         ),
         body: SafeArea(
@@ -110,24 +130,26 @@ class SiyagRankedMatchScreen extends ConsumerWidget {
               : ListView(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                   children: [
-                    _Players(match: match),
+                    _Players(loc: loc, match: match),
                     const SizedBox(height: 16),
                     if (match.isOver)
-                      _Result(match: match)
+                      _Result(loc: loc, match: match)
                     else if (match.isPreparing)
                       _Preparing(
+                        loc: loc,
                         match: match,
                         onReady: () => _act(ref, (r) => r.ready(matchId)),
                       )
                     else
                       _Active(
+                        loc: loc,
                         match: match,
                         onGuess: (w) => _act(
                           ref,
                           (r) =>
                               r.guess(matchId, w, language: match.language),
                         ),
-                        onForfeit: () => _act(ref, (r) => r.forfeit(matchId)),
+                        onForfeit: () => _confirmForfeit(context, ref),
                       ),
                   ],
                 ),
@@ -138,7 +160,8 @@ class SiyagRankedMatchScreen extends ConsumerWidget {
 }
 
 class _Players extends StatelessWidget {
-  const _Players({required this.match});
+  const _Players({required this.loc, required this.match});
+  final AppLocalizations loc;
   final RankedMatch match;
 
   @override
@@ -147,13 +170,16 @@ class _Players extends StatelessWidget {
     final opp = match.opponent;
     return Row(
       children: [
-        Expanded(child: _Chip(p: you, highlight: match.isMyTurn, isYou: true)),
+        Expanded(
+          child: _Chip(loc: loc, p: you, highlight: match.isMyTurn, isYou: true),
+        ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Text('ضد', style: ST.ar(13, color: SC.textMute)),
+          child: Text(loc('vs'), style: ST.ar(13, color: SC.textMute)),
         ),
         Expanded(
           child: _Chip(
+            loc: loc,
             p: opp,
             highlight: match.isActive && !match.isMyTurn,
             isYou: false,
@@ -165,7 +191,13 @@ class _Players extends StatelessWidget {
 }
 
 class _Chip extends StatelessWidget {
-  const _Chip({required this.p, required this.highlight, required this.isYou});
+  const _Chip({
+    required this.loc,
+    required this.p,
+    required this.highlight,
+    required this.isYou,
+  });
+  final AppLocalizations loc;
   final MatchPlayer? p;
   final bool highlight;
   final bool isYou;
@@ -186,10 +218,10 @@ class _Chip extends StatelessWidget {
           active: true,
         ),
         const SizedBox(height: 8),
-        Text(isYou ? 'أنت' : (p?.label ?? '—'),
+        Text(isYou ? loc('you') : (p?.label ?? '—'),
             maxLines: 1, overflow: TextOverflow.ellipsis, style: ST.ar(13, weight: FontWeight.w600)),
         Text(
-          (p?.ready ?? false) ? 'جاهز' : (p?.connectionState ?? ''),
+          (p?.ready ?? false) ? loc('ready') : (p?.connectionState ?? ''),
           style: ST.ar(10, color: (p?.ready ?? false) ? SC.emerald : SC.textMute),
         ),
       ],
@@ -198,7 +230,12 @@ class _Chip extends StatelessWidget {
 }
 
 class _Preparing extends StatelessWidget {
-  const _Preparing({required this.match, required this.onReady});
+  const _Preparing({
+    required this.loc,
+    required this.match,
+    required this.onReady,
+  });
+  final AppLocalizations loc;
   final RankedMatch match;
   final VoidCallback onReady;
 
@@ -207,10 +244,10 @@ class _Preparing extends StatelessWidget {
     final ready = match.you?.ready ?? false;
     return Column(
       children: [
-        Text('استعدّ لبدء المباراة', style: ST.ar(16, weight: FontWeight.w600)),
+        Text(loc('getReady'), style: ST.ar(16, weight: FontWeight.w600)),
         const SizedBox(height: 12),
         SiyagPrimaryButton(
-          label: ready ? 'بانتظار الخصم…' : 'أنا جاهز',
+          label: ready ? loc('waitingOpponent') : loc('imReady'),
           icon: ready ? null : Icons.check_rounded,
           onTap: ready ? null : onReady,
         ),
@@ -220,7 +257,13 @@ class _Preparing extends StatelessWidget {
 }
 
 class _Active extends ConsumerStatefulWidget {
-  const _Active({required this.match, required this.onGuess, required this.onForfeit});
+  const _Active({
+    required this.loc,
+    required this.match,
+    required this.onGuess,
+    required this.onForfeit,
+  });
+  final AppLocalizations loc;
   final RankedMatch match;
   final void Function(String) onGuess;
   final VoidCallback onForfeit;
@@ -260,8 +303,8 @@ class _ActiveState extends ConsumerState<_Active> {
           ),
           child: Text(
             myTurn
-                ? 'دورك — الوقت ${m.turnRemainingSeconds?.round() ?? '—'}ث'
-                : 'دور الخصم',
+                ? '${widget.loc('yourTurn')} · ${m.turnRemainingSeconds?.round() ?? '—'}${widget.loc('secShort')}'
+                : widget.loc('opponentTurn'),
             textAlign: TextAlign.center,
             style: ST.ar(14, weight: FontWeight.w600,
                 color: myTurn ? SC.gold : SC.textMute),
@@ -278,7 +321,9 @@ class _ActiveState extends ConsumerState<_Active> {
                 style: ST.ar(18),
                 onSubmitted: (_) => _submit(),
                 decoration: InputDecoration(
-                  hintText: myTurn ? 'خمّن كلمة' : 'انتظر دورك',
+                  hintText: myTurn
+                      ? widget.loc('guessAWord')
+                      : widget.loc('waitYourTurn'),
                   filled: true,
                   fillColor: SC.surfaceHi,
                   border: OutlineInputBorder(
@@ -290,7 +335,7 @@ class _ActiveState extends ConsumerState<_Active> {
             ),
             const SizedBox(width: 10),
             SiyagPrimaryButton(
-              label: 'أرسل',
+              label: widget.loc('send'),
               onTap: myTurn ? _submit : null,
               fullWidth: false,
             ),
@@ -316,7 +361,10 @@ class _ActiveState extends ConsumerState<_Active> {
         SiyagTap(
           onTap: widget.onForfeit,
           child: Center(
-            child: Text('انسحاب', style: ST.ar(12, color: SC.coral)),
+            child: Text(
+              widget.loc('leave'),
+              style: ST.ar(12, color: SC.coral),
+            ),
           ),
         ),
       ],
@@ -325,7 +373,8 @@ class _ActiveState extends ConsumerState<_Active> {
 }
 
 class _Result extends StatelessWidget {
-  const _Result({required this.match});
+  const _Result({required this.loc, required this.match});
+  final AppLocalizations loc;
   final RankedMatch match;
 
   @override
@@ -337,20 +386,22 @@ class _Result extends StatelessWidget {
         Icon(won ? Icons.emoji_events_rounded : Icons.flag_outlined,
             size: 56, color: won ? SC.gold : SC.textMute),
         const SizedBox(height: 12),
-        Text(won ? 'فزت!' : 'انتهت المباراة',
+        Text(won ? loc('youWon') : loc('matchEnded'),
             style: ST.ar(22, weight: FontWeight.w700)),
         if (match.secretWord != null) ...[
           const SizedBox(height: 6),
-          Text('الكلمة: ${match.secretWord}', style: ST.ar(14, color: SC.textDim)),
+          Text('${loc('theWordLabel')}: ${match.secretWord}',
+              style: ST.ar(14, color: SC.textDim)),
         ],
         if (match.ratingDelta != null) ...[
           const SizedBox(height: 4),
-          Text('${match.ratingDelta! >= 0 ? '+' : ''}${match.ratingDelta} تقييم',
+          Text(
+              '${match.ratingDelta! >= 0 ? '+' : ''}${match.ratingDelta} ${loc('ratingPts')}',
               style: ST.mono(14, color: won ? SC.emerald : SC.coral)),
         ],
         const SizedBox(height: 20),
         SiyagPrimaryButton(
-          label: 'العودة',
+          label: loc('back'),
           onTap: () => Navigator.of(context).popUntil((r) => r.isFirst),
         ),
       ],

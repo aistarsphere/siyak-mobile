@@ -51,15 +51,16 @@ class _SiyagLeaderboardScreenState
       });
     }
     final state = ref.watch(leaderboardControllerProvider);
+    final loc = ref.watch(localizationsProvider);
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: loc.direction,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SiyagScreenHeader(
-            kicker: 'Weekly Rankings',
-            title: 'المتصدرون',
+          SiyagScreenHeader(
+            kicker: loc('leaderboard'),
+            title: loc('placement'),
           ),
           Expanded(
             child: AnimatedSwitcher(
@@ -79,7 +80,7 @@ class _SiyagLeaderboardScreenState
                           Padding(
                             padding: const EdgeInsets.only(top: 12),
                             child: Text(
-                              'مركزك #${state.currentPlacement}',
+                              '${loc('yourPlacement')} #${state.currentPlacement}',
                               style: ST.mono(13, color: SC.coral),
                             ),
                           ),

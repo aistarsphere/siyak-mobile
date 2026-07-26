@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/siyag_theme.dart';
 import '../../../../core/widgets/siyag/siyag_common.dart';
 import '../../../../core/widgets/siyag/siyag_tap.dart';
@@ -51,8 +52,26 @@ class _S extends ConsumerState<SiyagRoomLobbyScreen> {
     builder: (_) => _InvitePlayersSheet(roomId: roomId),
   );
 
+  /// Confirm, then leave the room (realtime + REST) and pop.
+  Future<void> _leave() async {
+    final loc = ref.read(localizationsProvider);
+    final ok = await showSiyagConfirm(
+      context,
+      direction: loc.direction,
+      title: loc('confirmLeaveTitle'),
+      body: loc('confirmLeaveBody'),
+      confirmLabel: loc('leave'),
+      cancelLabel: loc('stay'),
+    );
+    if (!ok) return;
+    await ref.read(realtimeRoomControllerProvider.notifier).leave();
+    await ref.read(roomLifecycleControllerProvider.notifier).leave();
+    if (mounted) Navigator.of(context).maybePop();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final loc = ref.watch(localizationsProvider);
     final conn = ref.watch(realtimeRoomControllerProvider);
     final room = conn.room ?? ref.watch(roomLifecycleControllerProvider).room;
 
@@ -68,7 +87,7 @@ class _S extends ConsumerState<SiyagRoomLobbyScreen> {
     });
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: loc.direction,
       child: Scaffold(
         backgroundColor: SC.bg,
         body: SafeArea(
@@ -80,33 +99,25 @@ class _S extends ConsumerState<SiyagRoomLobbyScreen> {
                 : Column(
                     children: [
                       SiyagTopBar(
-                        kicker: 'Lobby',
+                        kicker: ref.read(localizationsProvider)('modeMultiplayer'),
                         kickerColor: SC.emerald,
-                        onBack: () async {
-                          await ref
-                              .read(realtimeRoomControllerProvider.notifier)
-                              .leave();
-                          await ref
-                              .read(roomLifecycleControllerProvider.notifier)
-                              .leave();
-                          if (context.mounted) Navigator.of(context).maybePop();
-                        },
+                        onBack: _leave,
                       ),
                       Expanded(
                         child: ListView(
                           padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                           children: [
-                            _CodeCard(room: room),
+                            _CodeCard(room: room, loc: loc),
                             const SizedBox(height: 16),
-                            _ConnBadge(status: conn.status),
+                            _ConnBadge(loc: loc, status: conn.status),
                             const SizedBox(height: 12),
                             Text(
-                              'اللاعبون (${room.participants.length}${room.maxPlayers != null ? '/${room.maxPlayers}' : ''})',
+                              '${loc('playersLabel')} (${room.participants.length}${room.maxPlayers != null ? '/${room.maxPlayers}' : ''})',
                               style: ST.mono(11, color: SC.textMute),
                             ),
                             const SizedBox(height: 8),
                             for (final p in room.participants)
-                              _Participant(p: p),
+                              _Participant(p: p, loc: loc),
                           ],
                         ),
                       ),
@@ -116,7 +127,7 @@ class _S extends ConsumerState<SiyagRoomLobbyScreen> {
                           children: [
                             if (room.amHost) ...[
                               SiyagPrimaryButton(
-                                label: 'ابدأ اللعبة',
+                                label: loc('startRoom'),
                                 color: SC.emerald,
                                 icon: Icons.play_arrow_rounded,
                                 onTap: () async {
@@ -143,34 +154,22 @@ class _S extends ConsumerState<SiyagRoomLobbyScreen> {
                               ),
                               const SizedBox(height: 10),
                               SiyagGhostButton(
-                                label: 'دعوة لاعبين',
+                                label: loc('invitePlayers'),
                                 icon: Icons.person_add_alt_1_rounded,
                                 onTap: () => _showInviteSheet(room.roomId),
                               ),
                             ] else
                               Text(
-                                'بانتظار المضيف لبدء اللعبة',
+                                loc('waitingForHost'),
                                 style: ST.ar(14, color: SC.textMute),
                               ),
                             const SizedBox(height: 10),
                             SiyagGhostButton(
-                              label: 'مغادرة الغرفة',
+                              label: ref.read(localizationsProvider)(
+                                'leaveRoom',
+                              ),
                               icon: Icons.logout_rounded,
-                              onTap: () async {
-                                await ref
-                                    .read(
-                                      realtimeRoomControllerProvider.notifier,
-                                    )
-                                    .leave();
-                                await ref
-                                    .read(
-                                      roomLifecycleControllerProvider.notifier,
-                                    )
-                                    .leave();
-                                if (context.mounted) {
-                                  Navigator.of(context).maybePop();
-                                }
-                              },
+                              onTap: _leave,
                             ),
                           ],
                         ),
@@ -185,8 +184,9 @@ class _S extends ConsumerState<SiyagRoomLobbyScreen> {
 }
 
 class _CodeCard extends StatelessWidget {
-  const _CodeCard({required this.room});
+  const _CodeCard({required this.room, required this.loc});
   final Room room;
+  final AppLocalizations loc;
 
   @override
   Widget build(BuildContext context) {
@@ -199,7 +199,7 @@ class _CodeCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Kicker('Join Code', color: SC.emerald),
+          Kicker(loc('joinCode'), color: SC.emerald),
           const SizedBox(height: 8),
           Text(room.joinCode, style: ST.mono(34, letterSpacing: 8)),
           const SizedBox(height: 12),
@@ -209,16 +209,18 @@ class _CodeCard extends StatelessWidget {
               _act(context, Icons.copy_rounded, () {
                 Clipboard.setData(ClipboardData(text: room.joinCode));
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('تم النسخ'),
-                    duration: Duration(seconds: 1),
+                  SnackBar(
+                    content: Text(loc('copied')),
+                    duration: const Duration(seconds: 1),
                   ),
                 );
               }),
               const SizedBox(width: 12),
               _act(context, Icons.ios_share_rounded, () {
                 SharePlus.instance.share(
-                  ShareParams(text: 'رمز الغرفة: ${room.joinCode}'),
+                  ShareParams(
+                    text: loc.fill('shareRoomCode', {'code': room.joinCode}),
+                  ),
                 );
               }),
             ],
@@ -242,16 +244,17 @@ class _CodeCard extends StatelessWidget {
 }
 
 class _ConnBadge extends StatelessWidget {
-  const _ConnBadge({required this.status});
+  const _ConnBadge({required this.loc, required this.status});
+  final AppLocalizations loc;
   final RoomConnStatus status;
 
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (status) {
-      RoomConnStatus.connected => ('متصل', SC.emerald),
+      RoomConnStatus.connected => (loc('connected'), SC.emerald),
       RoomConnStatus.reconnecting ||
-      RoomConnStatus.recovering => ('إعادة الاتصال...', SC.coral),
-      _ => ('جارٍ الاتصال', SC.textMute),
+      RoomConnStatus.recovering => (loc('reconnecting'), SC.coral),
+      _ => (loc('connecting2'), SC.textMute),
     };
     return Row(
       children: [
@@ -297,7 +300,10 @@ class _InvitePlayersSheetState extends ConsumerState<_InvitePlayersSheet> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('تعذّر إرسال الدعوة', style: ST.ar(13)),
+            content: Text(
+              ref.read(localizationsProvider)('errInviteFailed'),
+              style: ST.ar(13),
+            ),
             backgroundColor: SC.surface,
           ),
         );
@@ -309,13 +315,14 @@ class _InvitePlayersSheetState extends ConsumerState<_InvitePlayersSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = ref.watch(localizationsProvider);
     final dir = ref.watch(playersDirectoryProvider);
     final players = (dir.asData?.value.players ?? const <SocialPlayer>[])
         .where((p) => p.availableForInvite)
         .toList();
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: loc.direction,
       child: DraggableScrollableSheet(
         expand: false,
         initialChildSize: 0.6,
@@ -332,10 +339,10 @@ class _InvitePlayersSheetState extends ConsumerState<_InvitePlayersSheet> {
               ),
             ),
             const SizedBox(height: 14),
-            Text('دعوة لاعبين', style: ST.ar(17, weight: FontWeight.w700)),
+            Text(loc('invitePlayers'), style: ST.ar(17, weight: FontWeight.w700)),
             const SizedBox(height: 4),
             Text(
-              'المتاحون للدعوة الآن',
+              loc('availableToInvite'),
               style: ST.mono(10, color: SC.textFaint),
             ),
             const SizedBox(height: 12),
@@ -345,7 +352,7 @@ class _InvitePlayersSheetState extends ConsumerState<_InvitePlayersSheet> {
                   : players.isEmpty
                   ? Center(
                       child: Text(
-                        'لا يوجد لاعبون متاحون للدعوة',
+                        loc('noPlayersTitle'),
                         style: ST.ar(14, color: SC.textMute),
                       ),
                     )
@@ -418,7 +425,7 @@ class _InvitePlayersSheetState extends ConsumerState<_InvitePlayersSheet> {
                                             ),
                                           )
                                         : Text(
-                                            'دعوة',
+                                            loc('invite'),
                                             style: ST.ar(
                                               13,
                                               weight: FontWeight.w600,
@@ -441,8 +448,9 @@ class _InvitePlayersSheetState extends ConsumerState<_InvitePlayersSheet> {
 }
 
 class _Participant extends StatelessWidget {
-  const _Participant({required this.p});
+  const _Participant({required this.p, required this.loc});
   final RoomParticipant p;
+  final AppLocalizations loc;
 
   @override
   Widget build(BuildContext context) {
@@ -467,7 +475,7 @@ class _Participant extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              p.isMe ? '${p.label} (أنت)' : p.label,
+              p.isMe ? '${p.label} (${loc('you')})' : p.label,
               style: ST.ar(15, weight: FontWeight.w500),
             ),
           ),
@@ -484,7 +492,7 @@ class _Participant extends StatelessWidget {
                 color: SC.coralDim,
                 borderRadius: BorderRadius.circular(999),
               ),
-              child: Text('المضيف', style: ST.mono(9, color: SC.coral)),
+              child: Text(loc('host'), style: ST.mono(9, color: SC.coral)),
             ),
           ],
         ],

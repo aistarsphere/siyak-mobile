@@ -292,6 +292,7 @@ class _ActiveState extends ConsumerState<_Active> {
             SiyagPrimaryButton(
               label: 'أرسل',
               onTap: myTurn ? _submit : null,
+              fullWidth: false,
             ),
           ],
         ),

@@ -85,6 +85,7 @@ class SiyagPrimaryButton extends StatelessWidget {
     this.icon,
     this.color,
     this.busy = false,
+    this.fullWidth = true,
   });
 
   final String label;
@@ -92,6 +93,11 @@ class SiyagPrimaryButton extends StatelessWidget {
   final IconData? icon;
   final Color? color;
   final bool busy;
+
+  /// Stretch to the parent's width (the default, for column CTAs). Set to
+  /// `false` when placed directly inside a [Row] — a full-width child in an
+  /// unbounded Row throws "BoxConstraints forces an infinite width".
+  final bool fullWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -102,14 +108,15 @@ class SiyagPrimaryButton extends StatelessWidget {
       child: Opacity(
         opacity: onTap == null && !busy ? 0.5 : 1,
         child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          width: fullWidth ? double.infinity : null,
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
           decoration: BoxDecoration(
             color: c,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
             children: [
               if (busy)
                 SizedBox(

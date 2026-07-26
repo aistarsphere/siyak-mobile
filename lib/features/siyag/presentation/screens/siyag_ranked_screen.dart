@@ -171,6 +171,7 @@ class _TierRow extends StatelessWidget {
             label: 'ابحث',
             busy: busy,
             onTap: enabled ? onPlay : null,
+            fullWidth: false,
           ),
         ],
       ),

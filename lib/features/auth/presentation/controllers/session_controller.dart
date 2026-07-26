@@ -242,9 +242,11 @@ class SessionController extends AsyncNotifier<SessionState> {
   /// (re)register its FCM token with the backend. Best-effort.
   Future<void> _onAuthenticated() async {
     try {
+      // attach/push-register are rejected with INSTALLATION_NOT_FOUND until the
+      // installation record exists on the backend, so ensure it first.
       final installationId = await ref
-          .read(installationIdStoreProvider)
-          .getOrCreate();
+          .read(installationRegistrarProvider)
+          .ensureRegistered();
       final repo = ref.read(installationRepositoryProvider);
       await repo.attach(installationId);
       final token = await NotificationService.instance.ensureToken();

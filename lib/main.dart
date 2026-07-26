@@ -10,7 +10,6 @@ import 'core/config/app_config.dart';
 import 'core/notifications/notification_service.dart';
 import 'features/auth/presentation/controllers/installation_providers.dart';
 import 'features/game/presentation/controllers/app_settings_controller.dart';
-import 'features/v2/presentation/controllers/v2_providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,9 +44,11 @@ Future<void> main() async {
 Future<void> _registerFcmToken(ProviderContainer container, String token) async {
   if (token.isEmpty) return;
   try {
+    // The backend rejects push/register with INSTALLATION_NOT_FOUND until the
+    // installation record exists, so create it first (idempotent).
     final installationId = await container
-        .read(installationIdStoreProvider)
-        .getOrCreate();
+        .read(installationRegistrarProvider)
+        .ensureRegistered();
     await container
         .read(installationRepositoryProvider)
         .registerPushToken(
@@ -63,7 +64,11 @@ Future<void> _registerFcmToken(ProviderContainer container, String token) async 
           notificationsEnabled: true,
         );
     if (kDebugMode) debugPrint('[Notifications] FCM token registered');
-  } catch (_) {
-    // Ignore; re-registers on the next token refresh / login.
+  } catch (e) {
+    // Best-effort: retried on the next token refresh / login. Surfaced in debug
+    // because a silent failure here means the backend can never reach this
+    // device (the device still receives Firebase-Console sends, which makes the
+    // problem look like a server-side one).
+    if (kDebugMode) debugPrint('[Notifications] FCM token registration FAILED: $e');
   }
 }

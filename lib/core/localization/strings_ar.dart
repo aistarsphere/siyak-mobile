@@ -342,4 +342,10 @@ const Map<String, String> stringsAr = {
   'youWon': 'فزت!',
   'matchEnded': 'انتهت المباراة',
   'ratingPts': 'تقييم',
+  'yourTurn': 'دورك',
+  'opponentTurn': 'دور الخصم',
+  'secShort': 'ث',
+  'revealHint': 'افتح تلميحاً',
+  'availableToInvite': 'المتاحون للدعوة الآن',
+  'shareRoomCode': 'رمز اللعبة: {code}',
 };

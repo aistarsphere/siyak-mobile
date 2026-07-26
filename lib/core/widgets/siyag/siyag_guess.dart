@@ -247,6 +247,7 @@ class SiyagHintPill extends StatelessWidget {
     this.rank,
     this.onReveal,
     this.loading = false,
+    this.revealLabel = 'افتح تلميحاً',
   });
 
   final bool revealed;
@@ -254,6 +255,7 @@ class SiyagHintPill extends StatelessWidget {
   final int? rank;
   final VoidCallback? onReveal;
   final bool loading;
+  final String revealLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -310,7 +312,7 @@ class SiyagHintPill extends StatelessWidget {
                             ],
                           )
                         : Text(
-                            'افتح تلميحاً',
+                            revealLabel,
                             style: ST.ar(13, color: SC.textDim),
                           )),
             ),

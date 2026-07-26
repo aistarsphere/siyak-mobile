@@ -109,10 +109,10 @@ class _S extends ConsumerState<SiyagRoomLobbyScreen> {
                           children: [
                             _CodeCard(room: room, loc: loc),
                             const SizedBox(height: 16),
-                            _ConnBadge(status: conn.status),
+                            _ConnBadge(loc: loc, status: conn.status),
                             const SizedBox(height: 12),
                             Text(
-                              'اللاعبون (${room.participants.length}${room.maxPlayers != null ? '/${room.maxPlayers}' : ''})',
+                              '${loc('playersLabel')} (${room.participants.length}${room.maxPlayers != null ? '/${room.maxPlayers}' : ''})',
                               style: ST.mono(11, color: SC.textMute),
                             ),
                             const SizedBox(height: 8),
@@ -218,7 +218,9 @@ class _CodeCard extends StatelessWidget {
               const SizedBox(width: 12),
               _act(context, Icons.ios_share_rounded, () {
                 SharePlus.instance.share(
-                  ShareParams(text: 'رمز الغرفة: ${room.joinCode}'),
+                  ShareParams(
+                    text: loc.fill('shareRoomCode', {'code': room.joinCode}),
+                  ),
                 );
               }),
             ],
@@ -242,16 +244,17 @@ class _CodeCard extends StatelessWidget {
 }
 
 class _ConnBadge extends StatelessWidget {
-  const _ConnBadge({required this.status});
+  const _ConnBadge({required this.loc, required this.status});
+  final AppLocalizations loc;
   final RoomConnStatus status;
 
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (status) {
-      RoomConnStatus.connected => ('متصل', SC.emerald),
+      RoomConnStatus.connected => (loc('connected'), SC.emerald),
       RoomConnStatus.reconnecting ||
-      RoomConnStatus.recovering => ('إعادة الاتصال...', SC.coral),
-      _ => ('جارٍ الاتصال', SC.textMute),
+      RoomConnStatus.recovering => (loc('reconnecting'), SC.coral),
+      _ => (loc('connecting2'), SC.textMute),
     };
     return Row(
       children: [
@@ -339,7 +342,7 @@ class _InvitePlayersSheetState extends ConsumerState<_InvitePlayersSheet> {
             Text(loc('invitePlayers'), style: ST.ar(17, weight: FontWeight.w700)),
             const SizedBox(height: 4),
             Text(
-              'المتاحون للدعوة الآن',
+              loc('availableToInvite'),
               style: ST.mono(10, color: SC.textFaint),
             ),
             const SizedBox(height: 12),
@@ -422,7 +425,7 @@ class _InvitePlayersSheetState extends ConsumerState<_InvitePlayersSheet> {
                                             ),
                                           )
                                         : Text(
-                                            'دعوة',
+                                            loc('invite'),
                                             style: ST.ar(
                                               13,
                                               weight: FontWeight.w600,
@@ -472,7 +475,7 @@ class _Participant extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              p.isMe ? '${p.label} (أنت)' : p.label,
+              p.isMe ? '${p.label} (${loc('you')})' : p.label,
               style: ST.ar(15, weight: FontWeight.w500),
             ),
           ),

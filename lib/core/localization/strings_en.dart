@@ -348,4 +348,10 @@ const Map<String, String> stringsEn = {
   'youWon': 'You won!',
   'matchEnded': 'Match over',
   'ratingPts': 'pts',
+  'yourTurn': 'Your turn',
+  'opponentTurn': "Opponent's turn",
+  'secShort': 's',
+  'revealHint': 'Reveal a hint',
+  'availableToInvite': 'Available to invite',
+  'shareRoomCode': 'Game code: {code}',
 };

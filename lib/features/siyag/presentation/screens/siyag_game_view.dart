@@ -276,6 +276,7 @@ class _SiyagGameViewState extends State<SiyagGameView> {
                         revealed: false,
                         loading: widget.hintLoading,
                         onReveal: widget.onRequestHint,
+                        revealLabel: widget.loc('revealHint'),
                       ),
                   ],
                 ),

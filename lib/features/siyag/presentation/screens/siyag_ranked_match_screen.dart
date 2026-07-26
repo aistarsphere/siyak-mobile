@@ -303,8 +303,8 @@ class _ActiveState extends ConsumerState<_Active> {
           ),
           child: Text(
             myTurn
-                ? 'دورك — الوقت ${m.turnRemainingSeconds?.round() ?? '—'}ث'
-                : 'دور الخصم',
+                ? '${widget.loc('yourTurn')} · ${m.turnRemainingSeconds?.round() ?? '—'}${widget.loc('secShort')}'
+                : widget.loc('opponentTurn'),
             textAlign: TextAlign.center,
             style: ST.ar(14, weight: FontWeight.w600,
                 color: myTurn ? SC.gold : SC.textMute),

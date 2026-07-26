@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/siyag_theme.dart';
 import '../../../../core/widgets/siyag/siyag_tap.dart';
+import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../v2/presentation/controllers/room_controller.dart';
 import '../../../v2/presentation/controllers/social_controller.dart';
 import '../siyag_route.dart';
@@ -13,75 +14,83 @@ import 'siyag_ranked_screen.dart';
 import 'siyag_room_lobby_screen.dart';
 import 'siyag_topbar.dart';
 
-/// Multiplayer hub (missing flow, designed in-grammar): create, join-by-code,
-/// or resume an active room.
+/// "Play with Friends" hub — the social entry point. Explains the mode, then
+/// offers create / join / competitive / online-players, each with an icon,
+/// a one-line description and a consistent feature colour. Fully localized
+/// (AR + EN, direction-aware).
 class SiyagMultiplayerHubScreen extends ConsumerWidget {
   const SiyagMultiplayerHubScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationsProvider);
     final active = ref.watch(roomLifecycleControllerProvider).room;
     final pendingInvites =
         ref.watch(incomingInvitationsProvider).asData?.value.length ?? 0;
+
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: loc.direction,
       child: Scaffold(
         backgroundColor: SC.bg,
         body: SafeArea(
           bottom: false,
           child: Column(
             children: [
-              SiyagTopBar(kicker: 'Multiplayer', kickerColor: SC.emerald),
+              SiyagTopBar(kicker: loc('play'), kickerColor: SC.emerald),
               const SizedBox(height: 8),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                   children: [
                     Text(
-                      'الغرفة المباشرة',
+                      loc('modeMultiplayer'),
                       style: ST.ar(26, weight: FontWeight.w700, height: 1.1),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(
-                      'العب نفس الكلمة مع أصدقائك في الوقت الفعلي',
-                      style: ST.ar(14, color: SC.textMute),
+                      loc('modeMultiplayerDesc'),
+                      style: ST.ar(14, color: SC.textMute, height: 1.4),
                     ),
                     const SizedBox(height: 20),
-                    _row(
+                    _ActionCard(
+                      index: 0,
                       icon: Icons.add_circle_outline_rounded,
                       color: SC.emerald,
-                      ar: 'إنشاء غرفة',
-                      en: 'Create Room',
+                      title: loc('createRoom'),
+                      description: loc('createGameDesc'),
                       onTap: () => Navigator.of(
                         context,
                       ).push(siyagRoute(const SiyagCreateRoomScreen())),
                     ),
                     const SizedBox(height: 12),
-                    _row(
+                    _ActionCard(
+                      index: 1,
                       icon: Icons.login_rounded,
-                      color: SC.cyan,
-                      ar: 'انضمام برمز',
-                      en: 'Join by code',
+                      color: SC.emerald,
+                      title: loc('joinRoom'),
+                      description: loc('joinGameDesc'),
                       onTap: () => Navigator.of(
                         context,
                       ).push(siyagRoute(const SiyagJoinRoomScreen())),
                     ),
                     const SizedBox(height: 12),
-                    _row(
+                    _ActionCard(
+                      index: 2,
                       icon: Icons.military_tech_rounded,
                       color: SC.gold,
-                      ar: 'المصنّفة 1v1',
-                      en: 'Ranked 1v1 · staked',
+                      title: loc('competitive'),
+                      description: loc('competitiveDesc'),
                       onTap: () => Navigator.of(
                         context,
                       ).push(siyagRoute(const SiyagRankedScreen())),
                     ),
                     const SizedBox(height: 12),
-                    _row(
+                    _ActionCard(
+                      index: 3,
                       icon: Icons.groups_rounded,
-                      color: SC.cyan,
-                      ar: 'اللاعبون',
-                      en: 'Players online · invites',
+                      color: SC.emerald,
+                      title: loc('players'),
+                      description: loc('onlinePlayersDesc'),
                       badge: pendingInvites,
                       onTap: () => Navigator.of(
                         context,
@@ -89,11 +98,12 @@ class SiyagMultiplayerHubScreen extends ConsumerWidget {
                     ),
                     if (active != null) ...[
                       const SizedBox(height: 12),
-                      _row(
+                      _ActionCard(
+                        index: 4,
                         icon: Icons.meeting_room_outlined,
                         color: SC.coral,
-                        ar: 'متابعة الغرفة',
-                        en: 'Code ${active.joinCode}',
+                        title: loc('resumeRoom'),
+                        description: '${loc('joinCode')}: ${active.joinCode}',
                         onTap: () => Navigator.of(
                           context,
                         ).push(siyagRoute(const SiyagRoomLobbyScreen())),
@@ -108,60 +118,76 @@ class SiyagMultiplayerHubScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Widget _row({
-    required IconData icon,
-    required Color color,
-    required String ar,
-    required String en,
-    required VoidCallback onTap,
-    int badge = 0,
-  }) => SiyagTap(
+/// A single hub action: icon tile + title + description + optional count badge.
+class _ActionCard extends StatelessWidget {
+  const _ActionCard({
+    required this.index,
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.description,
+    required this.onTap,
+    this.badge = 0,
+  });
+
+  final int index;
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String description;
+  final VoidCallback onTap;
+  final int badge;
+
+  @override
+  Widget build(BuildContext context) => SiyagTap(
     onTap: onTap,
     scale: 0.98,
     child: Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: SC.surface,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: SC.line),
       ),
       child: Row(
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 46,
+            height: 46,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.13),
+              color: color.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(icon, size: 20, color: color),
+            child: Icon(icon, size: 22, color: color),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(ar, style: ST.ar(16, weight: FontWeight.w600)),
-                const SizedBox(height: 2),
-                Text(en, style: ST.mono(10, color: SC.textMute)),
+                Text(title, style: ST.ar(17, weight: FontWeight.w700)),
+                const SizedBox(height: 3),
+                Text(
+                  description,
+                  style: ST.ar(12.5, color: SC.textMute, height: 1.35),
+                ),
               ],
             ),
           ),
-          if (badge > 0)
+          if (badge > 0) ...[
+            const SizedBox(width: 8),
             Container(
-              margin: const EdgeInsetsDirectional.only(end: 8),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: SC.coral,
                 borderRadius: BorderRadius.circular(999),
               ),
-              child: Text(
-                '$badge',
-                style: ST.mono(11, color: SC.onAccent),
-              ),
+              child: Text('$badge', style: ST.mono(11, color: SC.onAccent)),
             ),
-          Icon(Icons.chevron_left_rounded, size: 18, color: SC.textFaint),
+          ],
         ],
       ),
     ),

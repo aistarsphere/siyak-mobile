@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/siyag_theme.dart';
 import '../../../../core/widgets/siyag/siyag_common.dart';
 import '../../../../core/widgets/siyag/siyag_tap.dart';
@@ -21,14 +22,16 @@ import 'siyag_weekly_screen.dart';
 class SiyagHomeScreen extends ConsumerWidget {
   const SiyagHomeScreen({super.key});
 
-  String _fmtRemaining(Duration? d) {
+  String _fmtRemaining(AppLocalizations loc, Duration? d) {
     if (d == null) return '—';
-    if (d.inDays > 0) return '${d.inDays}d ${d.inHours % 24}h';
-    return '${d.inHours}h ${d.inMinutes % 60}m';
+    final day = loc('uDay'), h = loc('uHour'), m = loc('uMin');
+    if (d.inDays > 0) return '${d.inDays}$day ${d.inHours % 24}$h';
+    return '${d.inHours}$h ${d.inMinutes % 60}$m';
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationsProvider);
     final profile = ref.watch(profileControllerProvider).value;
     final caps = ref.watch(capabilitiesProvider).value;
     final lang = GameplayLanguage.fromCode(ref.watch(appSettingsProvider).lang);
@@ -39,7 +42,7 @@ class SiyagHomeScreen extends ConsumerWidget {
         : 'س';
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: loc.direction,
       child: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
@@ -53,7 +56,7 @@ class SiyagHomeScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Kicker('Semantic Word Game'),
+                      Kicker(loc('tagline')),
                       const SizedBox(height: 8),
                       Text(
                         'سياق',
@@ -118,14 +121,18 @@ class SiyagHomeScreen extends ConsumerWidget {
                 context,
               ).push(siyagRoute(const SiyagWeeklyScreen())),
               child: _WeeklyHeroCard(
-                remaining: _fmtRemaining(weekly?.timeRemaining),
+                remaining: _fmtRemaining(loc, weekly?.timeRemaining),
+                endsInLabel: loc('timeRemaining'),
                 subtitle: weekly == null
-                    ? 'التحدي الأسبوعي'
+                    ? loc('modeWeekly')
                     : weekly.categoryLabel(true) +
                           (weekly.placement != null
                               ? ' · مركزك #${weekly.placement}'
                               : ''),
-                cta: 'ابدأ التحدي الأسبوعي',
+                cta: loc('startWeekly'),
+                onPlay: () => Navigator.of(
+                  context,
+                ).push(siyagRoute(const SiyagWeeklyScreen())),
               ),
             ),
           ),
@@ -137,10 +144,10 @@ class SiyagHomeScreen extends ConsumerWidget {
               children: [
                 Expanded(
                   child: _ModeTile(
-                    ar: 'تدريب حر',
-                    en: 'Solo Practice',
+                    title: loc('modeSolo'),
+                    subtitle: loc('modeSoloDesc'),
                     icon: Icons.bolt_rounded,
-                    color: SC.cyan,
+                    color: SC.cyan, // blue = solo (design system)
                     onTap: () => Navigator.of(
                       context,
                     ).push(siyagRoute(const SiyagPracticeSetupScreen())),
@@ -149,10 +156,10 @@ class SiyagHomeScreen extends ConsumerWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _ModeTile(
-                    ar: 'العب مع الأصدقاء',
-                    en: 'Multiplayer',
+                    title: loc('modeMultiplayer'),
+                    subtitle: loc('modeMultiplayerDesc'),
                     icon: Icons.groups_rounded,
-                    color: SC.emerald,
+                    color: SC.emerald, // green = social (design system)
                     enabled: caps?.multiplayerEnabled ?? true,
                     onTap: () => Navigator.of(
                       context,
@@ -169,15 +176,15 @@ class SiyagHomeScreen extends ConsumerWidget {
             child: Column(
               children: [
                 _Launcher(
-                  label: 'المتصدرون',
-                  en: 'Leaderboard',
+                  label: loc('leaderboard'),
+                  subtitle: loc('yourPlacement'),
                   icon: Icons.emoji_events_rounded,
                   onTap: () => ref.read(siyagTabProvider.notifier).state = 1,
                 ),
                 const SizedBox(height: 10),
                 _Launcher(
-                  label: 'الإحصائيات والملف',
-                  en: 'Statistics · Profile',
+                  label: loc('account'),
+                  subtitle: loc('stats'),
                   icon: Icons.insights_rounded,
                   onTap: () => ref.read(siyagTabProvider.notifier).state = 2,
                 ),
@@ -195,11 +202,15 @@ class _WeeklyHeroCard extends StatelessWidget {
     required this.remaining,
     required this.subtitle,
     required this.cta,
+    required this.endsInLabel,
+    required this.onPlay,
   });
 
   final String remaining;
   final String subtitle;
   final String cta;
+  final String endsInLabel;
+  final VoidCallback onPlay;
 
   @override
   Widget build(BuildContext context) {
@@ -262,7 +273,7 @@ class _WeeklyHeroCard extends StatelessWidget {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Kicker('Ends in', color: SC.coral),
+                          Kicker(endsInLabel, color: SC.coral),
                           Text(remaining, style: ST.mono(18)),
                         ],
                       ),
@@ -279,6 +290,7 @@ class _WeeklyHeroCard extends StatelessWidget {
                   SiyagPrimaryButton(
                     label: cta,
                     icon: Icons.play_arrow_rounded,
+                    onTap: onPlay,
                   ),
                 ],
               ),
@@ -292,16 +304,16 @@ class _WeeklyHeroCard extends StatelessWidget {
 
 class _ModeTile extends StatelessWidget {
   const _ModeTile({
-    required this.ar,
-    required this.en,
+    required this.title,
+    required this.subtitle,
     required this.icon,
     required this.color,
     required this.onTap,
     this.enabled = true,
   });
 
-  final String ar;
-  final String en;
+  final String title;
+  final String subtitle;
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
@@ -334,9 +346,14 @@ class _ModeTile extends StatelessWidget {
                 child: Icon(icon, size: 19, color: color),
               ),
               const Spacer(),
-              Text(ar, style: ST.ar(16, weight: FontWeight.w600)),
+              Text(title, style: ST.ar(16, weight: FontWeight.w600)),
               const SizedBox(height: 4),
-              Text(en, style: ST.mono(10, color: SC.textMute)),
+              Text(
+                subtitle,
+                style: ST.ar(11, color: SC.textMute, height: 1.3),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           ),
         ),
@@ -348,13 +365,13 @@ class _ModeTile extends StatelessWidget {
 class _Launcher extends StatelessWidget {
   const _Launcher({
     required this.label,
-    required this.en,
+    required this.subtitle,
     required this.icon,
     required this.onTap,
   });
 
   final String label;
-  final String en;
+  final String subtitle;
   final IconData icon;
   final VoidCallback onTap;
 
@@ -387,7 +404,7 @@ class _Launcher extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(label, style: ST.ar(15, weight: FontWeight.w500)),
-                  Text(en, style: ST.mono(10, color: SC.textMute)),
+                  Text(subtitle, style: ST.ar(11, color: SC.textMute)),
                 ],
               ),
             ),

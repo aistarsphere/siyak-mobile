@@ -19,6 +19,7 @@ class SiyagRankedScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationsProvider);
     final stats = ref.watch(rankedStatsProvider).value;
     final tiers = ref.watch(rankedTiersProvider).value ?? const <RankedTier>[];
     final wallet = ref.watch(walletControllerProvider).value;
@@ -34,13 +35,16 @@ class SiyagRankedScreen extends ConsumerWidget {
     });
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: loc.direction,
       child: Scaffold(
         backgroundColor: SC.bg,
         appBar: AppBar(
           backgroundColor: SC.bg,
           elevation: 0,
-          title: Text('المصنّفة 1v1', style: ST.ar(18, weight: FontWeight.w700)),
+          title: Text(
+            loc('competitive'),
+            style: ST.ar(18, weight: FontWeight.w700),
+          ),
           centerTitle: true,
         ),
         body: SafeArea(

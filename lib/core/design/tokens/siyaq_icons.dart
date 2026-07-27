@@ -75,6 +75,18 @@ class SiyaqIcons {
   static const synced = Icons.cloud_done_outlined;
   static const privacy = Icons.shield_outlined;
 
+  // Multiplayer
+  static const addCircle = Icons.add_circle_outline_rounded;
+  static const room = Icons.meeting_room_outlined;
+
+  // Selection & room actions
+  static const checkCircle = Icons.check_circle_rounded;
+  static const radioOff = Icons.circle_outlined;
+  static const share = Icons.ios_share_rounded;
+  static const leave = Icons.logout_rounded;
+  static const invite = Icons.person_add_alt_1_rounded;
+  static const add = Icons.add_rounded;
+
   // Theme
   static const themeSystem = Icons.brightness_auto_rounded;
   static const themeLight = Icons.light_mode_rounded;

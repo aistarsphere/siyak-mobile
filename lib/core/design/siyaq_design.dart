@@ -22,6 +22,7 @@ export 'components/foundation/siyaq_surface.dart';
 export 'components/foundation/siyaq_text.dart';
 export 'components/shared/siyaq_avatar.dart';
 export 'components/shared/siyaq_chip.dart';
+export 'components/shared/siyaq_count_badge.dart';
 export 'components/shared/siyaq_icon_tile.dart';
 export 'components/shared/siyaq_leaderboard.dart';
 export 'components/shared/siyaq_list_row.dart';

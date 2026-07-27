@@ -21,6 +21,7 @@ class SiyaqListRow extends StatelessWidget {
     super.key,
     required this.title,
     this.subtitle,
+    this.leading,
     this.leadingIcon,
     this.leadingColor,
     this.trailing,
@@ -29,12 +30,22 @@ class SiyaqListRow extends StatelessWidget {
     this.tone,
     this.surface = true,
     this.titleRole = SiyaqTextRole.bodyMedium,
+    this.subtitleRole = SiyaqTextRole.bodySmall,
     this.semanticLabel,
     this.stackTrailingBelow = 300,
+    this.padding,
+    this.radius = SiyaqRadius.card,
+    this.selected = false,
+    this.showSelectionIndicator = false,
+    this.selectionAccent,
   });
 
   final String title;
   final String? subtitle;
+
+  /// Arbitrary leading widget — a [SiyaqIconTile], an avatar, a checkbox.
+  /// Takes precedence over [leadingIcon] when both are supplied.
+  final Widget? leading;
 
   final IconData? leadingIcon;
 
@@ -58,7 +69,24 @@ class SiyaqListRow extends StatelessWidget {
   final bool surface;
 
   final SiyaqTextRole titleRole;
+  final SiyaqTextRole subtitleRole;
   final String? semanticLabel;
+
+  /// Overrides the surface padding — a hub "action card" is roomier than a
+  /// settings row.
+  final EdgeInsetsGeometry? padding;
+
+  final double radius;
+
+  /// Draws the selected treatment (accent border + tinted fill) and announces the
+  /// row as selected.
+  final bool selected;
+
+  /// Appends a radio/check glyph reflecting [selected] — turns the row into a
+  /// single-choice option without a second component.
+  final bool showSelectionIndicator;
+
+  final Color? selectionAccent;
 
   /// Below this width (scaled by the active text scale) a [trailing] widget moves
   /// onto its own line instead of competing with the title for horizontal space.
@@ -81,14 +109,20 @@ class SiyaqListRow extends StatelessWidget {
         SiyaqText(title, role: titleRole, color: titleColor),
         if (subtitle != null) ...[
           const SizedBox(height: SiyaqSpacing.xxxs),
-          SiyaqText(
-            subtitle!,
-            role: SiyaqTextRole.bodySmall,
-            color: c.textMuted,
-          ),
+          SiyaqText(subtitle!, role: subtitleRole, color: c.textMuted),
         ],
       ],
     );
+
+    final selectAccent = selectionAccent ?? c.primary;
+
+    Widget? selectionMark() => showSelectionIndicator
+        ? Icon(
+            selected ? SiyaqIcons.checkCircle : SiyaqIcons.radioOff,
+            size: SiyaqIconSize.lg,
+            color: selected ? selectAccent : c.textDisabled,
+          )
+        : null;
 
     Widget? chevron() => showChevron
         ? Icon(
@@ -101,13 +135,15 @@ class SiyaqListRow extends StatelessWidget {
           )
         : null;
 
-    Widget? lead() => leadingIcon == null
-        ? null
-        : Icon(
-            leadingIcon,
-            size: SiyaqIconSize.md,
-            color: leadingColor ?? toneColor ?? c.iconSecondary,
-          );
+    Widget? lead() =>
+        leading ??
+        (leadingIcon == null
+            ? null
+            : Icon(
+                leadingIcon,
+                size: SiyaqIconSize.md,
+                color: leadingColor ?? toneColor ?? c.iconSecondary,
+              ));
 
     final content = LayoutBuilder(
       builder: (context, constraints) {
@@ -127,6 +163,10 @@ class SiyaqListRow extends StatelessWidget {
               const SizedBox(width: SiyaqSpacing.md),
               trailing!,
             ],
+            if (selectionMark() != null) ...[
+              const SizedBox(width: SiyaqSpacing.md),
+              selectionMark()!,
+            ],
             if (chevron() != null) ...[
               const SizedBox(width: SiyaqSpacing.sm),
               chevron()!,
@@ -141,7 +181,12 @@ class SiyaqListRow extends StatelessWidget {
           children: [
             head,
             const SizedBox(height: SiyaqSpacing.md),
-            trailing!,
+            // Explicitly start-aligned: a stacked trailing widget should sit at
+            // the reading-start edge, not stretch across the row.
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: trailing!,
+            ),
           ],
         );
       },
@@ -161,11 +206,16 @@ class SiyaqListRow extends StatelessWidget {
 
     return SiyaqSurface(
       onTap: onTap,
+      selected: selected,
+      accent: selectionAccent,
       semanticLabel: semanticLabel ?? title,
-      padding: const EdgeInsets.symmetric(
-        horizontal: SiyaqSpacing.lg,
-        vertical: SiyaqSpacing.md,
-      ),
+      radius: radius,
+      padding:
+          padding ??
+          const EdgeInsets.symmetric(
+            horizontal: SiyaqSpacing.lg,
+            vertical: SiyaqSpacing.md,
+          ),
       child: content,
     );
   }

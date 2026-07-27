@@ -177,11 +177,11 @@ void main() {
   });
 
   testWidgets('shared components · Light + Dark', (t) async {
-    await shoot(t, 'shared_light_dark', const Size(1700, 6000), ['Shared']);
+    await shoot(t, 'shared_light_dark', const Size(1700, 7200), ['Shared']);
   });
 
   testWidgets('shared components · Arabic RTL + English LTR', (t) async {
-    await shoot(t, 'shared_ar_en', const Size(1700, 6000), [
+    await shoot(t, 'shared_ar_en', const Size(1700, 7200), [
       'Shared',
       'Dark',
       'AR + EN',
@@ -189,7 +189,7 @@ void main() {
   });
 
   testWidgets('shared components · 320px at text scale 2.0', (t) async {
-    await shoot(t, 'shared_320_scale2', const Size(1200, 6000), [
+    await shoot(t, 'shared_320_scale2', const Size(1200, 7200), [
       'Shared',
       'Dark',
       '2.0',

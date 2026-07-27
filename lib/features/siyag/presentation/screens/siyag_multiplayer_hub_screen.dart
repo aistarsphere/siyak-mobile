@@ -1,119 +1,233 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/design/theme/context_tokens.dart';
-import '../../../../core/design/theme/legacy_type_bridge.dart';
-import '../../../../core/widgets/siyag/siyag_tap.dart';
+import '../../../../core/design/siyaq_design.dart';
+import '../../../auth/presentation/controllers/session_controller.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../v2/presentation/controllers/room_controller.dart';
 import '../../../v2/presentation/controllers/social_controller.dart';
 import '../siyag_route.dart';
+import '../siyag_shell.dart';
 import 'siyag_create_room_screen.dart';
 import 'siyag_join_room_screen.dart';
 import 'siyag_players_screen.dart';
 import 'siyag_ranked_screen.dart';
 import 'siyag_room_lobby_screen.dart';
-import 'siyag_topbar.dart';
 
 /// "Play with Friends" hub — the social entry point. Explains the mode, then
-/// offers create / join / competitive / online-players, each with an icon,
-/// a one-line description and a consistent feature colour. Fully localized
-/// (AR + EN, direction-aware).
+/// offers create / join / competitive / online-players, each with a feature
+/// colour, a one-line description and a consistent tap target.
+///
+/// Built from the Siyaq design system — no screen-local cards, icon tiles,
+/// badges or text styles. Navigation targets, providers and multiplayer state
+/// handling are unchanged from the pre-migration implementation.
 class SiyagMultiplayerHubScreen extends ConsumerWidget {
   const SiyagMultiplayerHubScreen({super.key});
+
+  /// Mirrors the Players screen: leave the pushed flow, then select the account
+  /// tab where sign-in actually lives.
+  void _goSignIn(BuildContext context, WidgetRef ref) {
+    Navigator.of(context).maybePop();
+    ref.read(siyagTabProvider.notifier).state = 2; // Profile tab
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationsProvider);
+    final c = context.colors;
     final active = ref.watch(roomLifecycleControllerProvider).room;
-    final pendingInvites =
-        ref.watch(incomingInvitationsProvider).asData?.value.length ?? 0;
+    final invitations = ref.watch(incomingInvitationsProvider);
+    final signedIn =
+        ref.watch(sessionControllerProvider).asData?.value.isSignedIn ?? false;
+
+    // The count is supplementary: while it loads the badge is simply absent, and
+    // a failure never hides the actions behind a full-screen error.
+    final pendingInvites = invitations.asData?.value.length ?? 0;
 
     return Directionality(
       textDirection: loc.direction,
       child: Scaffold(
-        backgroundColor: context.colors.background,
+        backgroundColor: c.background,
         body: SafeArea(
           bottom: false,
           child: Column(
             children: [
-              SiyagTopBar(
+              SiyaqScreenHeader(
                 kicker: loc('play'),
-                kickerColor: context.colors.success,
+                accent: c.success,
+                onBack: () => Navigator.of(context).maybePop(),
+                backLabel: loc('back'),
+                padding: const EdgeInsets.fromLTRB(
+                  SiyaqSpacing.xl,
+                  SiyaqSpacing.md,
+                  SiyaqSpacing.xl,
+                  SiyaqSpacing.sm,
+                ),
               ),
-              const SizedBox(height: 8),
               Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                  padding: const EdgeInsets.fromLTRB(
+                    SiyaqSpacing.xl,
+                    SiyaqSpacing.sm,
+                    SiyaqSpacing.xl,
+                    SiyaqSpacing.xxl,
+                  ),
                   children: [
-                    Text(
+                    SiyaqText(
                       loc('modeMultiplayer'),
-                      style: context.legacyType.ar(
-                        26,
-                        weight: FontWeight.w700,
-                        height: 1.1,
-                      ),
+                      role: SiyaqTextRole.displaySmall,
                     ),
-                    const SizedBox(height: 6),
-                    Text(
+                    const SizedBox(height: SiyaqSpacing.xs),
+                    SiyaqText(
                       loc('modeMultiplayerDesc'),
-                      style: context.legacyType.ar(
-                        14,
-                        color: context.colors.textMuted,
-                        height: 1.4,
-                      ),
+                      role: SiyaqTextRole.bodyMedium,
+                      color: c.textMuted,
                     ),
-                    const SizedBox(height: 20),
-                    _ActionCard(
-                      index: 0,
-                      icon: Icons.add_circle_outline_rounded,
-                      color: context.colors.success,
+
+                    // ── Guest notice ──────────────────────────────────────────
+                    // Informational only: create and join-by-code work without an
+                    // account, and the Players screen gates itself. Nothing here
+                    // is disabled.
+                    if (!signedIn) ...[
+                      const SizedBox(height: SiyaqSpacing.xl),
+                      SiyaqTintedSurface(
+                        tone: SiyaqTone.accent,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(
+                              children: [
+                                SiyaqIcon.decorative(
+                                  SiyaqIcons.playerId,
+                                  size: SiyaqIconSize.md,
+                                  color: c.primary,
+                                ),
+                                const SizedBox(width: SiyaqSpacing.sm),
+                                Expanded(
+                                  child: SiyaqText(
+                                    loc('guestPlayersTitle'),
+                                    role: SiyaqTextRole.bodyLarge,
+                                    color: c.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: SiyaqSpacing.xs),
+                            SiyaqText(
+                              loc('signInBenefit'),
+                              role: SiyaqTextRole.bodySmall,
+                              color: c.textMuted,
+                            ),
+                            const SizedBox(height: SiyaqSpacing.md),
+                            SiyaqButton(
+                              label: loc('signIn'),
+                              icon: SiyaqIcons.signIn,
+                              size: SiyaqButtonSize.medium,
+                              fullWidth: true,
+                              onPressed: () => _goSignIn(context, ref),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    // ── Invitations failed to load ────────────────────────────
+                    // Surfaced inline with a retry. Pre-migration the error was
+                    // swallowed by `.asData?.value.length ?? 0`.
+                    if (signedIn && invitations.hasError) ...[
+                      const SizedBox(height: SiyaqSpacing.lg),
+                      SiyaqTintedSurface(
+                        tone: SiyaqTone.warning,
+                        child: Row(
+                          children: [
+                            SiyaqIcon.decorative(
+                              SiyaqIcons.offline,
+                              size: SiyaqIconSize.md,
+                              color: c.warning,
+                            ),
+                            const SizedBox(width: SiyaqSpacing.sm),
+                            Expanded(
+                              child: SiyaqText(
+                                loc.errorMessage(invitations.error!),
+                                role: SiyaqTextRole.bodySmall,
+                                color: c.warning,
+                              ),
+                            ),
+                            const SizedBox(width: SiyaqSpacing.sm),
+                            SiyaqButton(
+                              label: loc('retry'),
+                              type: SiyaqButtonType.secondary,
+                              size: SiyaqButtonSize.medium,
+                              onPressed: () =>
+                                  ref.invalidate(incomingInvitationsProvider),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: SiyaqSpacing.xl),
+
+                    // ── Actions ───────────────────────────────────────────────
+                    _action(
+                      context,
+                      icon: SiyaqIcons.addCircle,
+                      accent: c.success,
                       title: loc('createRoom'),
                       description: loc('createGameDesc'),
                       onTap: () => Navigator.of(
                         context,
                       ).push(siyagRoute(const SiyagCreateRoomScreen())),
                     ),
-                    const SizedBox(height: 12),
-                    _ActionCard(
-                      index: 1,
-                      icon: Icons.login_rounded,
-                      color: context.colors.success,
+                    const SizedBox(height: SiyaqSpacing.md),
+                    _action(
+                      context,
+                      icon: SiyaqIcons.signIn,
+                      accent: c.success,
                       title: loc('joinRoom'),
                       description: loc('joinGameDesc'),
                       onTap: () => Navigator.of(
                         context,
                       ).push(siyagRoute(const SiyagJoinRoomScreen())),
                     ),
-                    const SizedBox(height: 12),
-                    _ActionCard(
-                      index: 2,
-                      icon: Icons.military_tech_rounded,
-                      color: context.colors.primary,
+                    const SizedBox(height: SiyaqSpacing.md),
+                    _action(
+                      context,
+                      icon: SiyaqIcons.ranked,
+                      accent: c.primary,
                       title: loc('competitive'),
                       description: loc('competitiveDesc'),
                       onTap: () => Navigator.of(
                         context,
                       ).push(siyagRoute(const SiyagRankedScreen())),
                     ),
-                    const SizedBox(height: 12),
-                    _ActionCard(
-                      index: 3,
-                      icon: Icons.groups_rounded,
-                      color: context.colors.success,
+                    const SizedBox(height: SiyaqSpacing.md),
+                    _action(
+                      context,
+                      icon: SiyaqIcons.social,
+                      accent: c.success,
                       title: loc('players'),
                       description: loc('onlinePlayersDesc'),
-                      badge: pendingInvites,
+                      trailing: SiyaqCountBadge(
+                        count: pendingInvites,
+                        semanticLabel: '$pendingInvites ${loc('invitations')}',
+                      ),
+                      // The row is one interactive node, so its own label has to
+                      // carry the badge's information — a nested Semantics inside
+                      // an interactive row is excluded and would be inaudible.
+                      semanticSuffix: pendingInvites > 0
+                          ? '$pendingInvites ${loc('invitations')}'
+                          : null,
                       onTap: () => Navigator.of(
                         context,
                       ).push(siyagRoute(const SiyagPlayersScreen())),
                     ),
                     if (active != null) ...[
-                      const SizedBox(height: 12),
-                      _ActionCard(
-                        index: 4,
-                        icon: Icons.meeting_room_outlined,
-                        color: context.colors.primary,
+                      const SizedBox(height: SiyaqSpacing.md),
+                      _action(
+                        context,
+                        icon: SiyaqIcons.room,
+                        accent: c.primary,
                         title: loc('resumeRoom'),
                         description: '${loc('joinCode')}: ${active.joinCode}',
                         onTap: () => Navigator.of(
@@ -130,91 +244,33 @@ class SiyagMultiplayerHubScreen extends ConsumerWidget {
       ),
     );
   }
-}
 
-/// A single hub action: icon tile + title + description + optional count badge.
-class _ActionCard extends StatelessWidget {
-  const _ActionCard({
-    required this.index,
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.description,
-    required this.onTap,
-    this.badge = 0,
-  });
-
-  final int index;
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String description;
-  final VoidCallback onTap;
-  final int badge;
-
-  @override
-  Widget build(BuildContext context) => SiyagTap(
-    onTap: onTap,
-    scale: 0.98,
-    child: Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: context.colors.surface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: context.colors.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(icon, size: 22, color: color),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: context.legacyType.ar(17, weight: FontWeight.w700),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  description,
-                  style: context.legacyType.ar(
-                    12.5,
-                    color: context.colors.textMuted,
-                    height: 1.35,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (badge > 0) ...[
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: context.colors.primary,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                '$badge',
-                style: context.legacyType.mono(
-                  11,
-                  color: context.colors.onPrimary,
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
+  /// One hub action, composed from the shared row + icon tile rather than a
+  /// screen-local card.
+  Widget _action(
+    BuildContext context, {
+    required IconData icon,
+    required Color accent,
+    required String title,
+    required String description,
+    required VoidCallback onTap,
+    Widget? trailing,
+    String? semanticSuffix,
+  }) => SiyaqListRow(
+    leading: SiyaqIconTile(
+      icon: icon,
+      size: SiyaqIconTileSize.medium,
+      accent: accent,
+      tinted: true,
     ),
+    title: title,
+    titleRole: SiyaqTextRole.headingSmall,
+    subtitle: description,
+    trailing: trailing,
+    showChevron: true,
+    onTap: onTap,
+    radius: SiyaqRadius.xxl,
+    padding: const EdgeInsets.all(SiyaqSpacing.lg),
+    semanticLabel: ['$title. $description', ?semanticSuffix].join(' '),
   );
 }

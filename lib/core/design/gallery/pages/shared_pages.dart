@@ -5,6 +5,7 @@ import '../../components/foundation/siyaq_surface.dart';
 import '../../components/foundation/siyaq_text.dart';
 import '../../components/shared/siyaq_avatar.dart';
 import '../../components/shared/siyaq_chip.dart';
+import '../../components/shared/siyaq_count_badge.dart';
 import '../../components/shared/siyaq_icon_tile.dart';
 import '../../components/shared/siyaq_leaderboard.dart';
 import '../../components/shared/siyaq_list_row.dart';
@@ -193,6 +194,80 @@ class _SharedComponentsPageState extends State<SharedComponentsPage> {
                 ),
               ],
             ),
+          ],
+        ),
+        GallerySection(
+          title: 'COUNT BADGE · collapses at 0 · caps at 99+',
+          children: [
+            Wrap(
+              spacing: SiyaqSpacing.md,
+              runSpacing: SiyaqSpacing.sm,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                for (final n in <int>[0, 1, 3, 12, 150])
+                  SiyaqCountBadge(count: n, semanticLabel: '$n'),
+                SiyaqCountBadge(
+                  count: 5,
+                  semanticLabel: '5',
+                  accent: c.gameRanked,
+                ),
+                SiyaqText(
+                  _t(context, '(الصفر لا يُرسم)', '(zero renders nothing)'),
+                  role: SiyaqTextRole.bodySmall,
+                  color: c.textMuted,
+                ),
+              ],
+            ),
+          ],
+        ),
+        GallerySection(
+          title: 'LIST ROW · leading slot: icon tile + badge (hub action)',
+          children: [
+            for (final (icon, accent, title, desc, badge)
+                in <(IconData, Color, String, String, int)>[
+                  (
+                    SiyaqIcons.addCircle,
+                    c.success,
+                    _t(context, 'إنشاء لعبة', 'Create Game'),
+                    _t(context, 'ابدأ لعبة جديدة', 'Start a new game'),
+                    0,
+                  ),
+                  (
+                    SiyaqIcons.social,
+                    c.success,
+                    _t(context, 'اللاعبون المتصلون', 'Online Players'),
+                    _t(context, 'شاهد من يلعب الآن', "See who's online"),
+                    3,
+                  ),
+                  (
+                    SiyaqIcons.ranked,
+                    c.primary,
+                    _t(context, 'اللعب التنافسي', 'Competitive Match'),
+                    _t(context, 'تحدَّ لاعبًا آخر', 'Challenge another player'),
+                    0,
+                  ),
+                ]) ...[
+              SiyaqListRow(
+                leading: SiyaqIconTile(
+                  icon: icon,
+                  size: SiyaqIconTileSize.medium,
+                  accent: accent,
+                  tinted: true,
+                ),
+                title: title,
+                titleRole: SiyaqTextRole.headingSmall,
+                subtitle: desc,
+                trailing: SiyaqCountBadge(
+                  count: badge,
+                  semanticLabel: '$badge',
+                ),
+                showChevron: true,
+                onTap: () {},
+                radius: SiyaqRadius.xxl,
+                padding: const EdgeInsets.all(SiyaqSpacing.lg),
+              ),
+              const SizedBox(height: SiyaqSpacing.md),
+            ],
           ],
         ),
         GallerySection(

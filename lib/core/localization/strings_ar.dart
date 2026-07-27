@@ -175,6 +175,7 @@ const Map<String, String> stringsAr = {
   'linkedGoogle': 'مرتبط بحساب Google',
   'linkedApple': 'مرتبط بحساب Apple',
   'playerId': 'معرّف اللاعب',
+  'copyHint': 'انقر مرتين للنسخ',
   'idCopied': 'تم نسخ معرّف اللاعب',
   'signedInNote': 'مسجّل الدخول عبر Google — يتزامن تقدمك عبر أجهزتك.',
   'guestIdentityNote':
@@ -239,7 +240,8 @@ const Map<String, String> stringsAr = {
   'uMin': 'د',
   // guest / empty / loading / error states
   'guestPlayersTitle': 'تحتاج إلى تسجيل الدخول',
-  'guestPlayersBody': 'سجّل الدخول للعب مع الآخرين، وإرسال الدعوات، وحفظ تقدّمك.',
+  'guestPlayersBody':
+      'سجّل الدخول للعب مع الآخرين، وإرسال الدعوات، وحفظ تقدّمك.',
   'noPlayersTitle': 'لا يوجد لاعبون متصلون الآن',
   'noPlayersBody': 'حاول لاحقاً أو ادعُ أصدقاءك.',
   'loadingPlayers': 'جاري تحميل اللاعبين...',

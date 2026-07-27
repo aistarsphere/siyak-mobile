@@ -1,31 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/design/siyaq_design.dart';
 import '../../../../core/localization/app_localizations.dart';
-import '../../../../core/theme/siyag_theme.dart';
-import '../../../../core/widgets/siyag/siyag_common.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../v2/domain/entities/gameplay_language.dart';
 import '../../../v2/domain/entities/weekly.dart';
 import '../../../v2/presentation/controllers/weekly_controller.dart';
 import '../siyag_route.dart';
-import 'siyag_topbar.dart';
 import 'siyag_weekly_game_screen.dart';
 
-/// Weekly hero overview (weekly.tsx): centered trophy hero + countdown boxes,
-/// meta row, start action. Wired to the live weekly challenge.
+/// Weekly challenge overview: hero with countdown, week progress, meta stats and
+/// the start/resume action. Wired to the live weekly challenge.
+///
+/// Built from the Siyaq design system — no screen-local cards, meta tiles, error
+/// state or text styles. Providers, navigation and the start/resume contract are
+/// unchanged from the pre-migration implementation.
 class SiyagWeeklyScreen extends ConsumerWidget {
   const SiyagWeeklyScreen({super.key});
 
-  List<(String, String)> _countdown(AppLocalizations loc, Duration? d) {
-    final day = loc('uDayFull'), hr = loc('uHourFull'), min = loc('uMinFull');
-    if (d == null) return [('--', day), ('--', hr), ('--', min)];
-    return [
-      (d.inDays.toString().padLeft(2, '0'), day),
-      ((d.inHours % 24).toString().padLeft(2, '0'), hr),
-      ((d.inMinutes % 60).toString().padLeft(2, '0'), min),
-    ];
-  }
+  /// A week, used to express `timeRemaining` as elapsed progress.
+  static const _week = Duration(days: 7);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -36,235 +31,244 @@ class SiyagWeeklyScreen extends ConsumerWidget {
     return Directionality(
       textDirection: loc.direction,
       child: Scaffold(
-        backgroundColor: SC.bg,
+        backgroundColor: context.colors.background,
         body: SafeArea(
           bottom: false,
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: async.when(
-              loading: () =>
-                  Center(child: CircularProgressIndicator(color: SC.coral)),
-              error: (e, _) => _Error(
-                loc: loc,
-                onRetry: () => ref.invalidate(weeklyChallengeProvider(lang)),
+          child: Column(
+            children: [
+              SiyaqScreenHeader(
+                // Kicker only: the hero card below carries the heading, which is
+                // how the pre-migration top bar was composed.
+                kicker: loc('modeWeekly'),
+                accent: context.colors.primary,
+                onBack: () => Navigator.of(context).maybePop(),
+                backLabel: loc('back'),
+                padding: const EdgeInsets.fromLTRB(
+                  SiyaqSpacing.xl,
+                  SiyaqSpacing.md,
+                  SiyaqSpacing.xl,
+                  SiyaqSpacing.sm,
+                ),
               ),
-              data: (c) => Column(
-                children: [
-                  SiyagTopBar(kicker: loc('modeWeekly'), kickerColor: SC.coral),
-                  Expanded(
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                      children: [
-                        _Hero(
-                          loc: loc,
-                          countdown: _countdown(loc, c.timeRemaining),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            _meta(
-                              Icons.category_rounded,
-                              c.categoryLabel(true),
-                              loc('category'),
-                            ),
-                            const SizedBox(width: 10),
-                            _meta(
-                              Icons.emoji_events_rounded,
-                              c.placement != null ? '#${c.placement}' : '—',
-                              loc('yourPlacement'),
-                            ),
-                            const SizedBox(width: 10),
-                            _meta(
-                              Icons.schedule_rounded,
-                              _state(loc, c.state),
-                              loc('participation'),
-                            ),
-                          ],
-                        ),
-                      ],
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: SiyaqMotion.summaryIn,
+                  child: async.when(
+                    loading: () => SiyaqLoader(semanticLabel: loc('loading')),
+                    error: (e, _) => SiyaqEmptyState.error(
+                      title: loc('weeklyLoadError'),
+                      body: loc.errorMessage(e),
+                      actionLabel: loc('retry'),
+                      onAction: () =>
+                          ref.invalidate(weeklyChallengeProvider(lang)),
                     ),
+                    data: (c) => _Overview(challenge: c, lang: lang, loc: loc),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                    child: SiyagPrimaryButton(
-                      label: c.participated
-                          ? loc('resumeWeekly')
-                          : loc('startWeekly'),
-                      icon: Icons.play_arrow_rounded,
-                      onTap: () async {
-                        await ref
-                            .read(weeklyRunControllerProvider.notifier)
-                            .start(lang);
-                        if (context.mounted) {
-                          Navigator.of(context).pushReplacement(
-                            siyagRoute(const SiyagWeeklyGameScreen()),
-                          );
-                        }
-                      },
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  static String _state(AppLocalizations loc, WeeklyState s) => switch (s) {
+  static String stateLabel(AppLocalizations loc, WeeklyState s) => switch (s) {
     WeeklyState.active => loc('inProgress'),
     WeeklyState.completed => loc('completed'),
     WeeklyState.notStarted => loc('notStarted'),
   };
 
-  Widget _meta(IconData icon, String v, String l) => Expanded(
-    child: Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: SC.surface,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, size: 15, color: SC.cyan),
-          const SizedBox(height: 8),
-          Text(
-            v,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: ST.mono(18),
-          ),
-          const SizedBox(height: 6),
-          Text(l, style: ST.ar(10, color: SC.textMute)),
-        ],
-      ),
-    ),
-  );
-}
-
-class _Hero extends StatelessWidget {
-  const _Hero({required this.loc, required this.countdown});
-  final AppLocalizations loc;
-  final List<(String, String)> countdown;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        decoration: BoxDecoration(
-          color: SC.surface,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: SC.coral.withValues(alpha: 0.27)),
-        ),
-        child: Stack(
-          children: [
-            PositionedDirectional(
-              top: -64,
-              end: -40,
-              child: Container(
-                width: 192,
-                height: 192,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: SC.coral.withValues(alpha: 0.14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: SC.coral.withValues(alpha: 0.14),
-                      blurRadius: 80,
-                      spreadRadius: 20,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: SC.coral,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Icon(
-                      Icons.emoji_events_rounded,
-                      size: 26,
-                      color: SC.onGold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    loc('modeWeekly'),
-                    style: ST.ar(28, weight: FontWeight.w700, height: 1.1),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    loc('modeWeeklyDesc'),
-                    style: ST.ar(14, color: SC.textMute),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      for (final t in countdown) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: SC.surfaceHi,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Column(
-                            children: [
-                              Text(t.$1, style: ST.mono(24)),
-                              const SizedBox(height: 4),
-                              Text(t.$2, style: ST.ar(10, color: SC.textMute)),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  /// Fraction of the week already elapsed, from the server's `timeRemaining`.
+  /// `null` when the server did not send a remaining duration.
+  static double? weekProgress(Duration? remaining) {
+    if (remaining == null) return null;
+    final left = remaining.inSeconds.clamp(0, _week.inSeconds);
+    return 1 - (left / _week.inSeconds);
   }
 }
 
-class _Error extends StatelessWidget {
-  const _Error({required this.loc, required this.onRetry});
+class _Overview extends ConsumerWidget {
+  const _Overview({
+    required this.challenge,
+    required this.lang,
+    required this.loc,
+  });
+
+  final WeeklyChallenge challenge;
+  final GameplayLanguage lang;
   final AppLocalizations loc;
-  final VoidCallback onRetry;
+
+  List<(String, String)> _countdown(Duration? d) {
+    final day = loc('uDayFull'), hr = loc('uHourFull'), min = loc('uMinFull');
+    if (d == null) return [('--', day), ('--', hr), ('--', min)];
+    return [
+      (d.inDays.toString().padLeft(2, '0'), day),
+      ((d.inHours % 24).toString().padLeft(2, '0'), hr),
+      ((d.inMinutes % 60).toString().padLeft(2, '0'), min),
+    ];
+  }
+
+  Future<void> _start(BuildContext context, WidgetRef ref) async {
+    await ref.read(weeklyRunControllerProvider.notifier).start(lang);
+    if (context.mounted) {
+      Navigator.of(
+        context,
+      ).pushReplacement(siyagRoute(const SiyagWeeklyGameScreen()));
+    }
+  }
+
   @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.cloud_off_rounded, size: 44, color: SC.textMute),
-          const SizedBox(height: 16),
-          Text(loc('weeklyLoadError'), style: ST.ar(16, color: SC.textDim)),
-          const SizedBox(height: 16),
-          SiyagPrimaryButton(
-            label: loc('retry'),
-            icon: Icons.refresh_rounded,
-            onTap: onRetry,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
+    final completed = challenge.state == WeeklyState.completed;
+    final progress = SiyagWeeklyScreen.weekProgress(challenge.timeRemaining);
+
+    return Column(
+      children: [
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(
+              SiyaqSpacing.xl,
+              SiyaqSpacing.sm,
+              SiyaqSpacing.xl,
+              SiyaqSpacing.xxl,
+            ),
+            children: [
+              // ── Hero ────────────────────────────────────────────────────────
+              SiyaqSurface(
+                variant: SiyaqSurfaceVariant.accent,
+                radius: SiyaqRadius.xxxl,
+                padding: const EdgeInsets.all(SiyaqSpacing.xxl),
+                child: Column(
+                  children: [
+                    // Replaces the old off-canvas blurred circle with a
+                    // tokenized glow, so it reads the same in both themes.
+                    const SiyaqIconTile(icon: SiyaqIcons.ranked, glow: true),
+                    const SizedBox(height: SiyaqSpacing.lg),
+                    SiyaqText(
+                      loc('modeWeekly'),
+                      role: SiyaqTextRole.displaySmall,
+                      align: TextAlign.center,
+                    ),
+                    const SizedBox(height: SiyaqSpacing.xs),
+                    SiyaqText(
+                      loc('modeWeeklyDesc'),
+                      role: SiyaqTextRole.bodyMedium,
+                      color: c.textMuted,
+                      align: TextAlign.center,
+                    ),
+                    const SizedBox(height: SiyaqSpacing.xl),
+                    // Countdown reuses the stat card — same shape (figure over
+                    // caption), so it needs no separate component.
+                    SiyaqStatGrid(
+                      columns: 3,
+                      minCellWidth: 60,
+                      children: [
+                        for (final (value, unit) in _countdown(
+                          challenge.timeRemaining,
+                        ))
+                          SiyaqStatCard(
+                            value: value,
+                            label: unit,
+                            semanticLabel: '$value $unit',
+                          ),
+                      ],
+                    ),
+                    if (progress != null) ...[
+                      const SizedBox(height: SiyaqSpacing.xl),
+                      SiyaqProgressBar(
+                        value: progress,
+                        label: loc('timeRemaining'),
+                        semanticLabel: loc('timeRemaining'),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+              // ── Completed banner ───────────────────────────────────────────
+              if (completed) ...[
+                const SizedBox(height: SiyaqSpacing.lg),
+                SiyaqTintedSurface(
+                  tone: SiyaqTone.success,
+                  child: Row(
+                    children: [
+                      SiyaqIcon.decorative(
+                        SiyaqIcons.success,
+                        size: SiyaqIconSize.md,
+                        color: c.success,
+                      ),
+                      const SizedBox(width: SiyaqSpacing.sm),
+                      Expanded(
+                        child: SiyaqText(
+                          loc('completed'),
+                          role: SiyaqTextRole.bodyMedium,
+                          color: c.success,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              // ── Meta stats ─────────────────────────────────────────────────
+              const SizedBox(height: SiyaqSpacing.lg),
+              SiyaqStatGrid(
+                columns: 3,
+                minCellWidth: 88,
+                children: [
+                  SiyaqStatCard(
+                    value: challenge.categoryLabel(loc.isArabic),
+                    label: loc('category'),
+                    numeric: false,
+                    semanticLabel:
+                        '${loc('category')}: '
+                        '${challenge.categoryLabel(loc.isArabic)}',
+                  ),
+                  SiyaqStatCard(
+                    value: challenge.placement != null
+                        ? '#${challenge.placement}'
+                        : null,
+                    label: loc('yourPlacement'),
+                    accent: challenge.placement != null ? c.primary : null,
+                    semanticLabel: challenge.placement != null
+                        ? '${loc('yourPlacement')}: ${challenge.placement}'
+                        : loc('yourPlacement'),
+                  ),
+                  SiyaqStatCard(
+                    value: SiyagWeeklyScreen.stateLabel(loc, challenge.state),
+                    label: loc('participation'),
+                    numeric: false,
+                    accent: completed ? c.success : null,
+                    semanticLabel:
+                        '${loc('participation')}: '
+                        '${SiyagWeeklyScreen.stateLabel(loc, challenge.state)}',
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
-      ),
-    ),
-  );
+        ),
+
+        // ── Primary action (pinned) ──────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            SiyaqSpacing.xl,
+            SiyaqSpacing.sm,
+            SiyaqSpacing.xl,
+            SiyaqSpacing.xxl,
+          ),
+          child: SiyaqButton(
+            label: challenge.participated
+                ? loc('resumeWeekly')
+                : loc('startWeekly'),
+            icon: SiyaqIcons.play,
+            fullWidth: true,
+            onPressed: () => _start(context, ref),
+          ),
+        ),
+      ],
+    );
+  }
 }

@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/theme/siyag_theme.dart';
-import '../../../../core/widgets/siyag/siyag_common.dart';
-import '../../../../core/widgets/siyag/siyag_tap.dart';
+import '../../../../core/design/siyaq_design.dart';
 import '../../../auth/domain/repositories/auth_repository.dart';
 import '../../../auth/presentation/controllers/auth_providers.dart';
 import '../../../auth/presentation/controllers/session_controller.dart';
@@ -12,77 +10,74 @@ import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../v2/domain/entities/installation_profile.dart';
 import '../../../v2/presentation/controllers/profile_controller.dart';
 
-/// Profile (profile.tsx): identity, stats grid, account link, appearance.
+/// Profile: identity, stats, account link, appearance and language.
 ///
 /// The identity block is **account-aware**: signed in → the account's public
 /// name/avatar and stable `SYG-XXXXX` id (editable via `PATCH /account/me`);
 /// guest → the anonymous installation profile (editable via `PATCH /profiles/me`).
-/// No mock badges — stats are real; the raw installation id stays hidden.
+/// Stats are real; the raw installation id stays hidden.
+///
+/// Built entirely from the Siyaq design system — no screen-local cards, pills,
+/// selectors or text styles. Behaviour, providers and API calls are unchanged
+/// from the pre-migration implementation.
 class SiyagProfileScreen extends ConsumerWidget {
   const SiyagProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(profileControllerProvider).value;
+    final profileState = ref.watch(profileControllerProvider);
+    final profile = profileState.value;
     final loc = ref.watch(localizationsProvider);
 
     return Directionality(
       textDirection: loc.direction,
       child: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
+        padding: const EdgeInsets.symmetric(
+          horizontal: SiyaqSpacing.xxl,
+          vertical: SiyaqSpacing.huge,
+        ),
         children: [
-          const SizedBox(height: 40),
           _IdentityHeader(profile: profile),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              _stat('${profile?.gamesPlayed ?? 0}', loc('gamesPlayed')),
-              const SizedBox(width: 8),
-              _stat('${profile?.gamesSolved ?? 0}', loc('gamesSolved')),
-              const SizedBox(width: 8),
-              _stat('${profile?.roomsWon ?? 0}', loc('roomsWon')),
-              const SizedBox(width: 8),
-              _stat(
-                profile?.weeklyBestPlacement != null
-                    ? '#${profile!.weeklyBestPlacement}'
-                    : '—',
-                loc('bestLabel'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
+          const SizedBox(height: SiyaqSpacing.xxl),
+          _StatsSection(profile: profile, loading: profileState.isLoading),
+          const SizedBox(height: SiyaqSpacing.xxl),
           const _AccountSection(),
-          const SizedBox(height: 24),
+          const SizedBox(height: SiyaqSpacing.xxl),
           const _IdentityNote(),
-          const SizedBox(height: 28),
-          _AppearanceSelector(),
-          const SizedBox(height: 20),
+          const SizedBox(height: SiyaqSpacing.xxxl),
+          const _AppearanceSelector(),
+          const SizedBox(height: SiyaqSpacing.xl),
           const _LanguageSelector(),
-          const SizedBox(height: 24),
         ],
       ),
     );
   }
+}
 
-  Widget _stat(String v, String l) => Expanded(
-    child: Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: SC.surface,
-        borderRadius: BorderRadius.circular(16),
+/// A labelled settings group: kicker + content.
+class _Section extends StatelessWidget {
+  const _Section({required this.label, required this.child});
+
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      SiyaqText(
+        label.toUpperCase(),
+        role: SiyaqTextRole.labelSmall,
+        script: SiyaqScript.mono,
+        color: context.colors.textMuted,
       ),
-      child: Column(
-        children: [
-          Text(v, style: ST.mono(20)),
-          const SizedBox(height: 6),
-          Text(l, style: ST.ar(9, color: SC.textMute)),
-        ],
-      ),
-    ),
+      const SizedBox(height: SiyaqSpacing.smd),
+      child,
+    ],
   );
 }
 
-/// Avatar + name + edit + (when signed in) the public `SYG-XXXXX` id chip.
+/// Avatar + name + edit action + (when signed in) the public `SYG-XXXXX` id.
 class _IdentityHeader extends ConsumerWidget {
   const _IdentityHeader({required this.profile});
   final InstallationProfile? profile;
@@ -94,7 +89,6 @@ class _IdentityHeader extends ConsumerWidget {
     final signedIn = account != null;
 
     final name = signedIn ? account.effectiveName : (profile?.label ?? '—');
-    final letter = name.isNotEmpty ? name.characters.first : 'س';
 
     VoidCallback? onEdit;
     if (signedIn) {
@@ -118,35 +112,32 @@ class _IdentityHeader extends ConsumerWidget {
       );
     }
 
-    return Center(
-      child: Column(
-        children: [
-          SiyagAvatar(
-            letter: letter,
-            imageUrl: signedIn ? account.avatarUrl : null,
-            size: 80,
-            active: true,
-          ),
-          const SizedBox(height: 16),
-          Text(name, style: ST.ar(22, weight: FontWeight.w600)),
-          const SizedBox(height: 6),
-          SiyagTap(
-            onTap: onEdit,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.edit_rounded, size: 13, color: SC.coral),
-                const SizedBox(width: 6),
-                Text(loc('editName'), style: ST.ar(13, color: SC.coral)),
-              ],
-            ),
-          ),
-          if (signedIn) ...[
-            const SizedBox(height: 10),
-            _PlayerIdChip(id: account.publicPlayerId),
-          ],
+    return Column(
+      children: [
+        SiyaqAvatar(
+          name: name,
+          imageUrl: signedIn ? account.avatarUrl : null,
+          size: SiyaqAvatarSize.xlarge,
+        ),
+        const SizedBox(height: SiyaqSpacing.lg),
+        SiyaqText(
+          name,
+          role: SiyaqTextRole.headingLarge,
+          align: TextAlign.center,
+        ),
+        const SizedBox(height: SiyaqSpacing.xs),
+        SiyaqButton(
+          label: loc('editName'),
+          icon: SiyaqIcons.edit,
+          type: SiyaqButtonType.ghost,
+          size: SiyaqButtonSize.medium,
+          onPressed: onEdit,
+        ),
+        if (signedIn) ...[
+          const SizedBox(height: SiyaqSpacing.sm),
+          _PlayerIdChip(id: account.publicPlayerId),
         ],
-      ),
+      ],
     );
   }
 }
@@ -159,7 +150,13 @@ class _PlayerIdChip extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationsProvider);
-    return SiyagTap(
+    return SiyaqChip(
+      label: id,
+      numeric: true,
+      icon: SiyaqIcons.playerId,
+      trailingIcon: SiyaqIcons.copy,
+      semanticLabel: '${loc('playerId')}: $id',
+      semanticHint: loc('copyHint'),
       onTap: () async {
         await Clipboard.setData(ClipboardData(text: id));
         if (context.mounted) {
@@ -168,31 +165,60 @@ class _PlayerIdChip extends ConsumerWidget {
             ..showSnackBar(SnackBar(content: Text(loc('idCopied'))));
         }
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: SC.surface,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: SC.line),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.badge_outlined, size: 13, color: SC.textMute),
-            const SizedBox(width: 6),
-            Text(id, style: ST.mono(12, color: SC.textDim)),
-            const SizedBox(width: 6),
-            Icon(Icons.copy_rounded, size: 12, color: SC.textMute),
-          ],
-        ),
-      ),
     );
   }
 }
 
-/// Account section: real Google sign-in (guest) or a compact linked/sign-out
-/// row (signed in). Uses the existing [SessionController]; on a real
-/// authentication failure it surfaces the error (never a silent guest fallback).
+/// Four real stats, laid out so they reflow rather than overflow.
+class _StatsSection extends ConsumerWidget {
+  const _StatsSection({required this.profile, required this.loading});
+
+  final InstallationProfile? profile;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationsProvider);
+    final best = profile?.weeklyBestPlacement;
+
+    return SiyaqStatGrid(
+      children: [
+        SiyaqStatCard(
+          value: profile == null ? null : '${profile!.gamesPlayed}',
+          label: loc('gamesPlayed'),
+          loading: loading,
+          semanticLabel: '${loc('gamesPlayed')}: ${profile?.gamesPlayed ?? 0}',
+        ),
+        SiyaqStatCard(
+          value: profile == null ? null : '${profile!.gamesSolved}',
+          label: loc('gamesSolved'),
+          loading: loading,
+          semanticLabel: '${loc('gamesSolved')}: ${profile?.gamesSolved ?? 0}',
+        ),
+        SiyaqStatCard(
+          value: profile == null ? null : '${profile!.roomsWon}',
+          label: loc('roomsWon'),
+          loading: loading,
+          semanticLabel: '${loc('roomsWon')}: ${profile?.roomsWon ?? 0}',
+        ),
+        SiyaqStatCard(
+          value: best != null ? '#$best' : null,
+          label: loc('bestLabel'),
+          loading: loading,
+          // A podium finish is the one stat worth accenting.
+          accent: best != null && best <= 3 ? context.colors.primary : null,
+          semanticLabel: best != null
+              ? '${loc('bestLabel')}: $best'
+              : loc('bestLabel'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Account section: real Google/Apple sign-in (guest) or a linked/sign-out row
+/// (signed in). Uses the existing [SessionController]; on a real authentication
+/// failure it surfaces the error (never a silent guest fallback).
 class _AccountSection extends ConsumerWidget {
   const _AccountSection();
 
@@ -245,7 +271,7 @@ class _AccountSection extends ConsumerWidget {
 
   Future<void> _signOut(BuildContext context, WidgetRef ref) async {
     final loc = ref.read(localizationsProvider);
-    final ok = await showSiyagConfirm(
+    final ok = await showSiyaqConfirm(
       context,
       direction: loc.direction,
       title: loc('confirmLogoutTitle'),
@@ -268,103 +294,98 @@ class _AccountSection extends ConsumerWidget {
     final linkedApple = account?.linkedProviders.contains('apple') ?? false;
     final blocked = signedIn && !account.isActive;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: SC.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SC.line),
-      ),
-      child: signedIn
-          // ── Signed in → optional blocked banner + provider-aware linked row
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (blocked) ...[
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.report_gmailerrorred_rounded,
-                        size: 16,
-                        color: SC.coral,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          loc(switch (account.status) {
-                            'suspended' => 'v2ErrAccountSuspended',
-                            'banned' => 'v2ErrAccountBanned',
-                            'verification_required' =>
-                              'v2ErrAccountVerification',
-                            'deletion_pending' => 'v2ErrAccountDeletionPending',
-                            'deleted' => 'v2ErrAccountDeleted',
-                            _ => 'v2ErrAccountDisabled',
-                          }),
-                          style: ST.ar(12, color: SC.coral),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Divider(height: 1, color: SC.line),
-                  const SizedBox(height: 12),
-                ],
-                Row(
-                  children: [
-                    Icon(Icons.verified_rounded, size: 16, color: SC.emerald),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        linkedApple ? loc('linkedApple') : loc('linkedGoogle'),
-                        style: ST.ar(13, color: SC.emerald),
-                      ),
-                    ),
-                    SiyagTap(
-                      onTap: () => _signOut(context, ref),
-                      child: Padding(
-                        padding: const EdgeInsets.all(4),
-                        child: Text(
-                          loc('signOut'),
-                          style: ST.ar(13, color: SC.textDim),
-                        ),
-                      ),
-                    ),
-                  ],
+    if (!signedIn) {
+      // ── Guest → offer Google (+ Apple on iOS) sign-in ─────────────────────
+      return _Section(
+        label: loc('account'),
+        child: SiyaqSurface(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SiyaqText(
+                loc('signInBenefit'),
+                role: SiyaqTextRole.bodyMedium,
+                color: context.colors.textSecondary,
+              ),
+              const SizedBox(height: SiyaqSpacing.md),
+              SiyaqButton(
+                label: loc('signInWithGoogle'),
+                icon: SiyaqIcons.signIn,
+                fullWidth: true,
+                loading: signingIn,
+                onPressed: () => _signIn(context, ref),
+              ),
+              if (appleSupported) ...[
+                const SizedBox(height: SiyaqSpacing.sm),
+                SiyaqButton(
+                  label: loc('signInWithApple'),
+                  icon: SiyaqIcons.apple,
+                  // Apple's brand guidelines mandate this fill; the label colour
+                  // is derived by measured contrast, not chosen here.
+                  accent: SiyaqColors.graphiteDeep,
+                  fullWidth: true,
+                  loading: signingIn,
+                  onPressed: () => _signInApple(context, ref),
                 ),
               ],
-            )
-          // ── Guest → offer Google (+ Apple on iOS) sign-in ─────────────────
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            ],
+          ),
+        ),
+      );
+    }
+
+    // ── Signed in → optional blocked banner + linked row + sign out ─────────
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (blocked) ...[
+          SiyaqTintedSurface(
+            tone: SiyaqTone.warning,
+            child: Row(
               children: [
-                Kicker(loc('account')),
-                const SizedBox(height: 6),
-                Text(loc('signInBenefit'), style: ST.ar(13, color: SC.textDim)),
-                const SizedBox(height: 12),
-                SiyagPrimaryButton(
-                  label: loc('signInWithGoogle'),
-                  icon: Icons.login_rounded,
-                  busy: signingIn,
-                  onTap: () => _signIn(context, ref),
+                Icon(
+                  SiyaqIcons.warning,
+                  size: SiyaqIconSize.md,
+                  color: context.colors.warning,
                 ),
-                if (appleSupported) ...[
-                  const SizedBox(height: 8),
-                  SiyagPrimaryButton(
-                    label: loc('signInWithApple'),
-                    icon: Icons.apple,
-                    color: const Color(0xFF1B1D22),
-                    busy: signingIn,
-                    onTap: () => _signInApple(context, ref),
+                const SizedBox(width: SiyaqSpacing.sm),
+                Expanded(
+                  child: SiyaqText(
+                    loc(switch (account.status) {
+                      'suspended' => 'v2ErrAccountSuspended',
+                      'banned' => 'v2ErrAccountBanned',
+                      'verification_required' => 'v2ErrAccountVerification',
+                      'deletion_pending' => 'v2ErrAccountDeletionPending',
+                      'deleted' => 'v2ErrAccountDeleted',
+                      _ => 'v2ErrAccountDisabled',
+                    }),
+                    role: SiyaqTextRole.bodySmall,
+                    color: context.colors.warning,
                   ),
-                ],
+                ),
               ],
             ),
+          ),
+          const SizedBox(height: SiyaqSpacing.sm),
+        ],
+        SiyaqListRow(
+          leadingIcon: SiyaqIcons.verified,
+          leadingColor: context.colors.success,
+          title: linkedApple ? loc('linkedApple') : loc('linkedGoogle'),
+          trailing: SiyaqButton(
+            label: loc('signOut'),
+            type: SiyaqButtonType.secondary,
+            size: SiyaqButtonSize.medium,
+            onPressed: () => _signOut(context, ref),
+          ),
+        ),
+      ],
     );
   }
 }
 
 /// Privacy/status footer: adapts to guest (anonymous, device-only) vs. signed-in
-/// (progress syncs via Google).
+/// (progress syncs to the account).
 class _IdentityNote extends ConsumerWidget {
   const _IdentityNote();
 
@@ -373,24 +394,21 @@ class _IdentityNote extends ConsumerWidget {
     final loc = ref.watch(localizationsProvider);
     final signedIn =
         ref.watch(sessionControllerProvider).asData?.value.account != null;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: SC.surface,
-        borderRadius: BorderRadius.circular(16),
-      ),
+    return SiyaqSurface(
+      variant: SiyaqSurfaceVariant.outlined,
       child: Row(
         children: [
           Icon(
-            signedIn ? Icons.cloud_done_outlined : Icons.shield_outlined,
-            size: 16,
-            color: SC.textMute,
+            signedIn ? SiyaqIcons.synced : SiyaqIcons.privacy,
+            size: SiyaqIconSize.md,
+            color: context.colors.textMuted,
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: SiyaqSpacing.smd),
           Expanded(
-            child: Text(
+            child: SiyaqText(
               signedIn ? loc('signedInNote') : loc('guestIdentityNote'),
-              style: ST.ar(12, color: SC.textMute),
+              role: SiyaqTextRole.bodySmall,
+              color: context.colors.textMuted,
             ),
           ),
         ],
@@ -399,8 +417,8 @@ class _IdentityNote extends ConsumerWidget {
   }
 }
 
-/// Shared bottom sheet for editing a display name (guest profile, account edit,
-/// and the one-shot welcome setup). [onSave] performs the actual persistence.
+/// Shared sheet for editing a display name (guest profile, account edit, and the
+/// one-shot welcome setup). [onSave] performs the actual persistence.
 Future<void> _showNameSheet(
   BuildContext context,
   WidgetRef ref, {
@@ -413,108 +431,58 @@ Future<void> _showNameSheet(
 }) async {
   final loc = ref.read(localizationsProvider);
   final controller = TextEditingController(text: initial);
-  await showModalBottomSheet<void>(
+  await SiyaqSheet.show<void>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
+    direction: loc.direction,
     builder: (ctx) {
       var saving = false;
       return StatefulBuilder(
-        builder: (ctx, setSheet) => Directionality(
-          textDirection: loc.direction,
-          child: Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.viewInsetsOf(ctx).bottom,
-            ),
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-              decoration: BoxDecoration(
-                color: SC.surface,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(24),
+        builder: (ctx, setSheet) => SiyaqSheet(
+          title: title,
+          body: body,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SiyaqTextField(
+                controller: controller,
+                hint: loc('nameHint'),
+                maxLength: 24,
+                autofocus: true,
+                textInputAction: TextInputAction.done,
+              ),
+              const SizedBox(height: SiyaqSpacing.md),
+              SiyaqButton(
+                label: loc('save'),
+                icon: SiyaqIcons.correct,
+                fullWidth: true,
+                loading: saving,
+                onPressed: () async {
+                  final name = controller.text.trim();
+                  if (name.isEmpty) {
+                    Navigator.of(ctx).pop();
+                    return;
+                  }
+                  setSheet(() => saving = true);
+                  try {
+                    await onSave(name);
+                  } finally {
+                    if (ctx.mounted) Navigator.of(ctx).pop();
+                  }
+                },
+              ),
+              if (showSkip) ...[
+                const SizedBox(height: SiyaqSpacing.sm),
+                SiyaqButton(
+                  label: loc('skip'),
+                  type: SiyaqButtonType.ghost,
+                  fullWidth: true,
+                  onPressed: () {
+                    onSkip?.call();
+                    Navigator.of(ctx).pop();
+                  },
                 ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: SC.textFaint,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    ),
-                  ),
-                  Text(title, style: ST.ar(18, weight: FontWeight.w600)),
-                  if (body != null) ...[
-                    const SizedBox(height: 6),
-                    Text(body, style: ST.ar(13, color: SC.textDim)),
-                  ],
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: controller,
-                    maxLength: 24,
-                    style: ST.ar(18),
-                    decoration: InputDecoration(
-                      hintText: loc('nameHint'),
-                      hintStyle: ST.ar(18, color: SC.textFaint),
-                      filled: true,
-                      fillColor: SC.surfaceHi,
-                      counterStyle: ST.mono(10, color: SC.textMute),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: SC.coral, width: 2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SiyagPrimaryButton(
-                    label: loc('save'),
-                    icon: Icons.check_rounded,
-                    busy: saving,
-                    onTap: () async {
-                      final name = controller.text.trim();
-                      if (name.isEmpty) {
-                        Navigator.of(ctx).pop();
-                        return;
-                      }
-                      setSheet(() => saving = true);
-                      try {
-                        await onSave(name);
-                      } finally {
-                        if (ctx.mounted) Navigator.of(ctx).pop();
-                      }
-                    },
-                  ),
-                  if (showSkip) ...[
-                    const SizedBox(height: 8),
-                    SiyagTap(
-                      onTap: () {
-                        onSkip?.call();
-                        Navigator.of(ctx).pop();
-                      },
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Text(
-                            loc('skip'),
-                            style: ST.ar(13, color: SC.textDim),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+              ],
+            ],
           ),
         ),
       );
@@ -522,72 +490,38 @@ Future<void> _showNameSheet(
   );
 }
 
-/// System / Light / Dark segmented selector. Persists via [AppSettings] and
-/// applies immediately (no restart). The selected segment uses the restrained
-/// gold accent as a "selected indicator".
+/// System / Light / Dark selector. Persists via [AppSettings] and applies
+/// immediately (no restart).
 class _AppearanceSelector extends ConsumerWidget {
+  const _AppearanceSelector();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationsProvider);
     final mode = ref.watch(appSettingsProvider.select((s) => s.themeMode));
-    const options = [
-      (ThemeMode.system, 'themeSystem', Icons.brightness_auto_rounded),
-      (ThemeMode.light, 'themeLight', Icons.light_mode_rounded),
-      (ThemeMode.dark, 'themeDark', Icons.dark_mode_rounded),
-    ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Kicker(loc('appearance')),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: SC.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: SC.line),
+    return _Section(
+      label: loc('appearance'),
+      child: SiyaqSegmentedControl<ThemeMode>(
+        value: mode,
+        onChanged: ref.read(appSettingsProvider.notifier).setThemeMode,
+        segments: [
+          SiyaqSegment(
+            value: ThemeMode.system,
+            label: loc('themeSystem'),
+            icon: SiyaqIcons.themeSystem,
           ),
-          child: Row(
-            children: [
-              for (final (m, key, icon) in options)
-                Expanded(
-                  child: SiyagTap(
-                    onTap: () =>
-                        ref.read(appSettingsProvider.notifier).setThemeMode(m),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 160),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: m == mode ? SC.gold : Colors.transparent,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            icon,
-                            size: 15,
-                            color: m == mode ? SC.onGold : SC.textMute,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            loc(key),
-                            style: ST.ar(
-                              13,
-                              weight: FontWeight.w500,
-                              color: m == mode ? SC.onGold : SC.textDim,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+          SiyaqSegment(
+            value: ThemeMode.light,
+            label: loc('themeLight'),
+            icon: SiyaqIcons.themeLight,
           ),
-        ),
-      ],
+          SiyaqSegment(
+            value: ThemeMode.dark,
+            label: loc('themeDark'),
+            icon: SiyaqIcons.themeDark,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -601,52 +535,16 @@ class _LanguageSelector extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationsProvider);
     final lang = ref.watch(appSettingsProvider.select((s) => s.lang));
-    const options = [
-      ('ar', 'langArabic'),
-      ('en', 'langEnglish'),
-    ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Kicker(loc('languageLabel')),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: SC.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: SC.line),
-          ),
-          child: Row(
-            children: [
-              for (final (code, key) in options)
-                Expanded(
-                  child: SiyagTap(
-                    onTap: () =>
-                        ref.read(appSettingsProvider.notifier).setLang(code),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 160),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: code == lang ? SC.gold : Colors.transparent,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        loc(key),
-                        style: ST.ar(
-                          13,
-                          weight: FontWeight.w500,
-                          color: code == lang ? SC.onGold : SC.textDim,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ],
+    return _Section(
+      label: loc('languageLabel'),
+      child: SiyaqSegmentedControl<String>(
+        value: lang,
+        onChanged: ref.read(appSettingsProvider.notifier).setLang,
+        segments: [
+          SiyaqSegment(value: 'ar', label: loc('langArabic')),
+          SiyaqSegment(value: 'en', label: loc('langEnglish')),
+        ],
+      ),
     );
   }
 }

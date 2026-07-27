@@ -177,6 +177,7 @@ const Map<String, String> stringsEn = {
   'linkedGoogle': 'Linked with Google',
   'linkedApple': 'Linked with Apple',
   'playerId': 'Player ID',
+  'copyHint': 'Double tap to copy',
   'idCopied': 'Player ID copied',
   'signedInNote':
       'Signed in with Google — your progress syncs across your devices.',

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/localization/app_localizations.dart';
-import '../../../../core/theme/siyag_theme.dart';
+import '../../../../core/design/theme/context_tokens.dart';
+import '../../../../core/design/theme/legacy_type_bridge.dart';
 import '../../../../core/widgets/siyag/siyag_common.dart';
 import '../../../../core/widgets/siyag/siyag_guess.dart';
 import '../../../../core/widgets/siyag/siyag_tap.dart';
@@ -111,7 +112,7 @@ class _SiyagGameViewState extends State<SiyagGameView> {
     return Directionality(
       textDirection: widget.loc.direction,
       child: Scaffold(
-        backgroundColor: SC.bg,
+        backgroundColor: context.colors.background,
         resizeToAvoidBottomInset: true,
         body: SafeArea(
           bottom: false,
@@ -123,9 +124,9 @@ class _SiyagGameViewState extends State<SiyagGameView> {
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: SC.surface,
+                    color: context.colors.surface,
                     borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: SC.lineStrong),
+                    border: Border.all(color: context.colors.borderStrong),
                   ),
                   padding: const EdgeInsetsDirectional.only(start: 16, end: 8),
                   child: Row(
@@ -137,10 +138,13 @@ class _SiyagGameViewState extends State<SiyagGameView> {
                           textDirection: widget.loc.direction,
                           onSubmitted: (_) => _submit(),
                           textInputAction: TextInputAction.send,
-                          style: ST.ar(20),
+                          style: context.legacyType.ar(20),
                           decoration: InputDecoration(
                             hintText: widget.loc('enterYourWord'),
-                            hintStyle: ST.ar(20, color: SC.textFaint),
+                            hintStyle: context.legacyType.ar(
+                              20,
+                              color: context.colors.textDisabled,
+                            ),
                             border: InputBorder.none,
                             contentPadding: const EdgeInsets.symmetric(
                               vertical: 16,
@@ -156,7 +160,7 @@ class _SiyagGameViewState extends State<SiyagGameView> {
                           height: 48,
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: SC.coral,
+                            color: context.colors.primary,
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: AnimatedSwitcher(
@@ -167,13 +171,13 @@ class _SiyagGameViewState extends State<SiyagGameView> {
                                     height: 18,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2.2,
-                                      color: SC.onGold,
+                                      color: context.colors.onPrimary,
                                     ),
                                   )
                                 : Icon(
                                     Icons.send_rounded,
                                     size: 18,
-                                    color: SC.onGold,
+                                    color: context.colors.onPrimary,
                                   ),
                           ),
                         ),
@@ -190,7 +194,10 @@ class _SiyagGameViewState extends State<SiyagGameView> {
                     : Center(
                         child: Text(
                           widget.flash!,
-                          style: ST.ar(13, color: SC.coral),
+                          style: context.legacyType.ar(
+                            13,
+                            color: context.colors.primary,
+                          ),
                         ),
                       ),
               ),
@@ -211,11 +218,17 @@ class _SiyagGameViewState extends State<SiyagGameView> {
                               vertical: 8,
                             ),
                             decoration: BoxDecoration(
-                              color: SC.surfaceHi,
+                              color: context.colors.surfaceElevated,
                               borderRadius: BorderRadius.circular(999),
-                              border: Border.all(color: SC.line),
+                              border: Border.all(color: context.colors.border),
                             ),
-                            child: Text(w, style: ST.ar(14, color: SC.textDim)),
+                            child: Text(
+                              w,
+                              style: context.legacyType.ar(
+                                14,
+                                color: context.colors.textSecondary,
+                              ),
+                            ),
                           ),
                         ),
                     ],
@@ -233,7 +246,7 @@ class _SiyagGameViewState extends State<SiyagGameView> {
                           emoji: '🔥',
                           word: closest.word,
                           rank: closest.rank,
-                          color: SC.coral,
+                          color: context.colors.primary,
                           solved: closest.solved,
                         ),
                       ),
@@ -245,7 +258,7 @@ class _SiyagGameViewState extends State<SiyagGameView> {
                             emoji: '🆕',
                             word: newest.word,
                             rank: newest.rank,
-                            color: SC.cyan,
+                            color: context.colors.info,
                             solved: newest.solved,
                           ),
                         ),
@@ -335,12 +348,17 @@ class _SiyagGameViewState extends State<SiyagGameView> {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: active ? SC.coral : SC.surface,
+          color: active ? context.colors.primary : context.colors.surface,
           borderRadius: BorderRadius.circular(999),
         ),
         child: Text(
           labels[m]!,
-          style: ST.ar(12, color: active ? SC.bg : SC.textMute),
+          style: context.legacyType.ar(
+            12,
+            color: active
+                ? context.colors.background
+                : context.colors.textMuted,
+          ),
         ),
       ),
     );

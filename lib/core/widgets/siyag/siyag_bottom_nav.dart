@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/siyag_theme.dart';
+import '../../design/theme/context_tokens.dart';
+import '../../design/theme/legacy_type_bridge.dart';
 import 'siyag_tap.dart';
 
 class SiyagNavItem {
@@ -28,8 +29,8 @@ class SiyagBottomNav extends StatelessWidget {
     final bottomPad = MediaQuery.paddingOf(context).bottom;
     return Container(
       decoration: BoxDecoration(
-        color: SC.bg,
-        border: Border(top: BorderSide(color: SC.line)),
+        color: context.colors.background,
+        border: Border(top: BorderSide(color: context.colors.border)),
       ),
       padding: EdgeInsets.only(
         top: 8,
@@ -67,7 +68,9 @@ class _NavButton extends StatelessWidget {
   Widget build(BuildContext context) {
     // Active tab uses the deeper gold (goldStrong) — richer, higher-contrast
     // selection in both themes; inactive stays soft gray.
-    final color = active ? SC.goldStrong : SC.textMute;
+    final color = active
+        ? context.colors.primaryStrong
+        : context.colors.textMuted;
     return SiyagTap(
       onTap: onTap,
       scale: 0.9,
@@ -85,7 +88,7 @@ class _NavButton extends StatelessWidget {
                   width: 6,
                   height: 6,
                   decoration: BoxDecoration(
-                    color: SC.gold,
+                    color: context.colors.primary,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -94,7 +97,7 @@ class _NavButton extends StatelessWidget {
             const SizedBox(height: 2),
             Icon(item.icon, size: 21, color: color),
             const SizedBox(height: 4),
-            Text(item.label, style: ST.ar(10, color: color)),
+            Text(item.label, style: context.legacyType.ar(10, color: color)),
           ],
         ),
       ),

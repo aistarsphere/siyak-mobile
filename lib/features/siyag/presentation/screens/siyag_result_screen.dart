@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/theme/siyag_theme.dart';
+import '../../../../core/design/theme/context_tokens.dart';
+import '../../../../core/design/theme/legacy_type_bridge.dart';
 import '../../../../core/widgets/siyag/siyag_common.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../game/presentation/widgets/confetti_overlay.dart';
@@ -55,7 +56,7 @@ class _SiyagResultScreenState extends ConsumerState<SiyagResultScreen>
     return Directionality(
       textDirection: loc.direction,
       child: Scaffold(
-        backgroundColor: SC.bg,
+        backgroundColor: context.colors.background,
         body: Stack(
           children: [
             SafeArea(
@@ -76,7 +77,7 @@ class _SiyagResultScreenState extends ConsumerState<SiyagResultScreen>
                           height: 80,
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: SC.emerald,
+                            color: context.colors.success,
                             borderRadius: BorderRadius.circular(24),
                           ),
                           child: const Text(
@@ -87,12 +88,20 @@ class _SiyagResultScreenState extends ConsumerState<SiyagResultScreen>
                       ),
                     ),
                     const SizedBox(height: 24),
-                    Center(child: Kicker(loc('solved'), color: SC.emerald)),
+                    Center(
+                      child: Kicker(
+                        loc('solved'),
+                        color: context.colors.success,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     Center(
                       child: Text(
                         loc('theWordWas'),
-                        style: ST.ar(16, color: SC.textMute),
+                        style: context.legacyType.ar(
+                          16,
+                          color: context.colors.textMuted,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -100,24 +109,36 @@ class _SiyagResultScreenState extends ConsumerState<SiyagResultScreen>
                       child: Text(
                         widget.secretWord,
                         textAlign: TextAlign.center,
-                        style: ST.ar(52, weight: FontWeight.w700, height: 1),
+                        style: context.legacyType.ar(
+                          52,
+                          weight: FontWeight.w700,
+                          height: 1,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 32),
                     Row(
                       children: [
-                        _stat('${widget.attempts}', loc('attemptsLabel')),
+                        _stat(
+                          context,
+                          '${widget.attempts}',
+                          loc('attemptsLabel'),
+                        ),
                         const SizedBox(width: 12),
-                        _stat('${widget.hintsUsed}', loc('hintsLabel')),
+                        _stat(
+                          context,
+                          '${widget.hintsUsed}',
+                          loc('hintsLabel'),
+                        ),
                         const SizedBox(width: 12),
-                        _stat(_fmt(widget.elapsed), loc('elapsed')),
+                        _stat(context, _fmt(widget.elapsed), loc('elapsed')),
                       ],
                     ),
                     const SizedBox(height: 40),
                     if (widget.showLeaderboard)
                       SiyagPrimaryButton(
                         label: loc('viewMyRank'),
-                        color: SC.emerald,
+                        color: context.colors.success,
                         onTap: () {
                           ref.read(siyagTabProvider.notifier).state = 1;
                           Navigator.of(context).popUntil((r) => r.isFirst);
@@ -142,18 +163,21 @@ class _SiyagResultScreenState extends ConsumerState<SiyagResultScreen>
     );
   }
 
-  Widget _stat(String v, String l) => Expanded(
+  Widget _stat(BuildContext context, String v, String l) => Expanded(
     child: Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
-        color: SC.surface,
+        color: context.colors.surface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         children: [
-          Text(v, style: ST.mono(26)),
+          Text(v, style: context.legacyType.mono(26)),
           const SizedBox(height: 6),
-          Text(l, style: ST.ar(11, color: SC.textMute)),
+          Text(
+            l,
+            style: context.legacyType.ar(11, color: context.colors.textMuted),
+          ),
         ],
       ),
     ),

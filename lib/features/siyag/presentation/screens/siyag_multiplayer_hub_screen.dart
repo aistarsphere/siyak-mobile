@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/theme/siyag_theme.dart';
+import '../../../../core/design/theme/context_tokens.dart';
+import '../../../../core/design/theme/legacy_type_bridge.dart';
 import '../../../../core/widgets/siyag/siyag_tap.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../v2/presentation/controllers/room_controller.dart';
@@ -31,12 +32,15 @@ class SiyagMultiplayerHubScreen extends ConsumerWidget {
     return Directionality(
       textDirection: loc.direction,
       child: Scaffold(
-        backgroundColor: SC.bg,
+        backgroundColor: context.colors.background,
         body: SafeArea(
           bottom: false,
           child: Column(
             children: [
-              SiyagTopBar(kicker: loc('play'), kickerColor: SC.emerald),
+              SiyagTopBar(
+                kicker: loc('play'),
+                kickerColor: context.colors.success,
+              ),
               const SizedBox(height: 8),
               Expanded(
                 child: ListView(
@@ -44,18 +48,26 @@ class SiyagMultiplayerHubScreen extends ConsumerWidget {
                   children: [
                     Text(
                       loc('modeMultiplayer'),
-                      style: ST.ar(26, weight: FontWeight.w700, height: 1.1),
+                      style: context.legacyType.ar(
+                        26,
+                        weight: FontWeight.w700,
+                        height: 1.1,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       loc('modeMultiplayerDesc'),
-                      style: ST.ar(14, color: SC.textMute, height: 1.4),
+                      style: context.legacyType.ar(
+                        14,
+                        color: context.colors.textMuted,
+                        height: 1.4,
+                      ),
                     ),
                     const SizedBox(height: 20),
                     _ActionCard(
                       index: 0,
                       icon: Icons.add_circle_outline_rounded,
-                      color: SC.emerald,
+                      color: context.colors.success,
                       title: loc('createRoom'),
                       description: loc('createGameDesc'),
                       onTap: () => Navigator.of(
@@ -66,7 +78,7 @@ class SiyagMultiplayerHubScreen extends ConsumerWidget {
                     _ActionCard(
                       index: 1,
                       icon: Icons.login_rounded,
-                      color: SC.emerald,
+                      color: context.colors.success,
                       title: loc('joinRoom'),
                       description: loc('joinGameDesc'),
                       onTap: () => Navigator.of(
@@ -77,7 +89,7 @@ class SiyagMultiplayerHubScreen extends ConsumerWidget {
                     _ActionCard(
                       index: 2,
                       icon: Icons.military_tech_rounded,
-                      color: SC.gold,
+                      color: context.colors.primary,
                       title: loc('competitive'),
                       description: loc('competitiveDesc'),
                       onTap: () => Navigator.of(
@@ -88,7 +100,7 @@ class SiyagMultiplayerHubScreen extends ConsumerWidget {
                     _ActionCard(
                       index: 3,
                       icon: Icons.groups_rounded,
-                      color: SC.emerald,
+                      color: context.colors.success,
                       title: loc('players'),
                       description: loc('onlinePlayersDesc'),
                       badge: pendingInvites,
@@ -101,7 +113,7 @@ class SiyagMultiplayerHubScreen extends ConsumerWidget {
                       _ActionCard(
                         index: 4,
                         icon: Icons.meeting_room_outlined,
-                        color: SC.coral,
+                        color: context.colors.primary,
                         title: loc('resumeRoom'),
                         description: '${loc('joinCode')}: ${active.joinCode}',
                         onTap: () => Navigator.of(
@@ -147,9 +159,9 @@ class _ActionCard extends StatelessWidget {
     child: Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: SC.surface,
+        color: context.colors.surface,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: SC.line),
+        border: Border.all(color: context.colors.border),
       ),
       child: Row(
         children: [
@@ -168,11 +180,18 @@ class _ActionCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: ST.ar(17, weight: FontWeight.w700)),
+                Text(
+                  title,
+                  style: context.legacyType.ar(17, weight: FontWeight.w700),
+                ),
                 const SizedBox(height: 3),
                 Text(
                   description,
-                  style: ST.ar(12.5, color: SC.textMute, height: 1.35),
+                  style: context.legacyType.ar(
+                    12.5,
+                    color: context.colors.textMuted,
+                    height: 1.35,
+                  ),
                 ),
               ],
             ),
@@ -182,10 +201,16 @@ class _ActionCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: SC.coral,
+                color: context.colors.primary,
                 borderRadius: BorderRadius.circular(999),
               ),
-              child: Text('$badge', style: ST.mono(11, color: SC.onAccent)),
+              child: Text(
+                '$badge',
+                style: context.legacyType.mono(
+                  11,
+                  color: context.colors.onPrimary,
+                ),
+              ),
             ),
           ],
         ],

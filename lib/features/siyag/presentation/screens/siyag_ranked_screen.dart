@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/localization/app_localizations.dart';
-import '../../../../core/theme/siyag_theme.dart';
+import '../../../../core/design/theme/context_tokens.dart';
+import '../../../../core/design/theme/legacy_type_bridge.dart';
 import '../../../../core/widgets/siyag/siyag_common.dart';
 import '../../../../core/widgets/siyag/siyag_tap.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
@@ -31,20 +32,22 @@ class SiyagRankedScreen extends ConsumerWidget {
       if (next.phase == MatchmakingPhase.matched && next.matchId != null) {
         final id = next.matchId!;
         ref.read(matchmakingControllerProvider.notifier).reset();
-        Navigator.of(context).push(siyagRoute(SiyagRankedMatchScreen(matchId: id)));
+        Navigator.of(
+          context,
+        ).push(siyagRoute(SiyagRankedMatchScreen(matchId: id)));
       }
     });
 
     return Directionality(
       textDirection: loc.direction,
       child: Scaffold(
-        backgroundColor: SC.bg,
+        backgroundColor: context.colors.background,
         appBar: AppBar(
-          backgroundColor: SC.bg,
+          backgroundColor: context.colors.background,
           elevation: 0,
           title: Text(
             loc('competitive'),
-            style: ST.ar(18, weight: FontWeight.w700),
+            style: context.legacyType.ar(18, weight: FontWeight.w700),
           ),
           centerTitle: true,
         ),
@@ -57,14 +60,20 @@ class SiyagRankedScreen extends ConsumerWidget {
               Kicker(loc('chooseStake')),
               const SizedBox(height: 10),
               if (tiers.isEmpty)
-                Text(loc('noTiers'),
-                    style: ST.ar(13, color: SC.textMute))
+                Text(
+                  loc('noTiers'),
+                  style: context.legacyType.ar(
+                    13,
+                    color: context.colors.textMuted,
+                  ),
+                )
               else
                 for (final t in tiers) ...[
                   _TierRow(
                     tier: t,
                     affordable:
-                        wallet == null || wallet.availableBalance >= t.entryCost,
+                        wallet == null ||
+                        wallet.availableBalance >= t.entryCost,
                     busy: mm.isSearching,
                     loc: loc,
                     onPlay: () => ref
@@ -86,8 +95,13 @@ class SiyagRankedScreen extends ConsumerWidget {
               ],
               if (mm.phase == MatchmakingPhase.error) ...[
                 const SizedBox(height: 8),
-                Text(loc('searchFailed'),
-                    style: ST.ar(12, color: SC.coral)),
+                Text(
+                  loc('searchFailed'),
+                  style: context.legacyType.ar(
+                    12,
+                    color: context.colors.primary,
+                  ),
+                ),
               ],
             ],
           ),
@@ -106,28 +120,43 @@ class _RatingCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
-      color: SC.surface,
+      color: context.colors.surface,
       borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: SC.line),
+      border: Border.all(color: context.colors.border),
     ),
     child: Row(
       children: [
-        Icon(Icons.military_tech_rounded, size: 34, color: SC.gold),
+        Icon(
+          Icons.military_tech_rounded,
+          size: 34,
+          color: context.colors.primary,
+        ),
         const SizedBox(width: 14),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${stats?.rating ?? 1000}', style: ST.mono(28)),
-            Text(loc('rating'), style: ST.ar(11, color: SC.textMute)),
+            Text(
+              '${stats?.rating ?? 1000}',
+              style: context.legacyType.mono(28),
+            ),
+            Text(
+              loc('rating'),
+              style: context.legacyType.ar(11, color: context.colors.textMuted),
+            ),
           ],
         ),
         const Spacer(),
         Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text('${stats?.wins ?? 0}${loc('winShort')} · ${stats?.losses ?? 0}${loc('lossShort')}',
-                style: ST.ar(14, weight: FontWeight.w600)),
-            Text(loc('record'), style: ST.ar(11, color: SC.textMute)),
+            Text(
+              '${stats?.wins ?? 0}${loc('winShort')} · ${stats?.losses ?? 0}${loc('lossShort')}',
+              style: context.legacyType.ar(14, weight: FontWeight.w600),
+            ),
+            Text(
+              loc('record'),
+              style: context.legacyType.ar(11, color: context.colors.textMuted),
+            ),
           ],
         ),
       ],
@@ -155,24 +184,39 @@ class _TierRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: SC.surface,
+        color: context.colors.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: SC.line),
+        border: Border.all(color: context.colors.border),
       ),
       child: Row(
         children: [
-          Icon(Icons.monetization_on_rounded, size: 22, color: SC.gold),
+          Icon(
+            Icons.monetization_on_rounded,
+            size: 22,
+            color: context.colors.primary,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(loc.fill('entryPrize', {'e': '${tier.entryCost}', 'p': '${tier.payout}'}),
-                    style: ST.ar(15, weight: FontWeight.w600)),
                 Text(
-                  affordable ? loc('winnerTakesStake') : loc('insufficientBalance'),
-                  style: ST.ar(11,
-                      color: affordable ? SC.textMute : SC.coral),
+                  loc.fill('entryPrize', {
+                    'e': '${tier.entryCost}',
+                    'p': '${tier.payout}',
+                  }),
+                  style: context.legacyType.ar(15, weight: FontWeight.w600),
+                ),
+                Text(
+                  affordable
+                      ? loc('winnerTakesStake')
+                      : loc('insufficientBalance'),
+                  style: context.legacyType.ar(
+                    11,
+                    color: affordable
+                        ? context.colors.textMuted
+                        : context.colors.primary,
+                  ),
                 ),
               ],
             ),
@@ -198,24 +242,33 @@ class _SearchingCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
-      color: SC.surface,
+      color: context.colors.surface,
       borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: SC.gold.withValues(alpha: 0.4)),
+      border: Border.all(color: context.colors.primary.withValues(alpha: 0.4)),
     ),
     child: Row(
       children: [
         SizedBox(
           width: 22,
           height: 22,
-          child: CircularProgressIndicator(strokeWidth: 2, color: SC.gold),
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: context.colors.primary,
+          ),
         ),
         const SizedBox(width: 14),
         Expanded(
-          child: Text(loc('searchingOpponent'), style: ST.ar(15, weight: FontWeight.w600)),
+          child: Text(
+            loc('searchingOpponent'),
+            style: context.legacyType.ar(15, weight: FontWeight.w600),
+          ),
         ),
         SiyagTap(
           onTap: onCancel,
-          child: Text(loc('cancel'), style: ST.ar(13, color: SC.coral)),
+          child: Text(
+            loc('cancel'),
+            style: context.legacyType.ar(13, color: context.colors.primary),
+          ),
         ),
       ],
     ),

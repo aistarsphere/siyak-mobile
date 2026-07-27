@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
-import '../../../../core/theme/siyag_theme.dart';
+import '../../../../core/design/theme/context_tokens.dart';
+import '../../../../core/design/theme/legacy_type_bridge.dart';
 import '../../../../core/widgets/siyag/siyag_common.dart';
 import '../../../../core/widgets/siyag/siyag_tap.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
@@ -34,23 +35,31 @@ class SiyagPracticeSetupScreen extends ConsumerWidget {
     return Directionality(
       textDirection: loc.direction,
       child: Scaffold(
-        backgroundColor: SC.bg,
+        backgroundColor: context.colors.background,
         body: SafeArea(
           bottom: false,
           child: Column(
             children: [
-              SiyagTopBar(kicker: loc('modeSolo'), kickerColor: SC.cyan),
+              SiyagTopBar(
+                kicker: loc('modeSolo'),
+                kickerColor: context.colors.info,
+              ),
               Expanded(
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
                   child: modes.when(
                     loading: () => Center(
-                      child: CircularProgressIndicator(color: SC.coral),
+                      child: CircularProgressIndicator(
+                        color: context.colors.primary,
+                      ),
                     ),
                     error: (e, _) => Center(
                       child: Text(
                         loc('somethingWrong'),
-                        style: ST.ar(15, color: SC.textMute),
+                        style: context.legacyType.ar(
+                          15,
+                          color: context.colors.textMuted,
+                        ),
                       ),
                     ),
                     data: (info) {
@@ -62,12 +71,13 @@ class SiyagPracticeSetupScreen extends ConsumerWidget {
                       return ListView(
                         padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                         children: [
-                          _label(loc('chooseGameLang')),
+                          _label(context, loc('chooseGameLang')),
                           const SizedBox(height: 8),
                           Row(
                             children: [
                               for (final l in GameplayLanguage.values) ...[
                                 _chip(
+                                  context,
                                   l == GameplayLanguage.arabic
                                       ? loc('langArabic')
                                       : loc('langEnglish'),
@@ -90,7 +100,7 @@ class SiyagPracticeSetupScreen extends ConsumerWidget {
                             ],
                           ),
                           const SizedBox(height: 20),
-                          _label(loc('category')),
+                          _label(context, loc('category')),
                           const SizedBox(height: 8),
                           Wrap(
                             spacing: 8,
@@ -98,6 +108,7 @@ class SiyagPracticeSetupScreen extends ConsumerWidget {
                             children: [
                               for (final c in cats)
                                 _chip(
+                                  context,
                                   c.labelFor(lang.code),
                                   c.code == selCat,
                                   () =>
@@ -109,7 +120,7 @@ class SiyagPracticeSetupScreen extends ConsumerWidget {
                             ],
                           ),
                           const SizedBox(height: 20),
-                          _label(loc('difficulty')),
+                          _label(context, loc('difficulty')),
                           const SizedBox(height: 8),
                           Row(
                             children: [
@@ -119,6 +130,7 @@ class SiyagPracticeSetupScreen extends ConsumerWidget {
                                 'hard',
                               ]) ...[
                                 _chip(
+                                  context,
                                   d == 'easy'
                                       ? loc('diffEasy')
                                       : d == 'hard'
@@ -132,7 +144,7 @@ class SiyagPracticeSetupScreen extends ConsumerWidget {
                                               )
                                               .state =
                                           d,
-                                  accent: SC.cyan,
+                                  accent: context.colors.info,
                                 ),
                                 const SizedBox(width: 8),
                               ],
@@ -150,7 +162,7 @@ class SiyagPracticeSetupScreen extends ConsumerWidget {
                   builder: (context, setLocal) {
                     return SiyagPrimaryButton(
                       label: loc('startGame'),
-                      color: SC.cyan,
+                      color: context.colors.info,
                       icon: Icons.play_arrow_rounded,
                       busy: busy,
                       onTap: () async {
@@ -189,12 +201,16 @@ class SiyagPracticeSetupScreen extends ConsumerWidget {
     );
   }
 
-  Widget _label(String t) => Align(
+  Widget _label(BuildContext context, String t) => Align(
     alignment: AlignmentDirectional.centerStart,
-    child: Text(t, style: ST.ar(13, color: SC.textDim)),
+    child: Text(
+      t,
+      style: context.legacyType.ar(13, color: context.colors.textSecondary),
+    ),
   );
 
   Widget _chip(
+    BuildContext context,
     String label,
     bool selected,
     VoidCallback onTap, {
@@ -205,14 +221,18 @@ class SiyagPracticeSetupScreen extends ConsumerWidget {
       duration: const Duration(milliseconds: 160),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
       decoration: BoxDecoration(
-        color: selected ? (accent ?? SC.coral) : SC.surface,
+        color: selected
+            ? (accent ?? context.colors.primary)
+            : context.colors.surface,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,
-        style: ST.ar(
+        style: context.legacyType.ar(
           13,
-          color: selected ? SC.onColor(accent ?? SC.coral) : SC.textMute,
+          color: selected
+              ? context.colors.onColorLegacy(accent ?? context.colors.primary)
+              : context.colors.textMuted,
         ),
       ),
     ),

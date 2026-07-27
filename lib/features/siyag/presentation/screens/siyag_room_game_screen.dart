@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/theme/siyag_theme.dart';
+import '../../../../core/design/theme/context_tokens.dart';
+import '../../../../core/design/theme/legacy_type_bridge.dart';
+import '../../../../core/design/gameplay/siyaq_heat.dart';
 import '../../../../core/widgets/siyag/siyag_common.dart';
 import '../../../../core/widgets/siyag/siyag_guess.dart';
 import '../../../../core/widgets/siyag/siyag_tap.dart';
@@ -35,7 +37,7 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
   }
 
   double _heat(Guess g) =>
-      SiyagHeat.fromRank(g.rank, 22548, solved: g.isSecret);
+      SiyaqHeat.fromRank(g.rank, 22548, solved: g.isSecret);
 
   Future<void> _submit() async {
     final loc = ref.read(localizationsProvider);
@@ -94,8 +96,10 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
     final room = conn.room;
     if (room == null) {
       return Scaffold(
-        backgroundColor: SC.bg,
-        body: Center(child: CircularProgressIndicator(color: SC.coral)),
+        backgroundColor: context.colors.background,
+        body: Center(
+          child: CircularProgressIndicator(color: context.colors.primary),
+        ),
       );
     }
     final solved = room.isSolved;
@@ -106,7 +110,7 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
     return Directionality(
       textDirection: loc.direction,
       child: Scaffold(
-        backgroundColor: SC.bg,
+        backgroundColor: context.colors.background,
         body: SafeArea(
           bottom: false,
           child: Stack(
@@ -115,7 +119,8 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
                 children: [
                   SiyagTopBar(
                     title: room.categoryLabel(true),
-                    subtitle: '${room.participants.length} ${loc('playersLabel')}',
+                    subtitle:
+                        '${room.participants.length} ${loc('playersLabel')}',
                     trailing: solved
                         ? null
                         : SiyagTap(
@@ -125,7 +130,7 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
                             child: Icon(
                               Icons.lightbulb_outline_rounded,
                               size: 20,
-                              color: SC.cyan,
+                              color: context.colors.info,
                             ),
                           ),
                   ),
@@ -137,7 +142,7 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: SC.coral.withValues(alpha: 0.13),
+                        color: context.colors.primary.withValues(alpha: 0.13),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -147,13 +152,16 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
                             height: 14,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: SC.coral,
+                              color: context.colors.primary,
                             ),
                           ),
                           const SizedBox(width: 8),
                           Text(
                             loc('reconnecting'),
-                            style: ST.ar(13, color: SC.coral),
+                            style: context.legacyType.ar(
+                              13,
+                              color: context.colors.primary,
+                            ),
                           ),
                         ],
                       ),
@@ -163,9 +171,11 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: SC.surface,
+                          color: context.colors.surface,
                           borderRadius: BorderRadius.circular(22),
-                          border: Border.all(color: SC.lineStrong),
+                          border: Border.all(
+                            color: context.colors.borderStrong,
+                          ),
                         ),
                         padding: const EdgeInsetsDirectional.only(
                           start: 16,
@@ -178,10 +188,13 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
                                 controller: _input,
                                 textDirection: TextDirection.rtl,
                                 onSubmitted: (_) => _submit(),
-                                style: ST.ar(20),
+                                style: context.legacyType.ar(20),
                                 decoration: InputDecoration(
                                   hintText: loc('enterYourWord'),
-                                  hintStyle: ST.ar(20, color: SC.textFaint),
+                                  hintStyle: context.legacyType.ar(
+                                    20,
+                                    color: context.colors.textDisabled,
+                                  ),
                                   border: InputBorder.none,
                                   contentPadding: const EdgeInsets.symmetric(
                                     vertical: 16,
@@ -197,7 +210,7 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
                                 height: 48,
                                 alignment: Alignment.center,
                                 decoration: BoxDecoration(
-                                  color: SC.emerald,
+                                  color: context.colors.success,
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                                 child: AnimatedSwitcher(
@@ -209,14 +222,18 @@ class _S extends ConsumerState<SiyagRoomGameScreen> {
                                           key: const ValueKey('loader'),
                                           child: CircularProgressIndicator(
                                             strokeWidth: 2.2,
-                                            color: SC.onColor(SC.emerald),
+                                            color: context.colors.onColorLegacy(
+                                              context.colors.success,
+                                            ),
                                           ),
                                         )
                                       : Icon(
                                           Icons.send_rounded,
                                           key: const ValueKey('icon'),
                                           size: 18,
-                                          color: SC.onColor(SC.emerald),
+                                          color: context.colors.onColorLegacy(
+                                            context.colors.success,
+                                          ),
                                         ),
                                 ),
                               ),
@@ -253,10 +270,10 @@ class _SharedRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final edge = shared.isSystemHint
-        ? SC.cyan
+        ? context.colors.info
         : shared.isMine
-        ? SC.coral
-        : SC.textDim;
+        ? context.colors.primary
+        : context.colors.textSecondary;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
       child: Row(
@@ -290,7 +307,7 @@ class _SharedRow extends StatelessWidget {
                   shared.isSystemHint ? '—' : shared.byLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: ST.mono(9, color: edge),
+                  style: context.legacyType.mono(9, color: edge),
                 ),
               ],
             ),
@@ -309,7 +326,7 @@ class _Winner extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationsProvider);
     return Container(
-      color: SC.scrim,
+      color: context.colors.scrim,
       alignment: Alignment.center,
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -321,33 +338,36 @@ class _Winner extends ConsumerWidget {
               height: 72,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: SC.emerald,
+                color: context.colors.success,
                 borderRadius: BorderRadius.circular(24),
               ),
               child: Icon(
                 Icons.emoji_events_rounded,
                 size: 34,
-                color: SC.onColor(SC.emerald),
+                color: context.colors.onColorLegacy(context.colors.success),
               ),
             ),
             const SizedBox(height: 16),
-            Kicker(loc('winner'), color: SC.emerald),
+            Kicker(loc('winner'), color: context.colors.success),
             const SizedBox(height: 6),
             Text(
               room.winner?.label ?? '—',
-              style: ST.ar(28, weight: FontWeight.w700),
+              style: context.legacyType.ar(28, weight: FontWeight.w700),
             ),
             if (room.secretWord != null) ...[
               const SizedBox(height: 12),
               Text(
                 '${loc('theWordLabel')}: ${room.secretWord}',
-                style: ST.ar(16, color: SC.textDim),
+                style: context.legacyType.ar(
+                  16,
+                  color: context.colors.textSecondary,
+                ),
               ),
             ],
             const SizedBox(height: 24),
             SiyagPrimaryButton(
               label: loc('returnHome'),
-              color: SC.emerald,
+              color: context.colors.success,
               onTap: () async {
                 await ref.read(realtimeRoomControllerProvider.notifier).leave();
                 await ref

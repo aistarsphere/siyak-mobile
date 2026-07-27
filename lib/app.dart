@@ -3,8 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'core/theme/app_theme.dart';
-import 'core/theme/siyag_theme.dart';
+import 'core/design/theme/siyaq_theme_data.dart';
+import 'core/design/tokens/siyaq_typography.dart';
 import 'features/game/presentation/controllers/app_settings_controller.dart';
 import 'features/siyag/presentation/siyag_shell.dart';
 
@@ -16,23 +16,31 @@ class SiyagApp extends ConsumerWidget {
     final lang = ref.watch(appSettingsProvider.select((s) => s.lang));
     final mode = ref.watch(appSettingsProvider.select((s) => s.themeMode));
 
-    // Resolve the effective brightness (System follows the platform) and point
-    // the custom-screen token accessor (SC) at it BEFORE the subtree builds.
-    // Depending on platformBrightness rebuilds this on OS light/dark changes.
+    // Resolve the effective brightness (System follows the platform) purely to
+    // drive the system UI overlay. Colours themselves are no longer pushed into
+    // a global: every widget reads them from the enclosing Theme via
+    // `context.colors`, so MaterialApp's own light/dark selection is the single
+    // source of truth. Depending on platformBrightness keeps the overlay in sync
+    // on OS light/dark changes.
     final platformBrightness = MediaQuery.platformBrightnessOf(context);
     final effective = switch (mode) {
       ThemeMode.light => Brightness.light,
       ThemeMode.dark => Brightness.dark,
       ThemeMode.system => platformBrightness,
     };
-    SC.applyBrightness(effective);
-    SystemChrome.setSystemUIOverlayStyle(AppTheme.systemUiStyleFor(effective));
+    SystemChrome.setSystemUIOverlayStyle(
+      SiyaqThemeData.systemUiStyleFor(effective),
+    );
+
+    // Typography follows the selected language so Material widgets inherit the
+    // right script family; custom widgets can still override per-string.
+    final script = SiyaqTypography.scriptForLocale(lang);
 
     return MaterialApp(
       title: 'سياق',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
+      theme: SiyaqThemeData.light(script: script),
+      darkTheme: SiyaqThemeData.dark(script: script),
       themeMode: mode,
       locale: Locale(lang),
       supportedLocales: const [Locale('ar'), Locale('en')],

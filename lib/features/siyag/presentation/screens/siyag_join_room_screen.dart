@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/theme/siyag_theme.dart';
+import '../../../../core/design/theme/context_tokens.dart';
+import '../../../../core/design/theme/legacy_type_bridge.dart';
 import '../../../../core/widgets/siyag/siyag_common.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../v2/presentation/controllers/room_controller.dart';
@@ -45,7 +46,9 @@ class _S extends ConsumerState<SiyagJoinRoomScreen> {
     } else {
       final err = ref.read(roomLifecycleControllerProvider).error;
       setState(
-        () => _error = err != null ? loc.errorMessage(err) : loc('gameNotFoundBody'),
+        () => _error = err != null
+            ? loc.errorMessage(err)
+            : loc('gameNotFoundBody'),
       );
     }
   }
@@ -59,12 +62,15 @@ class _S extends ConsumerState<SiyagJoinRoomScreen> {
     return Directionality(
       textDirection: loc.direction,
       child: Scaffold(
-        backgroundColor: SC.bg,
+        backgroundColor: context.colors.background,
         body: SafeArea(
           bottom: false,
           child: Column(
             children: [
-              SiyagTopBar(kicker: loc('joinRoom'), kickerColor: SC.cyan),
+              SiyagTopBar(
+                kicker: loc('joinRoom'),
+                kickerColor: context.colors.info,
+              ),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
@@ -75,7 +81,10 @@ class _S extends ConsumerState<SiyagJoinRoomScreen> {
                         alignment: AlignmentDirectional.centerStart,
                         child: Text(
                           loc('enterGameCode'),
-                          style: ST.ar(13, color: SC.textDim),
+                          style: context.legacyType.ar(
+                            13,
+                            color: context.colors.textSecondary,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -96,23 +105,26 @@ class _S extends ConsumerState<SiyagJoinRoomScreen> {
                           ),
                           LengthLimitingTextInputFormatter(8),
                         ],
-                        style: ST.mono(30, letterSpacing: 8),
+                        style: context.legacyType.mono(30, letterSpacing: 8),
                         decoration: InputDecoration(
                           hintText: 'ABCD',
-                          hintStyle: ST.mono(
+                          hintStyle: context.legacyType.mono(
                             30,
-                            color: SC.textFaint,
+                            color: context.colors.textDisabled,
                             letterSpacing: 8,
                           ),
                           filled: true,
-                          fillColor: SC.surface,
+                          fillColor: context.colors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide.none,
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(color: SC.cyan, width: 2),
+                            borderSide: BorderSide(
+                              color: context.colors.info,
+                              width: 2,
+                            ),
                           ),
                         ),
                         onChanged: (_) {
@@ -132,13 +144,16 @@ class _S extends ConsumerState<SiyagJoinRoomScreen> {
                               height: 16,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: SC.cyan,
+                                color: context.colors.info,
                               ),
                             ),
                             const SizedBox(width: 10),
                             Text(
                               loc('searchingGame'),
-                              style: ST.ar(13, color: SC.textMute),
+                              style: context.legacyType.ar(
+                                13,
+                                color: context.colors.textMuted,
+                              ),
                             ),
                           ],
                         )
@@ -149,14 +164,17 @@ class _S extends ConsumerState<SiyagJoinRoomScreen> {
                             Icon(
                               Icons.error_outline_rounded,
                               size: 18,
-                              color: SC.coral,
+                              color: context.colors.primary,
                             ),
                             const SizedBox(width: 8),
                             Flexible(
                               child: Text(
                                 _error!,
                                 textAlign: TextAlign.center,
-                                style: ST.ar(13, color: SC.coral),
+                                style: context.legacyType.ar(
+                                  13,
+                                  color: context.colors.primary,
+                                ),
                               ),
                             ),
                           ],
@@ -169,7 +187,7 @@ class _S extends ConsumerState<SiyagJoinRoomScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                 child: SiyagPrimaryButton(
                   label: loc('join'),
-                  color: SC.cyan,
+                  color: context.colors.info,
                   icon: Icons.login_rounded,
                   busy: busy,
                   onTap: canJoin ? _join : null,

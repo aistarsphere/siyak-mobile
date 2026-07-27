@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../theme/siyag_theme.dart';
+import '../../design/tokens/siyaq_motion.dart';
 
 /// `whileTap={{ scale: 0.97 }}` press feedback from the reference (motion/react).
 class SiyagTap extends StatefulWidget {
@@ -42,7 +42,7 @@ class _SiyagTapState extends State<SiyagTap> {
           : null,
       child: AnimatedScale(
         scale: _down ? widget.scale : 1.0,
-        duration: SM.tap,
+        duration: SiyaqMotion.tap,
         curve: Curves.easeOut,
         child: widget.child,
       ),

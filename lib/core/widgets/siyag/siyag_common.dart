@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/siyag_theme.dart';
+import '../../design/theme/context_tokens.dart';
+import '../../design/theme/legacy_type_bridge.dart';
+import '../../design/tokens/siyaq_typography.dart';
 import 'siyag_tap.dart';
 
 /// Mono uppercase kicker label (ui.tsx `Kicker`): 10px, 0.18em tracking.
@@ -13,7 +15,11 @@ class Kicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     text.toUpperCase(),
-    style: ST.mono(10, color: color ?? SC.textMute, letterSpacing: 1.8),
+    style: context.legacyType.mono(
+      10,
+      color: color ?? context.colors.textMuted,
+      letterSpacing: 1.8,
+    ),
   );
 }
 
@@ -39,14 +45,16 @@ class SiyagAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? SC.coral;
+    final c = color ?? context.colors.primary;
     final letterTile = Text(
       letter,
       style: TextStyle(
-        fontFamily: SF.ar,
+        fontFamily: SiyaqFonts.arabic,
         fontSize: size * 0.4,
         fontWeight: FontWeight.w600,
-        color: active ? SC.onColor(c) : SC.textDim,
+        color: active
+            ? context.colors.onColorLegacy(c)
+            : context.colors.textSecondary,
       ),
     );
     final hasImage = imageUrl != null && imageUrl!.isNotEmpty;
@@ -57,8 +65,8 @@ class SiyagAvatar extends StatelessWidget {
       clipBehavior: hasImage ? Clip.antiAlias : Clip.none,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: active ? c : SC.surfaceHi,
-        border: active ? null : Border.all(color: SC.line),
+        color: active ? c : context.colors.surfaceElevated,
+        border: active ? null : Border.all(color: context.colors.border),
       ),
       child: hasImage
           ? Image.network(
@@ -101,8 +109,10 @@ class SiyagPrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? SC.coral;
-    final fg = SC.onColor(c); // readable on graphite/gold/green fills
+    final c = color ?? context.colors.primary;
+    final fg = context.colors.onColorLegacy(
+      c,
+    ); // readable on graphite/gold/green fills
     return SiyagTap(
       onTap: busy ? null : onTap,
       child: Opacity(
@@ -129,7 +139,11 @@ class SiyagPrimaryButton extends StatelessWidget {
               if (icon != null || busy) const SizedBox(width: 8),
               Text(
                 label,
-                style: ST.ar(15, weight: FontWeight.w600, color: fg),
+                style: context.legacyType.ar(
+                  15,
+                  weight: FontWeight.w600,
+                  color: fg,
+                ),
               ),
             ],
           ),
@@ -162,19 +176,23 @@ class SiyagGhostButton extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
-            color: SC.surfaceHi,
+            color: context.colors.surfaceElevated,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 16, color: SC.text),
+                Icon(icon, size: 16, color: context.colors.textPrimary),
                 const SizedBox(width: 8),
               ],
               Text(
                 label,
-                style: ST.ar(15, weight: FontWeight.w500, color: SC.text),
+                style: context.legacyType.ar(
+                  15,
+                  weight: FontWeight.w500,
+                  color: context.colors.textPrimary,
+                ),
               ),
             ],
           ),
@@ -184,36 +202,13 @@ class SiyagGhostButton extends StatelessWidget {
   }
 }
 
-/// Screen header (ui.tsx `ScreenHeader`): kicker + 30px bold title, px-6 pt-12.
-class SiyagScreenHeader extends StatelessWidget {
-  const SiyagScreenHeader({
-    super.key,
-    required this.kicker,
-    required this.title,
-  });
-
-  final String kicker;
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 48, 24, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Kicker(kicker),
-          const SizedBox(height: 4),
-          Text(title, style: ST.ar(30, weight: FontWeight.w700, height: 1.1)),
-        ],
-      ),
-    );
-  }
-}
+// `SiyagScreenHeader` was removed once the Leaderboard migration replaced its
+// only remaining call site with `SiyaqScreenHeader`. Other screens use
+// `SiyagTopBar`, which is unrelated and still live.
 
 /// A consistent confirm/cancel dialog for destructive actions (leave, forfeit,
 /// sign-out). Returns `true` when the user confirms. The confirm button is
-/// coloured [SC.error] when [destructive] (the default).
+/// coloured [context.colors.error] when [destructive] (the default).
 Future<bool> showSiyagConfirm(
   BuildContext context, {
   required TextDirection direction,
@@ -225,11 +220,11 @@ Future<bool> showSiyagConfirm(
 }) async {
   final ok = await showDialog<bool>(
     context: context,
-    barrierColor: SC.scrim,
+    barrierColor: context.colors.scrim,
     builder: (ctx) => Directionality(
       textDirection: direction,
       child: Dialog(
-        backgroundColor: SC.surface,
+        backgroundColor: context.colors.surface,
         insetPadding: const EdgeInsets.symmetric(horizontal: 32),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         child: Padding(
@@ -241,18 +236,22 @@ Future<bool> showSiyagConfirm(
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: ST.ar(18, weight: FontWeight.w700),
+                style: context.legacyType.ar(18, weight: FontWeight.w700),
               ),
               const SizedBox(height: 10),
               Text(
                 body,
                 textAlign: TextAlign.center,
-                style: ST.ar(13.5, color: SC.textMute, height: 1.5),
+                style: context.legacyType.ar(
+                  13.5,
+                  color: context.colors.textMuted,
+                  height: 1.5,
+                ),
               ),
               const SizedBox(height: 22),
               SiyagPrimaryButton(
                 label: confirmLabel,
-                color: destructive ? SC.error : null,
+                color: destructive ? context.colors.error : null,
                 onTap: () => Navigator.of(ctx).pop(true),
               ),
               const SizedBox(height: 8),

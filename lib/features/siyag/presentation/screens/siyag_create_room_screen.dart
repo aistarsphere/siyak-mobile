@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
 import '../../../../core/localization/app_localizations.dart';
-import '../../../../core/theme/siyag_theme.dart';
+import '../../../../core/design/theme/context_tokens.dart';
+import '../../../../core/design/theme/legacy_type_bridge.dart';
 import '../../../../core/widgets/siyag/siyag_common.dart';
 import '../../../../core/widgets/siyag/siyag_tap.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
@@ -95,14 +96,14 @@ class _WizardState extends ConsumerState<SiyagCreateRoomScreen> {
     return Directionality(
       textDirection: loc.direction,
       child: Scaffold(
-        backgroundColor: SC.bg,
+        backgroundColor: context.colors.background,
         body: SafeArea(
           bottom: false,
           child: Column(
             children: [
               SiyagTopBar(
                 kicker: loc('createRoom'),
-                kickerColor: SC.emerald,
+                kickerColor: context.colors.success,
                 onBack: _back,
               ),
               _StepDots(step: _step, total: _steps),
@@ -121,7 +122,7 @@ class _WizardState extends ConsumerState<SiyagCreateRoomScreen> {
                 child: isLast
                     ? SiyagPrimaryButton(
                         label: loc('createRoom'),
-                        color: SC.emerald,
+                        color: context.colors.success,
                         icon: Icons.add_rounded,
                         busy: busy,
                         onTap: () {
@@ -131,7 +132,7 @@ class _WizardState extends ConsumerState<SiyagCreateRoomScreen> {
                       )
                     : SiyagPrimaryButton(
                         label: loc('next'),
-                        color: SC.emerald,
+                        color: context.colors.success,
                         onTap: _canAdvance(modes) ? _next : null,
                       ),
               ),
@@ -179,7 +180,7 @@ class _StepDots extends StatelessWidget {
           width: i == step ? 22 : 8,
           height: 8,
           decoration: BoxDecoration(
-            color: i <= step ? SC.emerald : SC.line,
+            color: i <= step ? context.colors.success : context.colors.border,
             borderRadius: BorderRadius.circular(999),
           ),
         ),
@@ -187,9 +188,9 @@ class _StepDots extends StatelessWidget {
   );
 }
 
-Widget _stepTitle(String t) => Padding(
+Widget _stepTitle(BuildContext context, String t) => Padding(
   padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-  child: Text(t, style: ST.ar(22, weight: FontWeight.w700)),
+  child: Text(t, style: context.legacyType.ar(22, weight: FontWeight.w700)),
 );
 
 /// A large selectable option card (icon/emoji + title + optional subtitle).
@@ -217,10 +218,10 @@ class _OptionCard extends StatelessWidget {
       duration: const Duration(milliseconds: 160),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: SC.surface,
+        color: context.colors.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: selected ? color : SC.line,
+          color: selected ? color : context.colors.border,
           width: selected ? 2 : 1,
         ),
       ),
@@ -231,22 +232,27 @@ class _OptionCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: ST.ar(16, weight: FontWeight.w700)),
+                Text(
+                  title,
+                  style: context.legacyType.ar(16, weight: FontWeight.w700),
+                ),
                 if (subtitle != null) ...[
                   const SizedBox(height: 3),
                   Text(
                     subtitle!,
-                    style: ST.ar(12.5, color: SC.textMute, height: 1.35),
+                    style: context.legacyType.ar(
+                      12.5,
+                      color: context.colors.textMuted,
+                      height: 1.35,
+                    ),
                   ),
                 ],
               ],
             ),
           ),
           Icon(
-            selected
-                ? Icons.check_circle_rounded
-                : Icons.circle_outlined,
-            color: selected ? color : SC.textFaint,
+            selected ? Icons.check_circle_rounded : Icons.circle_outlined,
+            color: selected ? color : context.colors.textDisabled,
             size: 22,
           ),
         ],
@@ -264,7 +270,7 @@ class _LanguageStep extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => ListView(
     children: [
-      _stepTitle(loc('chooseLanguage')),
+      _stepTitle(context, loc('chooseLanguage')),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(
@@ -275,7 +281,7 @@ class _LanguageStep extends ConsumerWidget {
                     ? loc('langArabic')
                     : loc('langEnglish'),
                 selected: l == lang,
-                color: SC.emerald,
+                color: context.colors.success,
                 onTap: () {
                   ref.read(_lang.notifier).state = l;
                   ref.read(_cat.notifier).state = null;
@@ -303,7 +309,8 @@ class _CategoryStep extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => modes.when(
-    loading: () => Center(child: CircularProgressIndicator(color: SC.emerald)),
+    loading: () =>
+        Center(child: CircularProgressIndicator(color: context.colors.success)),
     error: (e, _) => _CenterState(
       icon: Icons.wifi_off_rounded,
       title: loc('somethingWrong'),
@@ -321,7 +328,7 @@ class _CategoryStep extends ConsumerWidget {
       final sel = ref.watch(_cat) ?? cats.first.code as String;
       return ListView(
         children: [
-          _stepTitle(loc('chooseCategory')),
+          _stepTitle(context, loc('chooseCategory')),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Wrap(
@@ -366,10 +373,10 @@ class _CategoryCard extends StatelessWidget {
       height: 104,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: SC.surface,
+        color: context.colors.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: selected ? SC.emerald : SC.line,
+          color: selected ? context.colors.success : context.colors.border,
           width: selected ? 2 : 1,
         ),
       ),
@@ -383,7 +390,7 @@ class _CategoryCard extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: ST.ar(13, weight: FontWeight.w600),
+            style: context.legacyType.ar(13, weight: FontWeight.w600),
           ),
         ],
       ),
@@ -401,7 +408,7 @@ class _ModeStep extends ConsumerWidget {
     final hint = ref.watch(_hint);
     return ListView(
       children: [
-        _stepTitle(loc('chooseMode')),
+        _stepTitle(context, loc('chooseMode')),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
@@ -410,7 +417,7 @@ class _ModeStep extends ConsumerWidget {
                 title: loc('modeNormal'),
                 subtitle: loc('modeNormalDesc'),
                 selected: hint == HintMode.standard,
-                color: SC.cyan,
+                color: context.colors.info,
                 onTap: () => ref.read(_hint.notifier).state = HintMode.standard,
               ),
               const SizedBox(height: 12),
@@ -418,7 +425,7 @@ class _ModeStep extends ConsumerWidget {
                 title: loc('modeCompetitive'),
                 subtitle: loc('modeCompetitiveDesc'),
                 selected: hint == HintMode.adaptive,
-                color: SC.gold,
+                color: context.colors.primary,
                 onTap: () => ref.read(_hint.notifier).state = HintMode.adaptive,
               ),
             ],
@@ -439,7 +446,7 @@ class _PlayersStep extends ConsumerWidget {
     final max = ref.watch(_max);
     return ListView(
       children: [
-        _stepTitle(loc('choosePlayers')),
+        _stepTitle(context, loc('choosePlayers')),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
@@ -448,8 +455,11 @@ class _PlayersStep extends ConsumerWidget {
                 _OptionCard(
                   title: loc.fill('playersCount', {'n': '$n'}),
                   selected: max == n,
-                  color: SC.emerald,
-                  leading: Icon(Icons.groups_rounded, color: SC.emerald),
+                  color: context.colors.success,
+                  leading: Icon(
+                    Icons.groups_rounded,
+                    color: context.colors.success,
+                  ),
                   onTap: () => ref.read(_max.notifier).state = n,
                 ),
                 const SizedBox(height: 12),
@@ -476,7 +486,8 @@ class _SummaryStep extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final info = modes.value;
-    final catCode = ref.watch(_cat) ??
+    final catCode =
+        ref.watch(_cat) ??
         (info != null && (info.playable as List).isNotEmpty
             ? info.playable.first.code as String
             : '');
@@ -491,30 +502,34 @@ class _SummaryStep extends ConsumerWidget {
 
     return ListView(
       children: [
-        _stepTitle(loc('summaryTitle')),
+        _stepTitle(context, loc('summaryTitle')),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: SC.surface,
+              color: context.colors.surface,
               borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: SC.line),
+              border: Border.all(color: context.colors.border),
             ),
             child: Column(
               children: [
-                _row(loc('languageLabel'),
-                    lang == GameplayLanguage.arabic
-                        ? loc('langArabic')
-                        : loc('langEnglish')),
-                _row(loc('category'), catLabel),
                 _row(
+                  context,
+                  loc('languageLabel'),
+                  lang == GameplayLanguage.arabic
+                      ? loc('langArabic')
+                      : loc('langEnglish'),
+                ),
+                _row(context, loc('category'), catLabel),
+                _row(
+                  context,
                   loc('gameModeLabel'),
                   hint == HintMode.adaptive
                       ? loc('modeCompetitive')
                       : loc('modeNormal'),
                 ),
-                _row(loc('playersLabel'), '$max', last: true),
+                _row(context, loc('playersLabel'), '$max', last: true),
               ],
             ),
           ),
@@ -523,16 +538,20 @@ class _SummaryStep extends ConsumerWidget {
     );
   }
 
-  Widget _row(String k, String v, {bool last = false}) => Padding(
-    padding: EdgeInsets.only(bottom: last ? 0 : 14),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(k, style: ST.ar(13, color: SC.textMute)),
-        Text(v, style: ST.ar(16, weight: FontWeight.w700)),
-      ],
-    ),
-  );
+  Widget _row(BuildContext context, String k, String v, {bool last = false}) =>
+      Padding(
+        padding: EdgeInsets.only(bottom: last ? 0 : 14),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              k,
+              style: context.legacyType.ar(13, color: context.colors.textMuted),
+            ),
+            Text(v, style: context.legacyType.ar(16, weight: FontWeight.w700)),
+          ],
+        ),
+      );
 }
 
 class _CenterState extends StatelessWidget {
@@ -552,19 +571,19 @@ class _CenterState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 44, color: SC.textFaint),
+          Icon(icon, size: 44, color: context.colors.textDisabled),
           const SizedBox(height: 14),
           Text(
             title,
             textAlign: TextAlign.center,
-            style: ST.ar(16, weight: FontWeight.w600),
+            style: context.legacyType.ar(16, weight: FontWeight.w600),
           ),
           if (body.isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(
               body,
               textAlign: TextAlign.center,
-              style: ST.ar(13, color: SC.textMute),
+              style: context.legacyType.ar(13, color: context.colors.textMuted),
             ),
           ],
         ],

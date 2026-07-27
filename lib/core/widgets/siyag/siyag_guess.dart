@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/siyag_theme.dart';
+import '../../design/theme/context_tokens.dart';
+import '../../design/theme/legacy_type_bridge.dart';
+import '../../design/tokens/siyaq_motion.dart';
+import '../../design/gameplay/siyaq_heat.dart';
 import 'siyag_tap.dart';
 
 /// Animated heat bar (ui.tsx `HeatBar`): continuous color + glow, fills to
@@ -19,7 +22,11 @@ class SiyagHeatBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = SiyagHeat.color(heat, solved: solved);
+    final color = SiyaqHeat.color(
+      heat,
+      solved: solved,
+      solvedColor: context.colors.success,
+    );
     final target = (solved ? 1.0 : heat).clamp(0.0, 1.0);
     return ClipRRect(
       borderRadius: BorderRadius.circular(999),
@@ -29,8 +36,8 @@ class SiyagHeatBar extends StatelessWidget {
         alignment: AlignmentDirectional.centerStart,
         child: TweenAnimationBuilder<double>(
           tween: Tween(begin: 0, end: target),
-          duration: SM.barFill,
-          curve: SM.easeOutQuint,
+          duration: SiyaqMotion.barFill,
+          curve: SiyaqMotion.easeOutQuint,
           builder: (context, t, _) => FractionallySizedBox(
             alignment: AlignmentDirectional.centerStart,
             widthFactor: t,
@@ -74,11 +81,15 @@ class SiyagGuessRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = SiyagHeat.color(heat, solved: solved);
+    final color = SiyaqHeat.color(
+      heat,
+      solved: solved,
+      solvedColor: context.colors.success,
+    );
     Widget row = Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
-        color: isNewest ? SC.surfaceHi : Colors.transparent,
+        color: isNewest ? context.colors.surfaceElevated : Colors.transparent,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -94,7 +105,10 @@ class SiyagGuessRow extends StatelessWidget {
             ),
             child: Text(
               solved ? '✓' : '#$rank',
-              style: ST.mono(12, color: SC.textDim),
+              style: context.legacyType.mono(
+                12,
+                color: context.colors.textSecondary,
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -113,13 +127,16 @@ class SiyagGuessRow extends StatelessWidget {
                         word,
                         textDirection: TextDirection.rtl,
                         overflow: TextOverflow.ellipsis,
-                        style: ST.ar(19, weight: FontWeight.w500),
+                        style: context.legacyType.ar(
+                          19,
+                          weight: FontWeight.w500,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      SiyagHeat.labelAr(heat, solved: solved),
-                      style: ST.mono(11, color: color),
+                      SiyaqHeat.labelAr(heat, solved: solved),
+                      style: context.legacyType.mono(11, color: color),
                     ),
                   ],
                 ),
@@ -155,8 +172,8 @@ class SiyagGuessRow extends StatelessWidget {
     if (animateIn) {
       row = TweenAnimationBuilder<double>(
         tween: Tween(begin: 0, end: 1),
-        duration: SM.rowIn,
-        curve: SM.easeOutQuint,
+        duration: SiyaqMotion.rowIn,
+        curve: SiyaqMotion.easeOutQuint,
         builder: (context, t, child) => Opacity(
           opacity: t,
           child: Transform.translate(
@@ -195,7 +212,7 @@ class SiyagSummaryChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: SC.surface,
+        color: context.colors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
@@ -207,7 +224,10 @@ class SiyagSummaryChip extends StatelessWidget {
             children: [
               Text(emoji, style: const TextStyle(fontSize: 11)),
               const SizedBox(width: 6),
-              Text(label.toUpperCase(), style: ST.mono(10, color: color)),
+              Text(
+                label.toUpperCase(),
+                style: context.legacyType.mono(10, color: color),
+              ),
             ],
           ),
           const SizedBox(height: 6),
@@ -221,13 +241,16 @@ class SiyagSummaryChip extends StatelessWidget {
                   word,
                   textDirection: TextDirection.rtl,
                   overflow: TextOverflow.ellipsis,
-                  style: ST.ar(22, weight: FontWeight.w600),
+                  style: context.legacyType.ar(22, weight: FontWeight.w600),
                 ),
               ),
               const SizedBox(width: 8),
               Text(
                 solved ? '✓' : '#$rank',
-                style: ST.mono(12, color: SC.textMute),
+                style: context.legacyType.mono(
+                  12,
+                  color: context.colors.textMuted,
+                ),
               ),
             ],
           ),
@@ -270,10 +293,14 @@ class SiyagHintPill extends StatelessWidget {
           bottom: 10,
         ),
         decoration: BoxDecoration(
-          color: revealed ? SC.cyanDim : SC.surfaceHi,
+          color: revealed
+              ? context.colors.info.withValues(alpha: 0.16)
+              : context.colors.surfaceElevated,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: revealed ? SC.cyan.withValues(alpha: 0.33) : SC.line,
+            color: revealed
+                ? context.colors.info.withValues(alpha: 0.33)
+                : context.colors.border,
           ),
         ),
         child: Row(
@@ -289,7 +316,7 @@ class SiyagHintPill extends StatelessWidget {
                       height: 14,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: SC.cyan,
+                        color: context.colors.info,
                       ),
                     )
                   : (revealed
@@ -302,18 +329,27 @@ class SiyagHintPill extends StatelessWidget {
                               Text(
                                 word ?? '',
                                 textDirection: TextDirection.rtl,
-                                style: ST.ar(17, weight: FontWeight.w500),
+                                style: context.legacyType.ar(
+                                  17,
+                                  weight: FontWeight.w500,
+                                ),
                               ),
                               const SizedBox(width: 8),
                               Text(
                                 '#${rank ?? 0}',
-                                style: ST.mono(11, color: SC.cyan),
+                                style: context.legacyType.mono(
+                                  11,
+                                  color: context.colors.info,
+                                ),
                               ),
                             ],
                           )
                         : Text(
                             revealLabel,
-                            style: ST.ar(13, color: SC.textDim),
+                            style: context.legacyType.ar(
+                              13,
+                              color: context.colors.textSecondary,
+                            ),
                           )),
             ),
           ],

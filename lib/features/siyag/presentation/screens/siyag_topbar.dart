@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/siyag_theme.dart';
+import '../../../../core/design/theme/context_tokens.dart';
+import '../../../../core/design/theme/legacy_type_bridge.dart';
 import '../../../../core/widgets/siyag/siyag_tap.dart';
 
 /// Full-screen top bar (gameplay/weekly/multiplayer top bars): a circular back
@@ -38,14 +39,14 @@ class SiyagTopBar extends StatelessWidget {
               height: 36,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: SC.surface,
+                color: context.colors.surface,
                 shape: BoxShape.circle,
               ),
               // RTL: back points to the right (chevron_right).
               child: Icon(
                 Icons.chevron_right_rounded,
                 size: 18,
-                color: SC.textDim,
+                color: context.colors.textSecondary,
               ),
             ),
           ),
@@ -55,17 +56,26 @@ class SiyagTopBar extends StatelessWidget {
                 if (kicker != null)
                   Text(
                     kicker!.toUpperCase(),
-                    style: ST.mono(
+                    style: context.legacyType.mono(
                       10,
-                      color: kickerColor ?? SC.textMute,
+                      color: kickerColor ?? context.colors.textMuted,
                       letterSpacing: 1.8,
                     ),
                   ),
                 if (title != null)
-                  Text(title!, style: ST.ar(14, weight: FontWeight.w500)),
+                  Text(
+                    title!,
+                    style: context.legacyType.ar(14, weight: FontWeight.w500),
+                  ),
                 if (subtitle != null) ...[
                   const SizedBox(height: 2),
-                  Text(subtitle!, style: ST.mono(10, color: SC.textMute)),
+                  Text(
+                    subtitle!,
+                    style: context.legacyType.mono(
+                      10,
+                      color: context.colors.textMuted,
+                    ),
+                  ),
                 ],
               ],
             ),

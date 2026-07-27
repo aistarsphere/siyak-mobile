@@ -3,7 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/theme/siyag_theme.dart';
+import '../../../../core/design/theme/context_tokens.dart';
+import '../../../../core/design/gameplay/siyaq_heat.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../v2/domain/entities/hint_mode.dart';
 import '../../../v2/presentation/controllers/weekly_controller.dart';
@@ -34,7 +35,7 @@ class _SiyagWeeklyGameScreenState extends ConsumerState<SiyagWeeklyGameScreen> {
   }
 
   double _heat(int rank, int total, bool solved) =>
-      SiyagHeat.fromRank(rank, total, solved: solved);
+      SiyaqHeat.fromRank(rank, total, solved: solved);
 
   Future<void> _submit(String word) async {
     await ref.read(weeklyRunControllerProvider.notifier).submitGuess(word);
@@ -66,7 +67,7 @@ class _SiyagWeeklyGameScreenState extends ConsumerState<SiyagWeeklyGameScreen> {
         final best = r.guesses
             .map((g) => _heat(g.rank, r.totalWords, g.isSecret))
             .reduce((a, b) => a > b ? a : b);
-        _showFlash(SiyagHeat.progressMessage(_prevBest, best));
+        _showFlash(SiyaqHeat.progressMessage(_prevBest, best));
         _prevBest = best;
       },
     );
@@ -117,8 +118,10 @@ class _SiyagWeeklyGameScreenState extends ConsumerState<SiyagWeeklyGameScreen> {
 
     if (run == null) {
       return Scaffold(
-        backgroundColor: SC.bg,
-        body: Center(child: CircularProgressIndicator(color: SC.coral)),
+        backgroundColor: context.colors.background,
+        body: Center(
+          child: CircularProgressIndicator(color: context.colors.primary),
+        ),
       );
     }
 

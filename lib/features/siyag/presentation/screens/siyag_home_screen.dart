@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/localization/app_localizations.dart';
-import '../../../../core/theme/siyag_theme.dart';
+import '../../../../core/design/theme/context_tokens.dart';
+import '../../../../core/design/theme/legacy_type_bridge.dart';
 import '../../../../core/widgets/siyag/siyag_common.dart';
 import '../../../../core/widgets/siyag/siyag_tap.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
@@ -60,7 +61,11 @@ class SiyagHomeScreen extends ConsumerWidget {
                       const SizedBox(height: 8),
                       Text(
                         'سياق',
-                        style: ST.ar(54, weight: FontWeight.w700, height: 1),
+                        style: context.legacyType.ar(
+                          54,
+                          weight: FontWeight.w700,
+                          height: 1,
+                        ),
                       ),
                     ],
                   ),
@@ -83,7 +88,7 @@ class SiyagHomeScreen extends ConsumerWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: SC.surface,
+                color: context.colors.surface,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -91,21 +96,27 @@ class SiyagHomeScreen extends ConsumerWidget {
                   Icon(
                     Icons.local_fire_department_rounded,
                     size: 15,
-                    color: SC.coral,
+                    color: context.colors.primary,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     profile == null
                         ? loc('unknownPlayer')
                         : '${profile.gamesSolved} ${loc('gamesSolved')} · ${profile.gamesPlayed} ${loc('gamesPlayed')}',
-                    style: ST.ar(13, color: SC.textDim),
+                    style: context.legacyType.ar(
+                      13,
+                      color: context.colors.textSecondary,
+                    ),
                   ),
                   const Spacer(),
                   Text(
                     profile?.weeklyBestPlacement != null
                         ? 'RANK #${profile!.weeklyBestPlacement}'
                         : profile?.shortCode ?? '',
-                    style: ST.mono(12, color: SC.textMute),
+                    style: context.legacyType.mono(
+                      12,
+                      color: context.colors.textMuted,
+                    ),
                   ),
                 ],
               ),
@@ -148,7 +159,7 @@ class SiyagHomeScreen extends ConsumerWidget {
                     title: loc('modeSolo'),
                     subtitle: loc('modeSoloDesc'),
                     icon: Icons.bolt_rounded,
-                    color: SC.cyan, // blue = solo (design system)
+                    color: context.colors.info, // blue = solo (design system)
                     onTap: () => Navigator.of(
                       context,
                     ).push(siyagRoute(const SiyagPracticeSetupScreen())),
@@ -160,7 +171,9 @@ class SiyagHomeScreen extends ConsumerWidget {
                     title: loc('modeMultiplayer'),
                     subtitle: loc('modeMultiplayerDesc'),
                     icon: Icons.groups_rounded,
-                    color: SC.emerald, // green = social (design system)
+                    color: context
+                        .colors
+                        .success, // green = social (design system)
                     enabled: caps?.multiplayerEnabled ?? true,
                     onTap: () => Navigator.of(
                       context,
@@ -223,10 +236,10 @@ class _WeeklyHeroCard extends StatelessWidget {
         decoration: BoxDecoration(
           // Elevated surface + stronger gold border → reads as the primary
           // (featured) action without becoming a solid-gold card.
-          color: SC.surfaceHi,
+          color: context.colors.surfaceElevated,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: SC.coral.withValues(alpha: 0.38),
+            color: context.colors.primary.withValues(alpha: 0.38),
             width: 1.5,
           ),
         ),
@@ -240,10 +253,10 @@ class _WeeklyHeroCard extends StatelessWidget {
                 height: 160,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: SC.coral.withValues(alpha: 0.14),
+                  color: context.colors.primary.withValues(alpha: 0.14),
                   boxShadow: [
                     BoxShadow(
-                      color: SC.coral.withValues(alpha: 0.14),
+                      color: context.colors.primary.withValues(alpha: 0.14),
                       blurRadius: 60,
                       spreadRadius: 20,
                     ),
@@ -263,21 +276,21 @@ class _WeeklyHeroCard extends StatelessWidget {
                         height: 44,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: SC.coral,
+                          color: context.colors.primary,
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Icon(
                           Icons.emoji_events_rounded,
                           size: 20,
-                          color: SC.onGold,
+                          color: context.colors.onPrimary,
                         ),
                       ),
                       const Spacer(),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Kicker(endsInLabel, color: SC.coral),
-                          Text(remaining, style: ST.mono(18)),
+                          Kicker(endsInLabel, color: context.colors.primary),
+                          Text(remaining, style: context.legacyType.mono(18)),
                         ],
                       ),
                     ],
@@ -285,10 +298,20 @@ class _WeeklyHeroCard extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     heroTitle,
-                    style: ST.ar(24, weight: FontWeight.w700, height: 1.1),
+                    style: context.legacyType.ar(
+                      24,
+                      weight: FontWeight.w700,
+                      height: 1.1,
+                    ),
                   ),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: ST.ar(14, color: SC.textMute)),
+                  Text(
+                    subtitle,
+                    style: context.legacyType.ar(
+                      14,
+                      color: context.colors.textMuted,
+                    ),
+                  ),
                   const SizedBox(height: 20),
                   SiyagPrimaryButton(
                     label: cta,
@@ -332,7 +355,7 @@ class _ModeTile extends StatelessWidget {
           height: 168,
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: SC.surface,
+            color: context.colors.surface,
             borderRadius: BorderRadius.circular(24),
           ),
           child: Column(
@@ -351,14 +374,18 @@ class _ModeTile extends StatelessWidget {
               const Spacer(),
               Text(
                 title,
-                style: ST.ar(16, weight: FontWeight.w600),
+                style: context.legacyType.ar(16, weight: FontWeight.w600),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: ST.ar(11, color: SC.textMute, height: 1.3),
+                style: context.legacyType.ar(
+                  11,
+                  color: context.colors.textMuted,
+                  height: 1.3,
+                ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -391,7 +418,7 @@ class _Launcher extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
-          color: SC.surface,
+          color: context.colors.surface,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
@@ -401,22 +428,35 @@ class _Launcher extends StatelessWidget {
               height: 36,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: SC.surfaceHi,
+                color: context.colors.surfaceElevated,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, size: 16, color: SC.textDim),
+              child: Icon(icon, size: 16, color: context.colors.textSecondary),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label, style: ST.ar(15, weight: FontWeight.w500)),
-                  Text(subtitle, style: ST.ar(11, color: SC.textMute)),
+                  Text(
+                    label,
+                    style: context.legacyType.ar(15, weight: FontWeight.w500),
+                  ),
+                  Text(
+                    subtitle,
+                    style: context.legacyType.ar(
+                      11,
+                      color: context.colors.textMuted,
+                    ),
+                  ),
                 ],
               ),
             ),
-            Icon(Icons.chevron_left_rounded, size: 18, color: SC.textFaint),
+            Icon(
+              Icons.chevron_left_rounded,
+              size: 18,
+              color: context.colors.textDisabled,
+            ),
           ],
         ),
       ),
@@ -433,16 +473,23 @@ class _CoinsPill extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     decoration: BoxDecoration(
-      color: SC.gold.withValues(alpha: 0.14),
+      color: context.colors.primary.withValues(alpha: 0.14),
       borderRadius: BorderRadius.circular(999),
-      border: Border.all(color: SC.gold.withValues(alpha: 0.40)),
+      border: Border.all(color: context.colors.primary.withValues(alpha: 0.40)),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.monetization_on_rounded, size: 15, color: SC.gold),
+        Icon(
+          Icons.monetization_on_rounded,
+          size: 15,
+          color: context.colors.primary,
+        ),
         const SizedBox(width: 5),
-        Text('$coins', style: ST.mono(14, color: SC.gold)),
+        Text(
+          '$coins',
+          style: context.legacyType.mono(14, color: context.colors.primary),
+        ),
       ],
     ),
   );

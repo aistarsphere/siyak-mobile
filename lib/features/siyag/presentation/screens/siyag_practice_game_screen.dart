@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/theme/siyag_theme.dart';
+import '../../../../core/design/gameplay/siyaq_heat.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../game/presentation/controllers/game_controller.dart';
 import '../siyag_route.dart';
@@ -35,7 +35,7 @@ class _SiyagPracticeGameScreenState
   }
 
   double _heat(int rank, int total, bool solved) =>
-      SiyagHeat.fromRank(rank, total, solved: solved);
+      SiyaqHeat.fromRank(rank, total, solved: solved);
 
   Future<void> _submit(String word) async {
     await ref.read(gameControllerProvider.notifier).submitGuess(word);
@@ -67,7 +67,7 @@ class _SiyagPracticeGameScreenState
       final best = s.guesses
           .map((g) => _heat(g.rank, s.totalWords, g.isSecret))
           .reduce((a, b) => a > b ? a : b);
-      _showFlash(SiyagHeat.progressMessage(_prevBest, best));
+      _showFlash(SiyaqHeat.progressMessage(_prevBest, best));
       _prevBest = best;
     });
     ref.listen(gameControllerProvider.select((s) => s.duplicateSeq), (
@@ -112,7 +112,9 @@ class _SiyagPracticeGameScreenState
     final total = state.totalWords;
     return SiyagGameView(
       loc: loc,
-      title: state.categoryLabel.isEmpty ? loc('modeSolo') : state.categoryLabel,
+      title: state.categoryLabel.isEmpty
+          ? loc('modeSolo')
+          : state.categoryLabel,
       guesses: [
         for (final g in state.guesses)
           SiyagGuessVM(

@@ -4,7 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/localization/app_localizations.dart';
-import '../../../../core/theme/siyag_theme.dart';
+import '../../../../core/design/theme/context_tokens.dart';
+import '../../../../core/design/theme/legacy_type_bridge.dart';
 import '../../../../core/widgets/siyag/siyag_common.dart';
 import '../../../../core/widgets/siyag/siyag_tap.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
@@ -44,7 +45,7 @@ class _S extends ConsumerState<SiyagRoomLobbyScreen> {
 
   void _showInviteSheet(String roomId) => showModalBottomSheet<void>(
     context: context,
-    backgroundColor: SC.bg,
+    backgroundColor: context.colors.background,
     isScrollControlled: true,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -89,18 +90,24 @@ class _S extends ConsumerState<SiyagRoomLobbyScreen> {
     return Directionality(
       textDirection: loc.direction,
       child: Scaffold(
-        backgroundColor: SC.bg,
+        backgroundColor: context.colors.background,
         body: SafeArea(
           bottom: false,
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
             child: room == null
-                ? Center(child: CircularProgressIndicator(color: SC.coral))
+                ? Center(
+                    child: CircularProgressIndicator(
+                      color: context.colors.primary,
+                    ),
+                  )
                 : Column(
                     children: [
                       SiyagTopBar(
-                        kicker: ref.read(localizationsProvider)('modeMultiplayer'),
-                        kickerColor: SC.emerald,
+                        kicker: ref.read(localizationsProvider)(
+                          'modeMultiplayer',
+                        ),
+                        kickerColor: context.colors.success,
                         onBack: _leave,
                       ),
                       Expanded(
@@ -113,7 +120,10 @@ class _S extends ConsumerState<SiyagRoomLobbyScreen> {
                             const SizedBox(height: 12),
                             Text(
                               '${loc('playersLabel')} (${room.participants.length}${room.maxPlayers != null ? '/${room.maxPlayers}' : ''})',
-                              style: ST.mono(11, color: SC.textMute),
+                              style: context.legacyType.mono(
+                                11,
+                                color: context.colors.textMuted,
+                              ),
                             ),
                             const SizedBox(height: 8),
                             for (final p in room.participants)
@@ -128,7 +138,7 @@ class _S extends ConsumerState<SiyagRoomLobbyScreen> {
                             if (room.amHost) ...[
                               SiyagPrimaryButton(
                                 label: loc('startRoom'),
-                                color: SC.emerald,
+                                color: context.colors.success,
                                 icon: Icons.play_arrow_rounded,
                                 onTap: () async {
                                   try {
@@ -161,7 +171,10 @@ class _S extends ConsumerState<SiyagRoomLobbyScreen> {
                             ] else
                               Text(
                                 loc('waitingForHost'),
-                                style: ST.ar(14, color: SC.textMute),
+                                style: context.legacyType.ar(
+                                  14,
+                                  color: context.colors.textMuted,
+                                ),
                               ),
                             const SizedBox(height: 10),
                             SiyagGhostButton(
@@ -193,15 +206,20 @@ class _CodeCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: SC.surface,
+        color: context.colors.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: SC.emerald.withValues(alpha: 0.27)),
+        border: Border.all(
+          color: context.colors.success.withValues(alpha: 0.27),
+        ),
       ),
       child: Column(
         children: [
-          Kicker(loc('joinCode'), color: SC.emerald),
+          Kicker(loc('joinCode'), color: context.colors.success),
           const SizedBox(height: 8),
-          Text(room.joinCode, style: ST.mono(34, letterSpacing: 8)),
+          Text(
+            room.joinCode,
+            style: context.legacyType.mono(34, letterSpacing: 8),
+          ),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -235,10 +253,10 @@ class _CodeCard extends StatelessWidget {
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: SC.surfaceHi,
+        color: c.colors.surfaceElevated,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Icon(icon, size: 18, color: SC.emerald),
+      child: Icon(icon, size: 18, color: c.colors.success),
     ),
   );
 }
@@ -251,10 +269,12 @@ class _ConnBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (status) {
-      RoomConnStatus.connected => (loc('connected'), SC.emerald),
-      RoomConnStatus.reconnecting ||
-      RoomConnStatus.recovering => (loc('reconnecting'), SC.coral),
-      _ => (loc('connecting2'), SC.textMute),
+      RoomConnStatus.connected => (loc('connected'), context.colors.success),
+      RoomConnStatus.reconnecting || RoomConnStatus.recovering => (
+        loc('reconnecting'),
+        context.colors.primary,
+      ),
+      _ => (loc('connecting2'), context.colors.textMuted),
     };
     return Row(
       children: [
@@ -264,7 +284,7 @@ class _ConnBadge extends StatelessWidget {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 8),
-        Text(label, style: ST.ar(13, color: color)),
+        Text(label, style: context.legacyType.ar(13, color: color)),
       ],
     );
   }
@@ -277,7 +297,8 @@ class _InvitePlayersSheet extends ConsumerStatefulWidget {
   final String roomId;
 
   @override
-  ConsumerState<_InvitePlayersSheet> createState() => _InvitePlayersSheetState();
+  ConsumerState<_InvitePlayersSheet> createState() =>
+      _InvitePlayersSheetState();
 }
 
 class _InvitePlayersSheetState extends ConsumerState<_InvitePlayersSheet> {
@@ -291,10 +312,12 @@ class _InvitePlayersSheetState extends ConsumerState<_InvitePlayersSheet> {
     }
     setState(() => _sending.add(p.publicPlayerId));
     try {
-      await ref.read(socialRepositoryProvider).inviteToRoom(
-        roomId: widget.roomId,
-        targetPublicPlayerId: p.publicPlayerId,
-      );
+      await ref
+          .read(socialRepositoryProvider)
+          .inviteToRoom(
+            roomId: widget.roomId,
+            targetPublicPlayerId: p.publicPlayerId,
+          );
       if (mounted) setState(() => _invited.add(p.publicPlayerId));
     } catch (_) {
       if (mounted) {
@@ -302,9 +325,9 @@ class _InvitePlayersSheetState extends ConsumerState<_InvitePlayersSheet> {
           SnackBar(
             content: Text(
               ref.read(localizationsProvider)('errInviteFailed'),
-              style: ST.ar(13),
+              style: context.legacyType.ar(13),
             ),
-            backgroundColor: SC.surface,
+            backgroundColor: context.colors.surface,
           ),
         );
       }
@@ -334,26 +357,39 @@ class _InvitePlayersSheetState extends ConsumerState<_InvitePlayersSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: SC.line,
+                color: context.colors.border,
                 borderRadius: BorderRadius.circular(999),
               ),
             ),
             const SizedBox(height: 14),
-            Text(loc('invitePlayers'), style: ST.ar(17, weight: FontWeight.w700)),
+            Text(
+              loc('invitePlayers'),
+              style: context.legacyType.ar(17, weight: FontWeight.w700),
+            ),
             const SizedBox(height: 4),
             Text(
               loc('availableToInvite'),
-              style: ST.mono(10, color: SC.textFaint),
+              style: context.legacyType.mono(
+                10,
+                color: context.colors.textDisabled,
+              ),
             ),
             const SizedBox(height: 12),
             Expanded(
               child: dir.isLoading
-                  ? Center(child: CircularProgressIndicator(color: SC.gold))
+                  ? Center(
+                      child: CircularProgressIndicator(
+                        color: context.colors.primary,
+                      ),
+                    )
                   : players.isEmpty
                   ? Center(
                       child: Text(
                         loc('noPlayersTitle'),
-                        style: ST.ar(14, color: SC.textMute),
+                        style: context.legacyType.ar(
+                          14,
+                          color: context.colors.textMuted,
+                        ),
                       ),
                     )
                   : ListView.separated(
@@ -365,13 +401,15 @@ class _InvitePlayersSheetState extends ConsumerState<_InvitePlayersSheet> {
                         final p = players[i];
                         final invited = _invited.contains(p.publicPlayerId);
                         final sending = _sending.contains(p.publicPlayerId);
-                        final name = p.displayName.isEmpty ? '—' : p.displayName;
+                        final name = p.displayName.isEmpty
+                            ? '—'
+                            : p.displayName;
                         return Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: SC.surface,
+                            color: context.colors.surface,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: SC.line),
+                            border: Border.all(color: context.colors.border),
                           ),
                           child: Row(
                             children: [
@@ -388,11 +426,17 @@ class _InvitePlayersSheetState extends ConsumerState<_InvitePlayersSheet> {
                                   children: [
                                     Text(
                                       name,
-                                      style: ST.ar(15, weight: FontWeight.w600),
+                                      style: context.legacyType.ar(
+                                        15,
+                                        weight: FontWeight.w600,
+                                      ),
                                     ),
                                     Text(
                                       p.publicPlayerId,
-                                      style: ST.mono(10, color: SC.textFaint),
+                                      style: context.legacyType.mono(
+                                        10,
+                                        color: context.colors.textDisabled,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -400,7 +444,7 @@ class _InvitePlayersSheetState extends ConsumerState<_InvitePlayersSheet> {
                               if (invited)
                                 Icon(
                                   Icons.check_circle_rounded,
-                                  color: SC.emerald,
+                                  color: context.colors.success,
                                   size: 24,
                                 )
                               else
@@ -412,7 +456,7 @@ class _InvitePlayersSheetState extends ConsumerState<_InvitePlayersSheet> {
                                       vertical: 8,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: SC.goldContainer,
+                                      color: context.colors.primaryContainer,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: sending
@@ -421,15 +465,15 @@ class _InvitePlayersSheetState extends ConsumerState<_InvitePlayersSheet> {
                                             height: 16,
                                             child: CircularProgressIndicator(
                                               strokeWidth: 2,
-                                              color: SC.gold,
+                                              color: context.colors.primary,
                                             ),
                                           )
                                         : Text(
                                             loc('invite'),
-                                            style: ST.ar(
+                                            style: context.legacyType.ar(
                                               13,
                                               weight: FontWeight.w600,
-                                              color: SC.gold,
+                                              color: context.colors.primary,
                                             ),
                                           ),
                                   ),
@@ -458,41 +502,49 @@ class _Participant extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: SC.surface,
+        color: context.colors.surface,
         borderRadius: BorderRadius.circular(16),
         border: p.isMe
-            ? Border.all(color: SC.emerald.withValues(alpha: 0.4))
-            : Border.all(color: SC.line),
+            ? Border.all(color: context.colors.success.withValues(alpha: 0.4))
+            : Border.all(color: context.colors.border),
       ),
       child: Row(
         children: [
           SiyagAvatar(
             letter: p.label.characters.first,
             size: 36,
-            color: p.isHost ? SC.coral : SC.emerald,
+            color: p.isHost ? context.colors.primary : context.colors.success,
             active: true,
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               p.isMe ? '${p.label} (${loc('you')})' : p.label,
-              style: ST.ar(15, weight: FontWeight.w500),
+              style: context.legacyType.ar(15, weight: FontWeight.w500),
             ),
           ),
           Icon(
             p.connected ? Icons.circle : Icons.circle_outlined,
             size: 9,
-            color: p.connected ? SC.emerald : SC.textFaint,
+            color: p.connected
+                ? context.colors.success
+                : context.colors.textDisabled,
           ),
           if (p.isHost) ...[
             const SizedBox(width: 10),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: SC.coralDim,
+                color: context.colors.primaryContainer,
                 borderRadius: BorderRadius.circular(999),
               ),
-              child: Text(loc('host'), style: ST.mono(9, color: SC.coral)),
+              child: Text(
+                loc('host'),
+                style: context.legacyType.mono(
+                  9,
+                  color: context.colors.primary,
+                ),
+              ),
             ),
           ],
         ],

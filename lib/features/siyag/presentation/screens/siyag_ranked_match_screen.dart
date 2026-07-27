@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/localization/app_localizations.dart';
-import '../../../../core/theme/siyag_theme.dart';
+import '../../../../core/design/theme/context_tokens.dart';
+import '../../../../core/design/theme/legacy_type_bridge.dart';
 import '../../../../core/widgets/siyag/siyag_common.dart';
 import '../../../../core/widgets/siyag/siyag_tap.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
@@ -114,19 +115,23 @@ class SiyagRankedMatchScreen extends ConsumerWidget {
     return Directionality(
       textDirection: loc.direction,
       child: Scaffold(
-        backgroundColor: SC.bg,
+        backgroundColor: context.colors.background,
         appBar: AppBar(
-          backgroundColor: SC.bg,
+          backgroundColor: context.colors.background,
           elevation: 0,
           title: Text(
             loc('competitive'),
-            style: ST.ar(18, weight: FontWeight.w700),
+            style: context.legacyType.ar(18, weight: FontWeight.w700),
           ),
           centerTitle: true,
         ),
         body: SafeArea(
           child: match == null
-              ? Center(child: CircularProgressIndicator(color: SC.gold))
+              ? Center(
+                  child: CircularProgressIndicator(
+                    color: context.colors.primary,
+                  ),
+                )
               : ListView(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                   children: [
@@ -146,8 +151,7 @@ class SiyagRankedMatchScreen extends ConsumerWidget {
                         match: match,
                         onGuess: (w) => _act(
                           ref,
-                          (r) =>
-                              r.guess(matchId, w, language: match.language),
+                          (r) => r.guess(matchId, w, language: match.language),
                         ),
                         onForfeit: () => _confirmForfeit(context, ref),
                       ),
@@ -171,11 +175,19 @@ class _Players extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: _Chip(loc: loc, p: you, highlight: match.isMyTurn, isYou: true),
+          child: _Chip(
+            loc: loc,
+            p: you,
+            highlight: match.isMyTurn,
+            isYou: true,
+          ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Text(loc('vs'), style: ST.ar(13, color: SC.textMute)),
+          child: Text(
+            loc('vs'),
+            style: context.legacyType.ar(13, color: context.colors.textMuted),
+          ),
         ),
         Expanded(
           child: _Chip(
@@ -206,23 +218,37 @@ class _Chip extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
-      color: SC.surface,
+      color: context.colors.surface,
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: highlight ? SC.gold : SC.line, width: highlight ? 2 : 1),
+      border: Border.all(
+        color: highlight ? context.colors.primary : context.colors.border,
+        width: highlight ? 2 : 1,
+      ),
     ),
     child: Column(
       children: [
         SiyagAvatar(
-          letter: (p?.label.isNotEmpty ?? false) ? p!.label.characters.first : '?',
+          letter: (p?.label.isNotEmpty ?? false)
+              ? p!.label.characters.first
+              : '?',
           size: 40,
           active: true,
         ),
         const SizedBox(height: 8),
-        Text(isYou ? loc('you') : (p?.label ?? '—'),
-            maxLines: 1, overflow: TextOverflow.ellipsis, style: ST.ar(13, weight: FontWeight.w600)),
+        Text(
+          isYou ? loc('you') : (p?.label ?? '—'),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: context.legacyType.ar(13, weight: FontWeight.w600),
+        ),
         Text(
           (p?.ready ?? false) ? loc('ready') : (p?.connectionState ?? ''),
-          style: ST.ar(10, color: (p?.ready ?? false) ? SC.emerald : SC.textMute),
+          style: context.legacyType.ar(
+            10,
+            color: (p?.ready ?? false)
+                ? context.colors.success
+                : context.colors.textMuted,
+          ),
         ),
       ],
     ),
@@ -244,7 +270,10 @@ class _Preparing extends StatelessWidget {
     final ready = match.you?.ready ?? false;
     return Column(
       children: [
-        Text(loc('getReady'), style: ST.ar(16, weight: FontWeight.w600)),
+        Text(
+          loc('getReady'),
+          style: context.legacyType.ar(16, weight: FontWeight.w600),
+        ),
         const SizedBox(height: 12),
         SiyagPrimaryButton(
           label: ready ? loc('waitingOpponent') : loc('imReady'),
@@ -298,7 +327,9 @@ class _ActiveState extends ConsumerState<_Active> {
         Container(
           padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
           decoration: BoxDecoration(
-            color: myTurn ? SC.gold.withValues(alpha: 0.14) : SC.surface,
+            color: myTurn
+                ? context.colors.primary.withValues(alpha: 0.14)
+                : context.colors.surface,
             borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
@@ -306,8 +337,11 @@ class _ActiveState extends ConsumerState<_Active> {
                 ? '${widget.loc('yourTurn')} · ${m.turnRemainingSeconds?.round() ?? '—'}${widget.loc('secShort')}'
                 : widget.loc('opponentTurn'),
             textAlign: TextAlign.center,
-            style: ST.ar(14, weight: FontWeight.w600,
-                color: myTurn ? SC.gold : SC.textMute),
+            style: context.legacyType.ar(
+              14,
+              weight: FontWeight.w600,
+              color: myTurn ? context.colors.primary : context.colors.textMuted,
+            ),
           ),
         ),
         const SizedBox(height: 14),
@@ -318,14 +352,14 @@ class _ActiveState extends ConsumerState<_Active> {
                 controller: _c,
                 enabled: myTurn,
                 textAlign: TextAlign.center,
-                style: ST.ar(18),
+                style: context.legacyType.ar(18),
                 onSubmitted: (_) => _submit(),
                 decoration: InputDecoration(
                   hintText: myTurn
                       ? widget.loc('guessAWord')
                       : widget.loc('waitYourTurn'),
                   filled: true,
-                  fillColor: SC.surfaceHi,
+                  fillColor: context.colors.surfaceElevated,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                     borderSide: BorderSide.none,
@@ -348,12 +382,24 @@ class _ActiveState extends ConsumerState<_Active> {
             child: Row(
               children: [
                 Expanded(
-                  child: Text(g.word,
-                      style: ST.ar(15,
-                          color: g.isYou ? SC.text : SC.textDim,
-                          weight: g.isYou ? FontWeight.w600 : FontWeight.w400)),
+                  child: Text(
+                    g.word,
+                    style: context.legacyType.ar(
+                      15,
+                      color: g.isYou
+                          ? context.colors.textPrimary
+                          : context.colors.textSecondary,
+                      weight: g.isYou ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  ),
                 ),
-                Text(g.rank != null ? '#${g.rank}' : '—', style: ST.mono(13, color: SC.gold)),
+                Text(
+                  g.rank != null ? '#${g.rank}' : '—',
+                  style: context.legacyType.mono(
+                    13,
+                    color: context.colors.primary,
+                  ),
+                ),
               ],
             ),
           ),
@@ -363,7 +409,7 @@ class _ActiveState extends ConsumerState<_Active> {
           child: Center(
             child: Text(
               widget.loc('leave'),
-              style: ST.ar(12, color: SC.coral),
+              style: context.legacyType.ar(12, color: context.colors.primary),
             ),
           ),
         ),
@@ -383,21 +429,35 @@ class _Result extends StatelessWidget {
     return Column(
       children: [
         const SizedBox(height: 12),
-        Icon(won ? Icons.emoji_events_rounded : Icons.flag_outlined,
-            size: 56, color: won ? SC.gold : SC.textMute),
+        Icon(
+          won ? Icons.emoji_events_rounded : Icons.flag_outlined,
+          size: 56,
+          color: won ? context.colors.primary : context.colors.textMuted,
+        ),
         const SizedBox(height: 12),
-        Text(won ? loc('youWon') : loc('matchEnded'),
-            style: ST.ar(22, weight: FontWeight.w700)),
+        Text(
+          won ? loc('youWon') : loc('matchEnded'),
+          style: context.legacyType.ar(22, weight: FontWeight.w700),
+        ),
         if (match.secretWord != null) ...[
           const SizedBox(height: 6),
-          Text('${loc('theWordLabel')}: ${match.secretWord}',
-              style: ST.ar(14, color: SC.textDim)),
+          Text(
+            '${loc('theWordLabel')}: ${match.secretWord}',
+            style: context.legacyType.ar(
+              14,
+              color: context.colors.textSecondary,
+            ),
+          ),
         ],
         if (match.ratingDelta != null) ...[
           const SizedBox(height: 4),
           Text(
-              '${match.ratingDelta! >= 0 ? '+' : ''}${match.ratingDelta} ${loc('ratingPts')}',
-              style: ST.mono(14, color: won ? SC.emerald : SC.coral)),
+            '${match.ratingDelta! >= 0 ? '+' : ''}${match.ratingDelta} ${loc('ratingPts')}',
+            style: context.legacyType.mono(
+              14,
+              color: won ? context.colors.success : context.colors.primary,
+            ),
+          ),
         ],
         const SizedBox(height: 20),
         SiyagPrimaryButton(

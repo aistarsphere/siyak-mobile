@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/siyag_theme.dart';
+import '../../../core/design/tokens/siyaq_motion.dart';
 
 /// Route transition from App.tsx: fade + slide y 12→0, 240ms, easeOutQuint.
 Route<T> siyagRoute<T>(Widget page) => PageRouteBuilder<T>(
-  transitionDuration: SM.route,
-  reverseTransitionDuration: SM.route,
+  transitionDuration: SiyaqMotion.route,
+  reverseTransitionDuration: SiyaqMotion.route,
   pageBuilder: (_, animation, _) {
-    final curved = CurvedAnimation(parent: animation, curve: SM.easeOutQuint);
+    final curved = CurvedAnimation(
+      parent: animation,
+      curve: SiyaqMotion.easeOutQuint,
+    );
     return FadeTransition(
       opacity: curved,
       child: SlideTransition(

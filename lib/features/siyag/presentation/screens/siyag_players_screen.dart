@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/localization/app_localizations.dart';
-import '../../../../core/theme/siyag_theme.dart';
+import '../../../../core/design/theme/context_tokens.dart';
+import '../../../../core/design/theme/legacy_type_bridge.dart';
 import '../../../../core/widgets/siyag/siyag_common.dart';
 import '../../../../core/widgets/siyag/siyag_tap.dart';
 import '../../../auth/presentation/controllers/session_controller.dart';
@@ -101,7 +102,10 @@ class _SiyagPlayersScreenState extends ConsumerState<SiyagPlayersScreen> {
   }
 
   void _snack(String msg) => ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(msg, style: ST.ar(13)), backgroundColor: SC.surface),
+    SnackBar(
+      content: Text(msg, style: context.legacyType.ar(13)),
+      backgroundColor: context.colors.surface,
+    ),
   );
 
   @override
@@ -117,16 +121,22 @@ class _SiyagPlayersScreenState extends ConsumerState<SiyagPlayersScreen> {
     return Directionality(
       textDirection: loc.direction,
       child: Scaffold(
-        backgroundColor: SC.bg,
+        backgroundColor: context.colors.background,
         appBar: AppBar(
-          backgroundColor: SC.bg,
+          backgroundColor: context.colors.background,
           elevation: 0,
-          title: Text(loc('players'), style: ST.ar(18, weight: FontWeight.w700)),
+          title: Text(
+            loc('players'),
+            style: context.legacyType.ar(18, weight: FontWeight.w700),
+          ),
           centerTitle: true,
           actions: [
             if (signedIn)
               IconButton(
-                icon: Icon(Icons.refresh_rounded, color: SC.textDim),
+                icon: Icon(
+                  Icons.refresh_rounded,
+                  color: context.colors.textSecondary,
+                ),
                 onPressed: _refresh,
               ),
           ],
@@ -135,8 +145,8 @@ class _SiyagPlayersScreenState extends ConsumerState<SiyagPlayersScreen> {
           child: !signedIn
               ? _signInPrompt(loc)
               : RefreshIndicator(
-                  color: SC.gold,
-                  backgroundColor: SC.surface,
+                  color: context.colors.primary,
+                  backgroundColor: context.colors.surface,
                   onRefresh: _refresh,
                   child: dir.when(
                     loading: () => _loading(),
@@ -153,18 +163,22 @@ class _SiyagPlayersScreenState extends ConsumerState<SiyagPlayersScreen> {
     padding: const EdgeInsets.all(24),
     children: [
       const SizedBox(height: 80),
-      Icon(Icons.groups_rounded, size: 48, color: SC.textFaint),
+      Icon(Icons.groups_rounded, size: 48, color: context.colors.textDisabled),
       const SizedBox(height: 16),
       Text(
         loc('guestPlayersTitle'),
         textAlign: TextAlign.center,
-        style: ST.ar(17, weight: FontWeight.w700),
+        style: context.legacyType.ar(17, weight: FontWeight.w700),
       ),
       const SizedBox(height: 8),
       Text(
         loc('guestPlayersBody'),
         textAlign: TextAlign.center,
-        style: ST.ar(13, color: SC.textMute, height: 1.5),
+        style: context.legacyType.ar(
+          13,
+          color: context.colors.textMuted,
+          height: 1.5,
+        ),
       ),
       const SizedBox(height: 20),
       SiyagPrimaryButton(
@@ -178,7 +192,7 @@ class _SiyagPlayersScreenState extends ConsumerState<SiyagPlayersScreen> {
   Widget _loading() => ListView(
     children: [
       const SizedBox(height: 120),
-      Center(child: CircularProgressIndicator(color: SC.gold)),
+      Center(child: CircularProgressIndicator(color: context.colors.primary)),
     ],
   );
 
@@ -186,21 +200,27 @@ class _SiyagPlayersScreenState extends ConsumerState<SiyagPlayersScreen> {
     padding: const EdgeInsets.all(24),
     children: [
       const SizedBox(height: 100),
-      Icon(Icons.wifi_off_rounded, size: 40, color: SC.textFaint),
+      Icon(
+        Icons.wifi_off_rounded,
+        size: 40,
+        color: context.colors.textDisabled,
+      ),
       const SizedBox(height: 12),
       Text(
         loc('errLoadPlayers'),
         textAlign: TextAlign.center,
-        style: ST.ar(15, weight: FontWeight.w600),
+        style: context.legacyType.ar(15, weight: FontWeight.w600),
       ),
       const SizedBox(height: 6),
       Text(
         loc('errNetwork'),
         textAlign: TextAlign.center,
-        style: ST.ar(12, color: SC.textMute),
+        style: context.legacyType.ar(12, color: context.colors.textMuted),
       ),
       const SizedBox(height: 14),
-      Center(child: SiyagPrimaryButton(label: loc('retry'), onTap: _refresh)),
+      Center(
+        child: SiyagPrimaryButton(label: loc('retry'), onTap: _refresh),
+      ),
     ],
   );
 
@@ -240,19 +260,22 @@ class _SiyagPlayersScreenState extends ConsumerState<SiyagPlayersScreen> {
                 Icon(
                   Icons.people_outline_rounded,
                   size: 40,
-                  color: SC.textFaint,
+                  color: context.colors.textDisabled,
                 ),
                 const SizedBox(height: 12),
                 Text(
                   loc('noPlayersTitle'),
                   textAlign: TextAlign.center,
-                  style: ST.ar(15, weight: FontWeight.w600),
+                  style: context.legacyType.ar(15, weight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   loc('noPlayersBody'),
                   textAlign: TextAlign.center,
-                  style: ST.ar(12.5, color: SC.textMute),
+                  style: context.legacyType.ar(
+                    12.5,
+                    color: context.colors.textMuted,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 SiyagPrimaryButton(
@@ -284,9 +307,9 @@ class _PlayerRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: SC.surface,
+        color: context.colors.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: SC.line),
+        border: Border.all(color: context.colors.border),
       ),
       child: Row(
         children: [
@@ -304,9 +327,9 @@ class _PlayerRow extends StatelessWidget {
                   width: 12,
                   height: 12,
                   decoration: BoxDecoration(
-                    color: _presenceColor(player.presence),
+                    color: _presenceColor(context, player.presence),
                     shape: BoxShape.circle,
-                    border: Border.all(color: SC.surface, width: 2),
+                    border: Border.all(color: context.colors.surface, width: 2),
                   ),
                 ),
               ),
@@ -317,11 +340,17 @@ class _PlayerRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: ST.ar(15, weight: FontWeight.w600)),
+                Text(
+                  name,
+                  style: context.legacyType.ar(15, weight: FontWeight.w600),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   player.publicPlayerId,
-                  style: ST.mono(10, color: SC.textFaint),
+                  style: context.legacyType.mono(
+                    10,
+                    color: context.colors.textDisabled,
+                  ),
                 ),
               ],
             ),
@@ -340,7 +369,7 @@ class _PresenceChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = _presenceColor(presence);
+    final c = _presenceColor(context, presence);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
@@ -349,7 +378,7 @@ class _PresenceChip extends StatelessWidget {
       ),
       child: Text(
         loc(_presenceKey(presence)),
-        style: ST.ar(10, weight: FontWeight.w600, color: c),
+        style: context.legacyType.ar(10, weight: FontWeight.w600, color: c),
       ),
     );
   }
@@ -378,23 +407,29 @@ class _InviteCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: SC.surface,
+        color: context.colors.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: SC.gold.withValues(alpha: 0.4)),
+        border: Border.all(
+          color: context.colors.primary.withValues(alpha: 0.4),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.mail_outline_rounded, size: 20, color: SC.gold),
+              Icon(
+                Icons.mail_outline_rounded,
+                size: 20,
+                color: context.colors.primary,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   invitation.roomName.isEmpty
                       ? loc('gameInvitation')
                       : invitation.roomName,
-                  style: ST.ar(15, weight: FontWeight.w700),
+                  style: context.legacyType.ar(15, weight: FontWeight.w700),
                 ),
               ),
             ],
@@ -402,7 +437,7 @@ class _InviteCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             loc.fill('invitedBy', {'name': host}),
-            style: ST.ar(12, color: SC.textMute),
+            style: context.legacyType.ar(12, color: context.colors.textMuted),
           ),
           const SizedBox(height: 14),
           Row(
@@ -424,9 +459,15 @@ class _InviteCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: SC.line),
+                    border: Border.all(color: context.colors.border),
                   ),
-                  child: Text(loc('dismiss'), style: ST.ar(13, color: SC.textDim)),
+                  child: Text(
+                    loc('dismiss'),
+                    style: context.legacyType.ar(
+                      13,
+                      color: context.colors.textSecondary,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -437,15 +478,15 @@ class _InviteCard extends StatelessWidget {
   }
 }
 
-Color _presenceColor(PresenceState p) => switch (p) {
-  PresenceState.onlineAvailable => SC.emerald,
-  PresenceState.onlineAway => SC.warning,
-  PresenceState.inLobby => SC.cyan,
-  PresenceState.inRoomGame => SC.cyan,
-  PresenceState.inRankedMatchmaking => SC.gold,
-  PresenceState.inRankedMatch => SC.gold,
-  PresenceState.reconnecting => SC.warning,
-  PresenceState.offline => SC.textFaint,
+Color _presenceColor(BuildContext context, PresenceState p) => switch (p) {
+  PresenceState.onlineAvailable => context.colors.success,
+  PresenceState.onlineAway => context.colors.warning,
+  PresenceState.inLobby => context.colors.info,
+  PresenceState.inRoomGame => context.colors.info,
+  PresenceState.inRankedMatchmaking => context.colors.primary,
+  PresenceState.inRankedMatch => context.colors.primary,
+  PresenceState.reconnecting => context.colors.warning,
+  PresenceState.offline => context.colors.textDisabled,
 };
 
 String _presenceKey(PresenceState p) => switch (p) {

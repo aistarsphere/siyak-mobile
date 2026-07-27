@@ -65,3 +65,24 @@ android/key.properties
 # QA artifacts — local reports & device screenshots, not part of the source tree
 docs/qa/
 UX_ISSUES_REPORT.md
+
+# Screenshots / rendered images — kept local, not committed.
+# NOTE: this also excludes the design-system golden baselines under
+# test/design/goldens/. Golden *tests* still run, but with no committed baseline
+# they only catch layout/paint exceptions, not visual regressions — and CI or a
+# fresh clone must regenerate with:
+#   flutter test --update-goldens
+# Drop the `test/**/goldens/` line if you later want visual-regression coverage.
+test/**/goldens/
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.gif
+**/*.webp
+# Re-include shipped image assets only. Scoped to image extensions on purpose —
+# a bare `!assets/**` would also un-ignore .DS_Store and friends.
+!assets/**/*.png
+!assets/**/*.jpg
+!assets/**/*.webp
+!android/app/src/main/res/**/*.png
+!ios/Runner/Assets.xcassets/**/*.png

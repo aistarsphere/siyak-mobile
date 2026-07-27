@@ -1,10 +1,39 @@
 # Design System — Siyaq
 
-The refined graphite + gold system. All colors are centralized in
-`lib/core/theme/app_tokens.dart` (`AppTokens.light` / `AppTokens.dark`) and
-surfaced to custom screens through `SC` (`lib/core/theme/siyag_theme.dart`) and
-to Material via `AppTheme` (`lib/core/theme/app_theme.dart`). **Never hardcode
-hex in feature widgets — use a semantic token.**
+The refined graphite + gold system, implemented as a **context-resolved token
+layer** under `lib/core/design/`:
+
+| Concern | File |
+|---|---|
+| Semantic colours (Light + Dark) | `design/tokens/siyaq_colors.dart` |
+| Typography roles + scripts | `design/tokens/siyaq_typography.dart` |
+| Spacing / radius | `design/tokens/siyaq_spacing.dart` |
+| Elevation / glow | `design/tokens/siyaq_elevation.dart` |
+| Motion | `design/tokens/siyaq_motion.dart` |
+| Icons | `design/tokens/siyaq_icons.dart` |
+| `ThemeData` assembly | `design/theme/siyaq_theme_data.dart` |
+| **Access** | `design/theme/context_tokens.dart` |
+| Accessibility primitives | `design/a11y/siyaq_a11y.dart` |
+| Validation gallery (debug) | `design/gallery/` |
+
+**Never hardcode hex in feature widgets — use a semantic token.**
+
+## Access: `context`, never a global
+
+```dart
+Container(color: context.colors.surface)
+Text('مرحبا', style: context.type.headingMedium)
+```
+
+Both resolve from the enclosing `Theme` via theme extensions. There is **no
+static cached palette**, which is what allows Light and Dark (and AR and EN) to
+render in the same widget tree — required by the gallery, previews and
+dual-theme golden tests.
+
+> The previous `SC` / `ST` static accessors were removed in the Phase 1
+> migration. `context.legacyType.*` is a **temporary bridge** that reproduces the
+> old `ST.*` pixel metrics while colour resolution moves to context; it is
+> replaced role-by-role as components are rebuilt.
 
 ## Brand identity
 
@@ -15,32 +44,39 @@ childish, neon, gradient-heavy, or "every component is gold." Gold communicates
 
 ## Semantic roles
 
-`SC` getter → `AppTokens` role (legacy `SC` names kept to avoid churn):
+| Token | Meaning |
+|---|---|
+| `background` | app canvas |
+| `surface` | base card |
+| `surfaceElevated` | elevated / interactive card |
+| `surfaceStrong` | strong elevated / pressed |
+| `surfaceDisabled` | disabled fill |
+| `textPrimary` | titles / primary text |
+| `textSecondary` | secondary — clearly readable |
+| `textMuted` | muted — subdued, **not** disabled |
+| `textDisabled` | disabled — visibly lower contrast |
+| `textInverse` | text on an inverted surface |
+| `border` / `borderStrong` | hairline / emphasized border |
+| `borderFocus` | 2px focus ring |
+| `primary` | primary interaction colour (gold) |
+| `primaryStrong` | pressed / active |
+| `primaryContainer` | soft gold fill (chips, badges) |
+| `onAction` | contrast-correct label on `primary` |
+| `actionSecondary` / `onActionSecondary` | secondary button pair |
+| `actionDestructive` / `onActionDestructive` | destructive button pair |
+| `success` / `warning` / `error` / `info` | status, each with a `*Subtle` fill |
+| `gameSolo` … `gamePractice` | game-mode accents, **distinct from status** |
 
-| SC getter | Role | Meaning |
-|---|---|---|
-| `bg` | `background` | app canvas |
-| `surface` | `surface` | base card |
-| `surfaceHi` | `surfaceElevated` | elevated / interactive card |
-| `surfaceHover` | `surfaceStrong` | strong elevated / pressed |
-| `text` | `textPrimary` | titles / primary text |
-| `textDim` | `textSecondary` | secondary — clearly readable |
-| `textMute` | `textMuted` | muted — subdued, **not** disabled |
-| `textFaint` | `textDisabled` | disabled — visibly lower contrast |
-| `line` | `borderSubtle` | hairline separation |
-| `lineStrong` | `borderStrong` | emphasized border |
-| `coral`* | `primary` (gold) | primary interaction color |
-| `gold` | `accentGold` (= primary) | achievement / premium / rank |
-| `goldStrong` | `primaryStrong` | pressed / active gold |
-| `goldContainer` | `primaryContainer` | soft gold fill (chips, badges) |
-| `onGold` / `onAccent` | `onPrimary` | dark charcoal on gold |
-| `emerald` | `success` | accepted / solved |
-| `cyan` | `info` | hint / informational / cold |
-| `warning` / `error` | `warning`/`error` | status |
+Two helpers replace the old `SC.onColor`:
 
-\* `SC.coral` is a historical name that now resolves to the gold **primary**.
-`SC.onColor(fill)` returns a readable foreground for any fill (dark on gold,
-light on graphite/green/info).
+- `colors.onAction` — the fixed, AA-verified label colour for primary fills.
+- `colors.foregroundOn(fill)` — for *dynamic* fills (game accents, heat colours);
+  picks whichever brand foreground measures higher contrast, rather than guessing
+  from a luminance threshold.
+
+`colors.onColorLegacy(fill)` reproduces the old threshold rule and exists only so
+the Phase 1 migration is provably pixel-identical. It is knowingly wrong in Light
+theme (2.19:1 on light gold) and is retired as components adopt `onAction`.
 
 ## Dark theme tokens
 

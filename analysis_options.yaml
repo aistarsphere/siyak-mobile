@@ -9,6 +9,14 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  exclude:
+    # Generated build output — never project code. Xcode/SwiftPM checks vendored
+    # Dart sources (e.g. flutterfire examples) into build/ios/SourcePackages,
+    # which otherwise adds ~13k analyzer errors that no one can act on and that
+    # mask real findings in lib/ and test/.
+    - build/**
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`

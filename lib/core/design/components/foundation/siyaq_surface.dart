@@ -80,7 +80,17 @@ class SiyaqSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (onTap == null && !disabled) {
-      return _decorated(context, const SiyaqInteraction());
+      final plain = _decorated(context, const SiyaqInteraction());
+      // A non-interactive surface still owns its announcement. Without this the
+      // label composed by the caller (e.g. "Sara, host, offline") is dropped and
+      // the reader hears the child fragments as unrelated nodes.
+      return semanticLabel == null
+          ? plain
+          : Semantics(
+              container: true,
+              label: semanticLabel,
+              child: ExcludeSemantics(child: plain),
+            );
     }
     return SiyaqPressable(
       onTap: disabled ? null : onTap,

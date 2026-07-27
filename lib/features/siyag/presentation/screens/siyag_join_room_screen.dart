@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/design/theme/context_tokens.dart';
-import '../../../../core/design/theme/legacy_type_bridge.dart';
-import '../../../../core/widgets/siyag/siyag_common.dart';
+import '../../../../core/design/siyaq_design.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../v2/presentation/controllers/room_controller.dart';
 import '../siyag_route.dart';
 import 'siyag_room_lobby_screen.dart';
-import 'siyag_topbar.dart';
 
-/// Join Game by code (uppercase-normalized). Shows friendly loading + not-found/
-/// full/expired states inline (never a raw API error). Localized, direction-aware.
+/// Join Game by code (uppercase-normalized). Shows friendly loading and
+/// not-found/full/expired states inline — never a raw API error.
+///
+/// Built from the Siyaq design system. The join call, error mapping and
+/// navigation are unchanged from the pre-migration implementation.
 class SiyagJoinRoomScreen extends ConsumerStatefulWidget {
   const SiyagJoinRoomScreen({super.key});
 
@@ -56,141 +55,97 @@ class _S extends ConsumerState<SiyagJoinRoomScreen> {
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationsProvider);
+    final c = context.colors;
     final busy = ref.watch(roomLifecycleControllerProvider).busy;
     final canJoin = _c.text.trim().isNotEmpty && !busy;
 
     return Directionality(
       textDirection: loc.direction,
       child: Scaffold(
-        backgroundColor: context.colors.background,
+        backgroundColor: c.background,
         body: SafeArea(
           bottom: false,
           child: Column(
             children: [
-              SiyagTopBar(
+              SiyaqScreenHeader(
                 kicker: loc('joinRoom'),
-                kickerColor: context.colors.info,
+                accent: c.info,
+                onBack: () => Navigator.of(context).maybePop(),
+                backLabel: loc('back'),
+                padding: const EdgeInsets.fromLTRB(
+                  SiyaqSpacing.xl,
+                  SiyaqSpacing.md,
+                  SiyaqSpacing.xl,
+                  SiyaqSpacing.sm,
+                ),
               ),
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(
+                    SiyaqSpacing.xl,
+                    SiyaqSpacing.xxl,
+                    SiyaqSpacing.xl,
+                    SiyaqSpacing.xxl,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Align(
-                        alignment: AlignmentDirectional.centerStart,
-                        child: Text(
-                          loc('enterGameCode'),
-                          style: context.legacyType.ar(
-                            13,
-                            color: context.colors.textSecondary,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
+                      SiyaqCodeField(
                         controller: _c,
-                        autofocus: true,
-                        textAlign: TextAlign.center,
-                        textCapitalization: TextCapitalization.characters,
+                        label: loc('enterGameCode'),
+                        semanticLabel: loc('enterGameCode'),
                         enabled: !busy,
-                        inputFormatters: [
-                          TextInputFormatter.withFunction(
-                            (o, n) => n.copyWith(
-                              text: n.text.toUpperCase().replaceAll(
-                                RegExp(r'[^A-Z0-9]'),
-                                '',
-                              ),
-                            ),
-                          ),
-                          LengthLimitingTextInputFormatter(8),
-                        ],
-                        style: context.legacyType.mono(30, letterSpacing: 8),
-                        decoration: InputDecoration(
-                          hintText: 'ABCD',
-                          hintStyle: context.legacyType.mono(
-                            30,
-                            color: context.colors.textDisabled,
-                            letterSpacing: 8,
-                          ),
-                          filled: true,
-                          fillColor: context.colors.surface,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(
-                              color: context.colors.info,
-                              width: 2,
-                            ),
-                          ),
-                        ),
+                        accent: c.info,
+                        errorText: busy ? null : _error,
                         onChanged: (_) {
-                          if (_error != null) setState(() => _error = null);
-                          setState(() {}); // refresh Join enabled state
+                          // Clears the stale error and refreshes the Join
+                          // enabled state — same contract as before.
+                          setState(() => _error = null);
                         },
                         onSubmitted: (_) => _join(),
                       ),
-                      const SizedBox(height: 16),
-                      // Loading / error states — never a raw API error.
-                      if (busy)
+                      if (busy) ...[
+                        const SizedBox(height: SiyaqSpacing.lg),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             SizedBox(
-                              width: 16,
-                              height: 16,
+                              width: SiyaqIconSize.sm,
+                              height: SiyaqIconSize.sm,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: context.colors.info,
+                                color: c.info,
                               ),
                             ),
-                            const SizedBox(width: 10),
-                            Text(
-                              loc('searchingGame'),
-                              style: context.legacyType.ar(
-                                13,
-                                color: context.colors.textMuted,
-                              ),
-                            ),
-                          ],
-                        )
-                      else if (_error != null)
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.error_outline_rounded,
-                              size: 18,
-                              color: context.colors.primary,
-                            ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: SiyaqSpacing.smd),
                             Flexible(
-                              child: Text(
-                                _error!,
-                                textAlign: TextAlign.center,
-                                style: context.legacyType.ar(
-                                  13,
-                                  color: context.colors.primary,
-                                ),
+                              child: SiyaqText(
+                                loc('searchingGame'),
+                                role: SiyaqTextRole.bodySmall,
+                                color: c.textMuted,
                               ),
                             ),
                           ],
                         ),
+                      ],
                     ],
                   ),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                child: SiyagPrimaryButton(
+                padding: const EdgeInsets.fromLTRB(
+                  SiyaqSpacing.xl,
+                  SiyaqSpacing.sm,
+                  SiyaqSpacing.xl,
+                  SiyaqSpacing.xxl,
+                ),
+                child: SiyaqButton(
                   label: loc('join'),
-                  color: context.colors.info,
-                  icon: Icons.login_rounded,
-                  busy: busy,
-                  onTap: canJoin ? _join : null,
+                  icon: SiyaqIcons.signIn,
+                  accent: c.info,
+                  fullWidth: true,
+                  loading: busy,
+                  onPressed: canJoin ? _join : null,
                 ),
               ),
             ],

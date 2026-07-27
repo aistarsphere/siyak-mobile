@@ -26,6 +26,7 @@ class SiyaqText extends StatelessWidget {
     this.softWrap,
     this.semanticsLabel,
     this.textDirection,
+    this.header = false,
   });
 
   /// Convenience for tabular numbers — ranks, timers, room codes.
@@ -41,6 +42,7 @@ class SiyaqText extends StatelessWidget {
     this.softWrap,
     this.semanticsLabel,
     this.textDirection,
+    this.header = false,
   }) : script = SiyaqScript.mono;
 
   final String data;
@@ -63,22 +65,29 @@ class SiyaqText extends StatelessWidget {
 
   final TextDirection? textDirection;
 
+  /// Announce as a heading, so a screen reader can jump between the sections of
+  /// a screen. Visual weight alone conveys nothing to assistive tech.
+  final bool header;
+
   @override
-  Widget build(BuildContext context) => Text(
-    data,
-    style: context.type.role(
-      role,
-      script: script,
-      color: color,
-      weight: weight,
-    ),
-    textAlign: align,
-    maxLines: maxLines,
-    // Default to ellipsis only when the caller bounded the lines; otherwise let
-    // text wrap so large text scales are never clipped.
-    overflow: overflow ?? (maxLines != null ? TextOverflow.ellipsis : null),
-    softWrap: softWrap,
-    semanticsLabel: semanticsLabel,
-    textDirection: textDirection,
-  );
+  Widget build(BuildContext context) {
+    final text = Text(
+      data,
+      style: context.type.role(
+        role,
+        script: script,
+        color: color,
+        weight: weight,
+      ),
+      textAlign: align,
+      maxLines: maxLines,
+      // Default to ellipsis only when the caller bounded the lines; otherwise let
+      // text wrap so large text scales are never clipped.
+      overflow: overflow ?? (maxLines != null ? TextOverflow.ellipsis : null),
+      softWrap: softWrap,
+      semanticsLabel: semanticsLabel,
+      textDirection: textDirection,
+    );
+    return header ? Semantics(header: true, child: text) : text;
+  }
 }

@@ -2,11 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
+import '../../../../core/design/siyaq_design.dart';
 import '../../../../core/localization/app_localizations.dart';
-import '../../../../core/design/theme/context_tokens.dart';
-import '../../../../core/design/theme/legacy_type_bridge.dart';
-import '../../../../core/widgets/siyag/siyag_common.dart';
-import '../../../../core/widgets/siyag/siyag_tap.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../game/presentation/controllers/providers.dart';
 import '../../../v2/domain/entities/gameplay_language.dart';
@@ -14,7 +11,6 @@ import '../../../v2/domain/entities/hint_mode.dart';
 import '../../../v2/presentation/controllers/room_controller.dart';
 import '../siyag_route.dart';
 import 'siyag_room_lobby_screen.dart';
-import 'siyag_topbar.dart';
 
 final _lang = StateProvider<GameplayLanguage>(
   (ref) => GameplayLanguage.fromCode(ref.watch(appSettingsProvider).lang),
@@ -27,6 +23,14 @@ const _playerOptions = [2, 4, 6];
 
 /// Create Game — a guided 5-step setup (language → category → mode → players →
 /// summary) wired to the live room repository. Fully localized, direction-aware.
+///
+/// Built from the Siyaq design system: the wizard chrome is [SiyaqStepDots], each
+/// single-choice step is a [SiyaqListRow] with a selection indicator, the category
+/// grid is [SiyaqSelectTile] (tintable icons in place of the old untintable,
+/// screen-reader-invisible emoji) and the summary is a [SiyaqStatGrid].
+///
+/// The step machine, the create call, provider wiring and navigation are
+/// unchanged from the pre-migration implementation.
 class SiyagCreateRoomScreen extends ConsumerStatefulWidget {
   const SiyagCreateRoomScreen({super.key});
 
@@ -88,6 +92,7 @@ class _WizardState extends ConsumerState<SiyagCreateRoomScreen> {
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationsProvider);
+    final c = context.colors;
     final lang = ref.watch(_lang);
     final modes = ref.watch(modesByLanguageProvider(lang.code));
     final busy = ref.watch(roomLifecycleControllerProvider).busy;
@@ -96,21 +101,36 @@ class _WizardState extends ConsumerState<SiyagCreateRoomScreen> {
     return Directionality(
       textDirection: loc.direction,
       child: Scaffold(
-        backgroundColor: context.colors.background,
+        backgroundColor: c.background,
         body: SafeArea(
           bottom: false,
           child: Column(
             children: [
-              SiyagTopBar(
+              SiyaqScreenHeader(
                 kicker: loc('createRoom'),
-                kickerColor: context.colors.success,
+                accent: c.success,
                 onBack: _back,
+                backLabel: loc('back'),
+                padding: const EdgeInsets.fromLTRB(
+                  SiyaqSpacing.xl,
+                  SiyaqSpacing.md,
+                  SiyaqSpacing.xl,
+                  SiyaqSpacing.sm,
+                ),
               ),
-              _StepDots(step: _step, total: _steps),
-              const SizedBox(height: 8),
+              SiyaqStepDots(
+                step: _step,
+                total: _steps,
+                accent: c.success,
+                semanticLabel: loc.fill('stepOf', {
+                  'n': '${_step + 1}',
+                  'total': '$_steps',
+                }),
+              ),
+              const SizedBox(height: SiyaqSpacing.sm),
               Expanded(
                 child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
+                  duration: SiyaqMotion.summaryIn,
                   child: KeyedSubtree(
                     key: ValueKey(_step),
                     child: _stepBody(loc, lang, modes),
@@ -118,22 +138,29 @@ class _WizardState extends ConsumerState<SiyagCreateRoomScreen> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                padding: const EdgeInsets.fromLTRB(
+                  SiyaqSpacing.xl,
+                  SiyaqSpacing.sm,
+                  SiyaqSpacing.xl,
+                  SiyaqSpacing.xxl,
+                ),
                 child: isLast
-                    ? SiyagPrimaryButton(
+                    ? SiyaqButton(
                         label: loc('createRoom'),
-                        color: context.colors.success,
-                        icon: Icons.add_rounded,
-                        busy: busy,
-                        onTap: () {
+                        icon: SiyaqIcons.add,
+                        accent: c.success,
+                        fullWidth: true,
+                        loading: busy,
+                        onPressed: () {
                           final info = modes.value;
                           if (info != null) _create(lang, info);
                         },
                       )
-                    : SiyagPrimaryButton(
+                    : SiyaqButton(
                         label: loc('next'),
-                        color: context.colors.success,
-                        onTap: _canAdvance(modes) ? _next : null,
+                        accent: c.success,
+                        fullWidth: true,
+                        onPressed: _canAdvance(modes) ? _next : null,
                       ),
               ),
             ],
@@ -164,99 +191,65 @@ class _WizardState extends ConsumerState<SiyagCreateRoomScreen> {
 }
 
 // ── Step chrome ───────────────────────────────────────────────────────────────
-class _StepDots extends StatelessWidget {
-  const _StepDots({required this.step, required this.total});
-  final int step;
-  final int total;
+
+/// Every step opens with its question as a heading, so the step body is
+/// self-describing without relying on the dots alone.
+class _StepScaffold extends StatelessWidget {
+  const _StepScaffold({required this.title, required this.children});
+
+  final String title;
+  final List<Widget> children;
 
   @override
-  Widget build(BuildContext context) => Row(
-    mainAxisAlignment: MainAxisAlignment.center,
+  Widget build(BuildContext context) => ListView(
+    padding: const EdgeInsets.fromLTRB(
+      SiyaqSpacing.xl,
+      SiyaqSpacing.sm,
+      SiyaqSpacing.xl,
+      SiyaqSpacing.lg,
+    ),
     children: [
-      for (var i = 0; i < total; i++)
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          margin: const EdgeInsets.symmetric(horizontal: 3),
-          width: i == step ? 22 : 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: i <= step ? context.colors.success : context.colors.border,
-            borderRadius: BorderRadius.circular(999),
-          ),
-        ),
+      SiyaqText(title, role: SiyaqTextRole.headingLarge, header: true),
+      const SizedBox(height: SiyaqSpacing.lg),
+      ...children,
     ],
   );
 }
 
-Widget _stepTitle(BuildContext context, String t) => Padding(
-  padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-  child: Text(t, style: context.legacyType.ar(22, weight: FontWeight.w700)),
-);
-
-/// A large selectable option card (icon/emoji + title + optional subtitle).
-class _OptionCard extends StatelessWidget {
-  const _OptionCard({
+/// One single-choice option. A [SiyaqListRow] with a selection indicator — no
+/// screen-local option card, and the row announces itself as selected.
+class _Option extends StatelessWidget {
+  const _Option({
     required this.title,
     required this.selected,
-    required this.color,
+    required this.accent,
     required this.onTap,
-    this.leading,
+    this.leadingIcon,
     this.subtitle,
   });
+
   final String title;
   final bool selected;
-  final Color color;
+  final Color accent;
   final VoidCallback onTap;
-  final Widget? leading;
+  final IconData? leadingIcon;
   final String? subtitle;
 
   @override
-  Widget build(BuildContext context) => SiyagTap(
-    onTap: onTap,
-    scale: 0.98,
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 160),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: context.colors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: selected ? color : context.colors.border,
-          width: selected ? 2 : 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          if (leading != null) ...[leading!, const SizedBox(width: 14)],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: context.legacyType.ar(16, weight: FontWeight.w700),
-                ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 3),
-                  Text(
-                    subtitle!,
-                    style: context.legacyType.ar(
-                      12.5,
-                      color: context.colors.textMuted,
-                      height: 1.35,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          Icon(
-            selected ? Icons.check_circle_rounded : Icons.circle_outlined,
-            color: selected ? color : context.colors.textDisabled,
-            size: 22,
-          ),
-        ],
-      ),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: SiyaqSpacing.md),
+    child: SiyaqListRow(
+      title: title,
+      subtitle: subtitle,
+      titleRole: SiyaqTextRole.bodyLarge,
+      leadingIcon: leadingIcon,
+      leadingColor: accent,
+      selected: selected,
+      showSelectionIndicator: true,
+      selectionAccent: accent,
+      radius: SiyaqRadius.xxl,
+      padding: const EdgeInsets.all(SiyaqSpacing.lg),
+      onTap: onTap,
     ),
   );
 }
@@ -268,30 +261,21 @@ class _LanguageStep extends ConsumerWidget {
   final GameplayLanguage lang;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => ListView(
+  Widget build(BuildContext context, WidgetRef ref) => _StepScaffold(
+    title: loc('chooseLanguage'),
     children: [
-      _stepTitle(context, loc('chooseLanguage')),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Column(
-          children: [
-            for (final l in GameplayLanguage.values) ...[
-              _OptionCard(
-                title: l == GameplayLanguage.arabic
-                    ? loc('langArabic')
-                    : loc('langEnglish'),
-                selected: l == lang,
-                color: context.colors.success,
-                onTap: () {
-                  ref.read(_lang.notifier).state = l;
-                  ref.read(_cat.notifier).state = null;
-                },
-              ),
-              const SizedBox(height: 12),
-            ],
-          ],
+      for (final l in GameplayLanguage.values)
+        _Option(
+          title: l == GameplayLanguage.arabic
+              ? loc('langArabic')
+              : loc('langEnglish'),
+          selected: l == lang,
+          accent: context.colors.success,
+          onTap: () {
+            ref.read(_lang.notifier).state = l;
+            ref.read(_cat.notifier).state = null;
+          },
         ),
-      ),
     ],
   );
 }
@@ -309,92 +293,42 @@ class _CategoryStep extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => modes.when(
-    loading: () =>
-        Center(child: CircularProgressIndicator(color: context.colors.success)),
-    error: (e, _) => _CenterState(
-      icon: Icons.wifi_off_rounded,
+    loading: () => SiyaqLoader(semanticLabel: loc('loading')),
+    error: (e, _) => SiyaqEmptyState.error(
       title: loc('somethingWrong'),
       body: loc('errNetwork'),
+      actionLabel: loc('retry'),
+      onAction: () => ref.invalidate(modesByLanguageProvider(lang.code)),
     ),
     data: (info) {
       final cats = info.playable as List;
       if (cats.isEmpty) {
-        return _CenterState(
-          icon: Icons.category_outlined,
+        return SiyaqEmptyState(
           title: loc('emptyGeneric'),
-          body: '',
+          icon: SiyaqIcons.catGeneral,
         );
       }
       final sel = ref.watch(_cat) ?? cats.first.code as String;
-      return ListView(
+      return _StepScaffold(
+        title: loc('chooseCategory'),
         children: [
-          _stepTitle(context, loc('chooseCategory')),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                for (final c in cats)
-                  _CategoryCard(
-                    emoji: _catEmoji(c.code as String),
-                    label: c.labelFor(lang.code) as String,
-                    selected: c.code == sel,
-                    onTap: () => ref.read(_cat.notifier).state = c.code,
-                  ),
-              ],
-            ),
+          Wrap(
+            spacing: SiyaqSpacing.md,
+            runSpacing: SiyaqSpacing.md,
+            children: [
+              for (final c in cats)
+                SiyaqSelectTile(
+                  icon: SiyaqIcons.category(c.code as String),
+                  label: c.labelFor(lang.code) as String,
+                  selected: c.code == sel,
+                  accent: context.colors.success,
+                  onTap: () => ref.read(_cat.notifier).state = c.code,
+                ),
+            ],
           ),
         ],
       );
     },
-  );
-}
-
-class _CategoryCard extends StatelessWidget {
-  const _CategoryCard({
-    required this.emoji,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-  final String emoji;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => SiyagTap(
-    onTap: onTap,
-    scale: 0.97,
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 160),
-      width: 104,
-      height: 104,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: context.colors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: selected ? context.colors.success : context.colors.border,
-          width: selected ? 2 : 1,
-        ),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 34)),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: context.legacyType.ar(13, weight: FontWeight.w600),
-          ),
-        ],
-      ),
-    ),
   );
 }
 
@@ -405,31 +339,24 @@ class _ModeStep extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     final hint = ref.watch(_hint);
-    return ListView(
+    return _StepScaffold(
+      title: loc('chooseMode'),
       children: [
-        _stepTitle(context, loc('chooseMode')),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            children: [
-              _OptionCard(
-                title: loc('modeNormal'),
-                subtitle: loc('modeNormalDesc'),
-                selected: hint == HintMode.standard,
-                color: context.colors.info,
-                onTap: () => ref.read(_hint.notifier).state = HintMode.standard,
-              ),
-              const SizedBox(height: 12),
-              _OptionCard(
-                title: loc('modeCompetitive'),
-                subtitle: loc('modeCompetitiveDesc'),
-                selected: hint == HintMode.adaptive,
-                color: context.colors.primary,
-                onTap: () => ref.read(_hint.notifier).state = HintMode.adaptive,
-              ),
-            ],
-          ),
+        _Option(
+          title: loc('modeNormal'),
+          subtitle: loc('modeNormalDesc'),
+          selected: hint == HintMode.standard,
+          accent: c.info,
+          onTap: () => ref.read(_hint.notifier).state = HintMode.standard,
+        ),
+        _Option(
+          title: loc('modeCompetitive'),
+          subtitle: loc('modeCompetitiveDesc'),
+          selected: hint == HintMode.adaptive,
+          accent: c.primary,
+          onTap: () => ref.read(_hint.notifier).state = HintMode.adaptive,
         ),
       ],
     );
@@ -444,29 +371,17 @@ class _PlayersStep extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final max = ref.watch(_max);
-    return ListView(
+    return _StepScaffold(
+      title: loc('choosePlayers'),
       children: [
-        _stepTitle(context, loc('choosePlayers')),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            children: [
-              for (final n in _playerOptions) ...[
-                _OptionCard(
-                  title: loc.fill('playersCount', {'n': '$n'}),
-                  selected: max == n,
-                  color: context.colors.success,
-                  leading: Icon(
-                    Icons.groups_rounded,
-                    color: context.colors.success,
-                  ),
-                  onTap: () => ref.read(_max.notifier).state = n,
-                ),
-                const SizedBox(height: 12),
-              ],
-            ],
+        for (final n in _playerOptions)
+          _Option(
+            title: loc.fill('playersCount', {'n': '$n'}),
+            selected: max == n,
+            accent: context.colors.success,
+            leadingIcon: SiyaqIcons.social,
+            onTap: () => ref.read(_max.notifier).state = n,
           ),
-        ),
       ],
     );
   }
@@ -500,108 +415,41 @@ class _SummaryStep extends ConsumerWidget {
     final hint = ref.watch(_hint);
     final max = ref.watch(_max);
 
-    return ListView(
+    // A stat grid rather than a card of label/value rows: each choice becomes its
+    // own announced cell, and the grid reflows to 2-up at narrow widths and large
+    // text scales instead of truncating.
+    return _StepScaffold(
+      title: loc('summaryTitle'),
       children: [
-        _stepTitle(context, loc('summaryTitle')),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: context.colors.surface,
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: context.colors.border),
+        SiyaqStatGrid(
+          columns: 2,
+          minCellWidth: 120,
+          gap: SiyaqSpacing.md,
+          children: [
+            SiyaqStatCard(
+              label: loc('languageLabel'),
+              value: lang == GameplayLanguage.arabic
+                  ? loc('langArabic')
+                  : loc('langEnglish'),
+              numeric: false,
             ),
-            child: Column(
-              children: [
-                _row(
-                  context,
-                  loc('languageLabel'),
-                  lang == GameplayLanguage.arabic
-                      ? loc('langArabic')
-                      : loc('langEnglish'),
-                ),
-                _row(context, loc('category'), catLabel),
-                _row(
-                  context,
-                  loc('gameModeLabel'),
-                  hint == HintMode.adaptive
-                      ? loc('modeCompetitive')
-                      : loc('modeNormal'),
-                ),
-                _row(context, loc('playersLabel'), '$max', last: true),
-              ],
+            SiyaqStatCard(
+              label: loc('category'),
+              value: catLabel,
+              numeric: false,
+              accent: context.colors.success,
             ),
-          ),
+            SiyaqStatCard(
+              label: loc('gameModeLabel'),
+              value: hint == HintMode.adaptive
+                  ? loc('modeCompetitive')
+                  : loc('modeNormal'),
+              numeric: false,
+            ),
+            SiyaqStatCard(label: loc('playersLabel'), value: '$max'),
+          ],
         ),
       ],
     );
   }
-
-  Widget _row(BuildContext context, String k, String v, {bool last = false}) =>
-      Padding(
-        padding: EdgeInsets.only(bottom: last ? 0 : 14),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              k,
-              style: context.legacyType.ar(13, color: context.colors.textMuted),
-            ),
-            Text(v, style: context.legacyType.ar(16, weight: FontWeight.w700)),
-          ],
-        ),
-      );
-}
-
-class _CenterState extends StatelessWidget {
-  const _CenterState({
-    required this.icon,
-    required this.title,
-    required this.body,
-  });
-  final IconData icon;
-  final String title;
-  final String body;
-
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 44, color: context.colors.textDisabled),
-          const SizedBox(height: 14),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: context.legacyType.ar(16, weight: FontWeight.w600),
-          ),
-          if (body.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Text(
-              body,
-              textAlign: TextAlign.center,
-              style: context.legacyType.ar(13, color: context.colors.textMuted),
-            ),
-          ],
-        ],
-      ),
-    ),
-  );
-}
-
-String _catEmoji(String code) {
-  final c = code.toLowerCase();
-  if (c.contains('animal') || c.contains('حيوان')) return '🐾';
-  if (c.contains('sport') || c.contains('رياض')) return '⚽';
-  if (c.contains('farm') || c.contains('agri') || c.contains('زراع')) {
-    return '🌱';
-  }
-  if (c.contains('tech') || c.contains('تقني')) return '💻';
-  if (c.contains('food') || c.contains('طعام')) return '🍽️';
-  if (c.contains('geo') || c.contains('جغراف')) return '🗺️';
-  if (c.contains('general') || c.contains('عام')) return '🌍';
-  return '🎯';
 }

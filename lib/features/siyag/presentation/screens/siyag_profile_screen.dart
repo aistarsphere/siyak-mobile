@@ -48,6 +48,8 @@ class SiyagProfileScreen extends ConsumerWidget {
           const _AppearanceSelector(),
           const SizedBox(height: SiyaqSpacing.xl),
           const _LanguageSelector(),
+          const SizedBox(height: SiyaqSpacing.xl),
+          const _FeedbackToggles(),
         ],
       ),
     );
@@ -522,6 +524,48 @@ class _AppearanceSelector extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Sound and haptic feedback preferences.
+///
+/// The settings themselves have existed (persisted) since the first release;
+/// they were never *rendered*, which made the sound preference dead and the
+/// haptics one uncontrollable. Both gate the whole feedback pipeline via
+/// [SiyaqFeedbackScope] and [FeedbackService].
+class _FeedbackToggles extends ConsumerWidget {
+  const _FeedbackToggles();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loc = ref.watch(localizationsProvider);
+    final sound = ref.watch(appSettingsProvider.select((s) => s.sound));
+    final haptics = ref.watch(appSettingsProvider.select((s) => s.haptics));
+    final notifier = ref.read(appSettingsProvider.notifier);
+
+    SiyaqSegmentedControl<bool> toggle(
+      bool value,
+      ValueChanged<bool> onChanged,
+    ) => SiyaqSegmentedControl<bool>(
+      value: value,
+      onChanged: onChanged,
+      segments: [
+        SiyaqSegment(value: true, label: loc('settingOn')),
+        SiyaqSegment(value: false, label: loc('settingOff')),
+      ],
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _Section(label: loc('sound'), child: toggle(sound, notifier.setSound)),
+        const SizedBox(height: SiyaqSpacing.xl),
+        _Section(
+          label: loc('haptics'),
+          child: toggle(haptics, notifier.setHaptics),
+        ),
+      ],
     );
   }
 }

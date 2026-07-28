@@ -62,7 +62,7 @@ class SiyaqProgressBar extends StatelessWidget {
         child: animate
             ? TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0, end: v),
-                duration: SiyaqMotion.barFill,
+                duration: context.motion.barFill,
                 curve: SiyaqMotion.easeOutQuint,
                 builder: (context, t, _) => _Fill(fraction: t, colour: a),
               )

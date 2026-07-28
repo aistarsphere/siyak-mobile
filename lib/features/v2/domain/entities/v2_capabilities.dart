@@ -6,6 +6,7 @@ class V2Capabilities {
     this.weeklyEnabled = false,
     this.multiplayerEnabled = false,
     this.adaptiveHintsEnabled = false,
+    this.translationEnabled = false,
     this.apiVersion,
   });
 
@@ -13,6 +14,11 @@ class V2Capabilities {
   final bool weeklyEnabled;
   final bool multiplayerEnabled;
   final bool adaptiveHintsEnabled;
+
+  /// Gameplay translation assistant (`features.translation`). No backend ships
+  /// this yet — fail-closed like every flag, so the feature stays invisible
+  /// until the contract in docs/TRANSLATION_CONTRACT.md is implemented.
+  final bool translationEnabled;
   final String? apiVersion;
 
   /// The state used whenever V2 cannot be reached or is not deployed.
@@ -23,6 +29,7 @@ class V2Capabilities {
     weeklyEnabled: weeklyEnabled,
     multiplayerEnabled: multiplayerEnabled,
     adaptiveHintsEnabled: adaptiveHintsEnabled,
+    translationEnabled: translationEnabled,
     apiVersion: apiVersion,
   );
 }

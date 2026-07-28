@@ -87,6 +87,18 @@ class SiyaqIcons {
   static const invite = Icons.person_add_alt_1_rounded;
   static const add = Icons.add_rounded;
 
+  // Gameplay
+  static const language = Icons.translate_rounded;
+  static const target = Icons.adjust_rounded;
+  static const trophy = Icons.emoji_events_rounded;
+  static const coins = Icons.monetization_on_rounded;
+  static const refresh = Icons.refresh_rounded;
+  static const solo = Icons.bolt_rounded;
+  static const stats = Icons.insights_rounded;
+  static const forfeit = Icons.flag_outlined;
+  static const opponent = Icons.person_outline_rounded;
+  static const players = Icons.group_rounded;
+
   // Theme
   static const themeSystem = Icons.brightness_auto_rounded;
   static const themeLight = Icons.light_mode_rounded;

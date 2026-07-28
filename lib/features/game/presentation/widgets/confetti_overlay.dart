@@ -2,18 +2,21 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_motion.dart';
+import '../../../../core/design/theme/context_tokens.dart';
+import '../../../../core/design/tokens/siyaq_motion.dart';
 
-/// Faithful port of the Stitch solved-screen confetti JS:
-/// 150 pieces, palette [#FFBF00, #F59E0B, #10B981, #FDFCF0, #EF4444],
-/// 4–12 px squares/circles, random opacity, fall past the bottom while
-/// rotating up to ±360°, 2–5 s each, cubic-bezier(.37,0,.63,1), then gone.
+/// Solved-screen confetti: 150 pieces, 4–12 px squares/circles, random opacity,
+/// falling past the bottom while rotating up to ±360°, 2–5 s each, then gone.
+///
+/// The palette is drawn from **semantic roles** rather than the fixed hex list
+/// the original port hardcoded, so the celebration belongs to whichever theme is
+/// active instead of sitting at fixed brightness on a light background.
 class ConfettiOverlay extends StatefulWidget {
   const ConfettiOverlay({super.key, this.pieceCount = 150, this.colors});
 
   final int pieceCount;
 
-  /// Optional palette override (Siyag result uses coral/cyan/emerald).
+  /// Optional palette override. Defaults to the theme's accent roles.
   final List<Color>? colors;
 
   @override
@@ -21,23 +24,26 @@ class ConfettiOverlay extends StatefulWidget {
 }
 
 class _ConfettiPiece {
-  _ConfettiPiece(math.Random rng, List<Color> palette)
+  _ConfettiPiece(math.Random rng, int paletteSize)
     : x = rng.nextDouble(),
       size = rng.nextDouble() * 8 + 4,
-      color = palette[rng.nextInt(palette.length)],
+      colorIndex = rng.nextInt(paletteSize),
       circle = rng.nextBool(),
       opacity = rng.nextDouble(),
       rotation = (rng.nextDouble() * 720 - 360) * math.pi / 180,
       duration =
-          AppMotion.confettiMin.inMilliseconds +
+          SiyaqMotion.confettiMin.inMilliseconds +
           rng.nextInt(
-            AppMotion.confettiMax.inMilliseconds -
-                AppMotion.confettiMin.inMilliseconds,
+            SiyaqMotion.confettiMax.inMilliseconds -
+                SiyaqMotion.confettiMin.inMilliseconds,
           );
 
   final double x; // horizontal position, fraction of width
   final double size;
-  final Color color;
+
+  /// Index into the palette resolved at paint time — the piece is generated once
+  /// in `initState`, but its colour must follow the live theme.
+  final int colorIndex;
   final bool circle;
   final double opacity;
   final double rotation; // total rotation over the fall
@@ -46,6 +52,18 @@ class _ConfettiPiece {
 
 class _ConfettiOverlayState extends State<ConfettiOverlay>
     with SingleTickerProviderStateMixin {
+  static const _paletteSize = 5;
+
+  /// Celebration palette from semantic roles, so it re-tints with the theme.
+  List<Color> _palette(BuildContext context) {
+    final override = widget.colors;
+    if (override != null && override.isNotEmpty) {
+      return override;
+    }
+    final c = context.colors;
+    return [c.primary, c.success, c.info, c.error, c.textPrimary];
+  }
+
   late final AnimationController _controller;
   late final List<_ConfettiPiece> _pieces;
 
@@ -53,21 +71,13 @@ class _ConfettiOverlayState extends State<ConfettiOverlay>
   void initState() {
     super.initState();
     final rng = math.Random();
-    final palette =
-        widget.colors ??
-        const [
-          Color(0xFFFF6B4A), // coral
-          Color(0xFF2DD4E8), // cyan
-          Color(0xFF34D399), // emerald
-          Color(0xFFF1ECE3), // text
-        ];
     _pieces = List.generate(
       widget.pieceCount,
-      (_) => _ConfettiPiece(rng, palette),
+      (_) => _ConfettiPiece(rng, _paletteSize),
     );
     _controller = AnimationController(
       vsync: this,
-      duration: AppMotion.confettiMax,
+      duration: SiyaqMotion.confettiMax,
     )..forward();
   }
 
@@ -79,6 +89,9 @@ class _ConfettiOverlayState extends State<ConfettiOverlay>
 
   @override
   Widget build(BuildContext context) {
+    // Reduced motion: a particle system at duration zero is meaningless, so the
+    // celebration is skipped outright. The victory *sound* is independent.
+    if (!context.motion.celebrationsEnabled) return const SizedBox.shrink();
     return IgnorePointer(
       child: AnimatedBuilder(
         animation: _controller,
@@ -88,8 +101,9 @@ class _ConfettiOverlayState extends State<ConfettiOverlay>
             size: Size.infinite,
             painter: _ConfettiPainter(
               pieces: _pieces,
+              palette: _palette(context),
               elapsedMs:
-                  _controller.value * AppMotion.confettiMax.inMilliseconds,
+                  _controller.value * SiyaqMotion.confettiMax.inMilliseconds,
             ),
           );
         },
@@ -99,9 +113,14 @@ class _ConfettiOverlayState extends State<ConfettiOverlay>
 }
 
 class _ConfettiPainter extends CustomPainter {
-  _ConfettiPainter({required this.pieces, required this.elapsedMs});
+  _ConfettiPainter({
+    required this.pieces,
+    required this.palette,
+    required this.elapsedMs,
+  });
 
   final List<_ConfettiPiece> pieces;
+  final List<Color> palette;
   final double elapsedMs;
 
   @override
@@ -110,10 +129,12 @@ class _ConfettiPainter extends CustomPainter {
     for (final p in pieces) {
       final t = (elapsedMs / p.duration).clamp(0.0, 1.0);
       if (t >= 1) continue;
-      final eased = AppMotion.confettiCurve.transform(t);
+      final eased = SiyaqMotion.confettiCurve.transform(t);
       final y = -20 + eased * (size.height * 1.05 + 20);
       final x = p.x * size.width;
-      paint.color = p.color.withValues(alpha: p.opacity);
+      paint.color = palette[p.colorIndex % palette.length].withValues(
+        alpha: p.opacity,
+      );
       canvas.save();
       canvas.translate(x, y);
       canvas.rotate(p.rotation * eased);

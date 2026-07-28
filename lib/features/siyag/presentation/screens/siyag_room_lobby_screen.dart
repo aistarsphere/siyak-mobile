@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/design/siyaq_design.dart';
+import '../../../../core/sound/feedback_service.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../v2/domain/entities/room.dart';
@@ -91,6 +92,17 @@ class _S extends ConsumerState<SiyagRoomLobbyScreen> {
     final conn = ref.watch(realtimeRoomControllerProvider);
     final room = conn.room ?? ref.watch(roomLifecycleControllerProvider).room;
 
+    // The moment the room connection is live — the "you're in" cue.
+    ref.listen(realtimeRoomControllerProvider.select((s) => s.status), (
+      prev,
+      next,
+    ) {
+      if (next == RoomConnStatus.connected &&
+          prev != RoomConnStatus.connected) {
+        ref.read(feedbackServiceProvider).play(SiyaqSoundEvent.roomJoined);
+      }
+    });
+
     ref.listen(realtimeRoomControllerProvider.select((s) => s.room?.state), (
       prev,
       next,
@@ -109,7 +121,7 @@ class _S extends ConsumerState<SiyagRoomLobbyScreen> {
         body: SafeArea(
           bottom: false,
           child: AnimatedSwitcher(
-            duration: SiyaqMotion.summaryIn,
+            duration: context.motion.summaryIn,
             child: room == null
                 ? SiyaqLoader(semanticLabel: loc('loading'))
                 : _Lobby(

@@ -178,3 +178,73 @@ both languages; never encode meaning by color alone (pair with icon/label).
 ❌ Gold card background with white text. ❌ Body paragraphs in gold. ❌ Every nav
 item gold. ❌ Secondary text as `textPrimary.withOpacity(0.4)`. ❌ Raw `Color(0x…)`
 inside a feature widget.
+
+
+## Motion
+
+Raw duration/curve tokens live in `SiyaqMotion`
+(`lib/core/design/tokens/siyaq_motion.dart`); the role-named aliases
+(`instant`, `short`, `standard`, `emphasized`, `celebration`) sit on the same
+numbers — one scale, two vocabularies.
+
+Roles, and what each one is for:
+
+| Role | Value | Used for |
+|---|---|---|
+| `instant` | 120ms | press states, selection ticks |
+| `short` | 200ms | small cross-fades, chip/panel state |
+| `standard` | 240ms | route changes |
+| `emphasized` | 320ms | content entrances the eye should follow |
+| `pulse` | 550ms | attention pulse on an existing element (duplicate row) |
+| `nudge` | 250ms | rejection shake — register, don't perform |
+| `reward` | 600ms | Best-improved glow, result-screen pop |
+| `celebration` | ≤5s | victory confetti |
+| `messageDwell` | 2200ms | how long a transient status message stays legible |
+
+`messageDwell` is the one role **not** collapsed under reduced motion: shortening
+how long text stays readable would hurt the people the setting exists for.
+Reduced motion removes movement, not time.
+
+**Call sites read `context.motion.<role>`, never the raw token.** The resolved
+accessor (`SiyaqMotionResolved`, `theme/context_tokens.dart`) collapses every
+role to `Duration.zero` when the OS reduce-motion setting is on, and exposes
+`celebrationsEnabled` for pure decoration (confetti is skipped entirely, not
+snapped). Explicit `AnimationController`s set their duration in
+`didChangeDependencies`, where MediaQuery is available.
+
+## Feedback (sound + haptics)
+
+The DS defines the *vocabulary*, not the player:
+`lib/core/design/feedback/siyaq_feedback.dart` holds `SiyaqSoundEvent`, the
+immutable `SiyaqFeedback` value and the `SiyaqFeedbackScope` InheritedWidget.
+The app installs the scope once in `MaterialApp.builder` (`lib/app.dart`) —
+above the Navigator, so pushed routes are inside it — and rebuilds it when the
+player's Sound/Haptics settings change.
+
+### Who gets feedback
+
+`SiyaqPressable` is **silent by default** — `haptics` and `sound` are opt-in per
+control. Beta playtesting on device drove this: with feedback on every
+pressable, one guess fired twice (the send tap, then the scored result ~300ms
+later, reading as a single stuttering event) and simply browsing menus buzzed
+continuously. Only controls that *commit* something opt in; `SiyaqButton` does
+so for its `primary` variant, and the composer's send button explicitly opts
+out because the scored result is the real feedback.
+
+Haptic intensity is a three-step ladder so it carries meaning: heavy for solved,
+medium for progress (best improved / very close) and for a rejected word,
+selection-click for a routine scored guess, light for a duplicate or a failed
+submit. `HapticFeedback.vibrate` is not used anywhere — it was the harshest
+pattern Android offers, fired for the most ordinary mistake in the game.
+
+- **DS widgets** (`SiyaqPressable`) read `SiyaqFeedbackScope.of(context)`;
+  with no scope installed (tests, gallery, goldens) they fall back to
+  `SiyaqFeedback.none`: haptics as before the sound system existed, sound a
+  no-op.
+- **Controllers** (no BuildContext) use `feedbackServiceProvider`
+  (`lib/core/sound/feedback_service.dart`). Both paths funnel into one
+  `SoundService`, so debounce and celebration priority are enforced once.
+- Asset mapping, per-event debounce, tier suppression and preloading live in
+  the `SoundSpec` table in `lib/core/sound/sound_service.dart`. Swapping the
+  temporary `dev_*.wav` assets (see `assets/sounds/README.md`) touches only
+  that table.

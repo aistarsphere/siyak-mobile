@@ -91,6 +91,11 @@ class SiyaqButton extends StatelessWidget {
       semanticLabel: label,
       semanticHint: semanticHint,
       focusRadius: SiyaqRadius.button,
+      // The primary button is the app's "you committed to something" control,
+      // so it is the one place that still ticks. Ghost/secondary variants are
+      // navigation and stay silent — see SiyaqPressable.haptics.
+      haptics: type == SiyaqButtonType.primary,
+      sound: type == SiyaqButtonType.primary,
       // A button already exceeds the 44px minimum; extra outer padding would
       // break full-width layouts and vertical rhythm.
       enforceMinTarget: false,

@@ -134,7 +134,7 @@ class _Segment<T> extends StatelessWidget {
       pressScale: 0.98,
       enforceMinTarget: false,
       builder: (context, state) => AnimatedContainer(
-        duration: SiyaqMotion.quick,
+        duration: context.motion.quick,
         curve: SiyaqMotion.easeOut,
         constraints: const BoxConstraints(
           minHeight: SiyaqSpacing.minTouchTarget - SiyaqSpacing.sm,

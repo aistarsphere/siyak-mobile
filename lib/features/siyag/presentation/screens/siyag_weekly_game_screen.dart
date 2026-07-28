@@ -3,8 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/design/theme/context_tokens.dart';
-import '../../../../core/design/gameplay/siyaq_heat.dart';
+import '../../../../core/design/siyaq_design.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../v2/domain/entities/hint_mode.dart';
 import '../../../v2/presentation/controllers/weekly_controller.dart';
@@ -27,10 +26,15 @@ class _SiyagWeeklyGameScreenState extends ConsumerState<SiyagWeeklyGameScreen> {
   double? _prevBest;
   Timer? _flashTimer;
 
+  /// Rejection text shown under the composer, self-clearing.
+  String? _rejection;
+  Timer? _rejectionTimer;
+
   @override
   void dispose() {
     _input.dispose();
     _flashTimer?.cancel();
+    _rejectionTimer?.cancel();
     super.dispose();
   }
 
@@ -43,11 +47,20 @@ class _SiyagWeeklyGameScreenState extends ConsumerState<SiyagWeeklyGameScreen> {
     if (s.unknownWord == null && mounted) _input.clear();
   }
 
+  void _showRejection(String msg) {
+    setState(() => _rejection = msg);
+    _rejectionTimer?.cancel();
+    _rejectionTimer = Timer(
+      SiyaqMotion.messageDwell,
+      () => mounted ? setState(() => _rejection = null) : null,
+    );
+  }
+
   void _showFlash(String msg) {
     setState(() => _flash = msg);
     _flashTimer?.cancel();
     _flashTimer = Timer(
-      const Duration(milliseconds: 2200),
+      SiyaqMotion.messageDwell,
       () => mounted ? setState(() => _flash = null) : null,
     );
   }
@@ -67,32 +80,16 @@ class _SiyagWeeklyGameScreenState extends ConsumerState<SiyagWeeklyGameScreen> {
         final best = r.guesses
             .map((g) => _heat(g.rank, r.totalWords, g.isSecret))
             .reduce((a, b) => a > b ? a : b);
-        _showFlash(SiyaqHeat.progressMessage(_prevBest, best));
+        _showFlash(loc(SiyaqHeat.progressKey(_prevBest, best)));
         _prevBest = best;
       },
     );
 
-    // Duplicate feedback.
-    ref.listen(weeklyRunControllerProvider.select((s) => s.duplicateSeq), (
-      prev,
-      next,
-    ) {
-      if (next > (prev ?? 0)) {
-        final w = ref.read(weeklyRunControllerProvider).duplicateCanonical;
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(loc.fill('canonicalDuplicate', {'w': w ?? ''})),
-            ),
-          );
-      }
-    });
     ref.listen(weeklyRunControllerProvider.select((s) => s.error), (p, n) {
       if (n != null && n != p) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(loc.errorMessage(n))));
+        // Inline rather than a floating SnackBar — see the practice screen: the
+        // snackbar covered the composer and duplicated its error surface.
+        _showRejection(loc.errorMessage(n));
         ref.read(weeklyRunControllerProvider.notifier).clearError();
       }
     });
@@ -129,12 +126,14 @@ class _SiyagWeeklyGameScreenState extends ConsumerState<SiyagWeeklyGameScreen> {
     return SiyagGameView(
       loc: loc,
       title: loc('modeWeekly'),
+      // The run carries its own language; the week can be played in either.
+      gameLanguage: run.language,
       guesses: [
         for (final g in run.guesses)
           SiyagGuessVM(
-            g.word,
-            g.rank,
-            _heat(g.rank, total, g.isSecret),
+            word: g.word,
+            rank: g.rank,
+            heat: _heat(g.rank, total, g.isSecret),
             solved: g.isSecret,
           ),
       ],
@@ -142,7 +141,10 @@ class _SiyagWeeklyGameScreenState extends ConsumerState<SiyagWeeklyGameScreen> {
       onSubmit: _submit,
       submitting: state.submitting,
       flash: _flash,
-      hints: [for (final h in state.hints) SiyagHintVM(h.word, h.semanticRank)],
+      hints: [
+        for (final h in state.hints)
+          SiyagHintVM(word: h.word, rank: h.semanticRank),
+      ],
       hintsRemaining: run.hintsRemaining,
       hintLoading: state.hintLoading,
       onRequestHint: () => ref
@@ -155,7 +157,12 @@ class _SiyagWeeklyGameScreenState extends ConsumerState<SiyagWeeklyGameScreen> {
         _input.text = w;
         _submit(w);
       },
+      solved: run.solved,
+      inputError: state.unknownWord != null ? loc('unknownWord') : _rejection,
       lastWord: state.lastGuessWord,
+      duplicateWord: state.duplicateCanonical,
+      duplicateSeq: state.duplicateSeq,
+      onBack: () => Navigator.of(context).maybePop(),
     );
   }
 }

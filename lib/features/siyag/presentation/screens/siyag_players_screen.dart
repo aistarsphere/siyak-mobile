@@ -3,11 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/design/siyaq_design.dart';
 import '../../../../core/localization/app_localizations.dart';
-import '../../../../core/design/theme/context_tokens.dart';
-import '../../../../core/design/theme/legacy_type_bridge.dart';
-import '../../../../core/widgets/siyag/siyag_common.dart';
-import '../../../../core/widgets/siyag/siyag_tap.dart';
 import '../../../auth/presentation/controllers/session_controller.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../v2/domain/entities/social.dart';
@@ -19,7 +16,14 @@ import 'siyag_room_lobby_screen.dart';
 
 /// Online players + incoming game invitations (contract §9–10). Account-only —
 /// guests get a sign-in prompt. While open, the screen beats presence so the
-/// player shows as available to others. Fully localized (AR + EN).
+/// player shows as available to others.
+///
+/// Built from the Siyaq design system — the four bespoke state blocks
+/// (~100 lines of hand-rolled loading/error/empty/guest UI) are now the shared
+/// state components, and an invitations fetch failure is **surfaced inline**
+/// instead of silently rendering as "no invitations".
+///
+/// Presence heartbeat, accept/decline calls and navigation are unchanged.
 class SiyagPlayersScreen extends ConsumerStatefulWidget {
   const SiyagPlayersScreen({super.key});
 
@@ -101,143 +105,143 @@ class _SiyagPlayersScreenState extends ConsumerState<SiyagPlayersScreen> {
     ref.invalidate(incomingInvitationsProvider);
   }
 
-  void _snack(String msg) => ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(msg, style: context.legacyType.ar(13)),
-      backgroundColor: context.colors.surface,
-    ),
-  );
+  void _snack(String msg) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationsProvider);
+    final c = context.colors;
     final signedIn =
         ref.watch(sessionControllerProvider).asData?.value.isSignedIn ?? false;
-    final invites =
-        ref.watch(incomingInvitationsProvider).asData?.value ??
-        const <RoomInvitation>[];
+    final invites = ref.watch(incomingInvitationsProvider);
     final dir = ref.watch(playersDirectoryProvider);
 
     return Directionality(
       textDirection: loc.direction,
       child: Scaffold(
-        backgroundColor: context.colors.background,
-        appBar: AppBar(
-          backgroundColor: context.colors.background,
-          elevation: 0,
-          title: Text(
-            loc('players'),
-            style: context.legacyType.ar(18, weight: FontWeight.w700),
-          ),
-          centerTitle: true,
-          actions: [
-            if (signedIn)
-              IconButton(
-                icon: Icon(
-                  Icons.refresh_rounded,
-                  color: context.colors.textSecondary,
-                ),
-                onPressed: _refresh,
-              ),
-          ],
-        ),
+        backgroundColor: c.background,
         body: SafeArea(
-          child: !signedIn
-              ? _signInPrompt(loc)
-              : RefreshIndicator(
-                  color: context.colors.primary,
-                  backgroundColor: context.colors.surface,
-                  onRefresh: _refresh,
-                  child: dir.when(
-                    loading: () => _loading(),
-                    error: (e, _) => _error(loc),
-                    data: (directory) => _list(loc, directory, invites),
-                  ),
+          bottom: false,
+          child: Column(
+            children: [
+              SiyaqScreenHeader(
+                kicker: loc('players'),
+                accent: c.success,
+                onBack: () => Navigator.of(context).maybePop(),
+                backLabel: loc('back'),
+                trailing: signedIn
+                    ? SiyaqIconButton(
+                        icon: SiyaqIcons.refresh,
+                        semanticLabel: loc('refresh'),
+                        onPressed: _refresh,
+                      )
+                    : null,
+                padding: const EdgeInsets.fromLTRB(
+                  SiyaqSpacing.xl,
+                  SiyaqSpacing.md,
+                  SiyaqSpacing.xl,
+                  SiyaqSpacing.sm,
                 ),
+              ),
+              Expanded(
+                child: !signedIn
+                    ? Center(
+                        child: SiyaqEmptyState(
+                          title: loc('guestPlayersTitle'),
+                          body: loc('guestPlayersBody'),
+                          icon: SiyaqIcons.social,
+                          actionLabel: loc('signIn'),
+                          onAction: _goSignIn,
+                        ),
+                      )
+                    : RefreshIndicator(
+                        color: c.primary,
+                        backgroundColor: c.surface,
+                        onRefresh: _refresh,
+                        child: dir.when(
+                          loading: () => ListView(
+                            children: [
+                              const SizedBox(height: SiyaqSpacing.huge * 2),
+                              SiyaqLoader(semanticLabel: loc('loading')),
+                            ],
+                          ),
+                          error: (e, _) => ListView(
+                            padding: const EdgeInsets.all(SiyaqSpacing.xxl),
+                            children: [
+                              const SizedBox(height: SiyaqSpacing.huge),
+                              SiyaqEmptyState.error(
+                                title: loc('errLoadPlayers'),
+                                body: loc('errNetwork'),
+                                actionLabel: loc('retry'),
+                                onAction: _refresh,
+                              ),
+                            ],
+                          ),
+                          data: (directory) => _list(loc, directory, invites),
+                        ),
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _signInPrompt(AppLocalizations loc) => ListView(
-    padding: const EdgeInsets.all(24),
-    children: [
-      const SizedBox(height: 80),
-      Icon(Icons.groups_rounded, size: 48, color: context.colors.textDisabled),
-      const SizedBox(height: 16),
-      Text(
-        loc('guestPlayersTitle'),
-        textAlign: TextAlign.center,
-        style: context.legacyType.ar(17, weight: FontWeight.w700),
-      ),
-      const SizedBox(height: 8),
-      Text(
-        loc('guestPlayersBody'),
-        textAlign: TextAlign.center,
-        style: context.legacyType.ar(
-          13,
-          color: context.colors.textMuted,
-          height: 1.5,
-        ),
-      ),
-      const SizedBox(height: 20),
-      SiyagPrimaryButton(
-        label: loc('signIn'),
-        icon: Icons.login_rounded,
-        onTap: _goSignIn,
-      ),
-    ],
-  );
-
-  Widget _loading() => ListView(
-    children: [
-      const SizedBox(height: 120),
-      Center(child: CircularProgressIndicator(color: context.colors.primary)),
-    ],
-  );
-
-  Widget _error(AppLocalizations loc) => ListView(
-    padding: const EdgeInsets.all(24),
-    children: [
-      const SizedBox(height: 100),
-      Icon(
-        Icons.wifi_off_rounded,
-        size: 40,
-        color: context.colors.textDisabled,
-      ),
-      const SizedBox(height: 12),
-      Text(
-        loc('errLoadPlayers'),
-        textAlign: TextAlign.center,
-        style: context.legacyType.ar(15, weight: FontWeight.w600),
-      ),
-      const SizedBox(height: 6),
-      Text(
-        loc('errNetwork'),
-        textAlign: TextAlign.center,
-        style: context.legacyType.ar(12, color: context.colors.textMuted),
-      ),
-      const SizedBox(height: 14),
-      Center(
-        child: SiyagPrimaryButton(label: loc('retry'), onTap: _refresh),
-      ),
-    ],
-  );
-
   Widget _list(
     AppLocalizations loc,
     SocialDirectory directory,
-    List<RoomInvitation> invites,
+    AsyncValue<List<RoomInvitation>> invites,
   ) {
+    final c = context.colors;
     final players = directory.players;
-    final pending = invites.where((i) => i.status.isActionable).toList();
+    final pending = (invites.asData?.value ?? const <RoomInvitation>[])
+        .where((i) => i.status.isActionable)
+        .toList();
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      padding: const EdgeInsets.fromLTRB(
+        SiyaqSpacing.xl,
+        SiyaqSpacing.sm,
+        SiyaqSpacing.xl,
+        SiyaqSpacing.xxl,
+      ),
       children: [
+        // An invitations failure used to render exactly like "no invitations".
+        // Someone waiting on an invite deserves to know the difference.
+        if (invites.hasError) ...[
+          SiyaqTintedSurface(
+            tone: SiyaqTone.warning,
+            child: Row(
+              children: [
+                SiyaqIcon.decorative(
+                  SiyaqIcons.offline,
+                  size: SiyaqIconSize.md,
+                  color: c.warning,
+                ),
+                const SizedBox(width: SiyaqSpacing.sm),
+                Expanded(
+                  child: SiyaqText(
+                    loc('errLoadInvites'),
+                    role: SiyaqTextRole.bodySmall,
+                    color: c.warning,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: SiyaqSpacing.md),
+        ],
         if (pending.isNotEmpty) ...[
-          Kicker(loc('invites')),
-          const SizedBox(height: 10),
+          SiyaqText(
+            loc('invites').toUpperCase(),
+            role: SiyaqTextRole.labelSmall,
+            script: SiyaqScript.mono,
+            color: c.textMuted,
+            header: true,
+          ),
+          const SizedBox(height: SiyaqSpacing.sm),
           for (final inv in pending) ...[
             _InviteCard(
               loc: loc,
@@ -246,144 +250,50 @@ class _SiyagPlayersScreenState extends ConsumerState<SiyagPlayersScreen> {
               onAccept: () => _accept(inv),
               onDecline: () => _decline(inv),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: SiyaqSpacing.smd),
           ],
-          const SizedBox(height: 10),
+          const SizedBox(height: SiyaqSpacing.sm),
         ],
-        Kicker(loc('onlineNow')),
-        const SizedBox(height: 10),
+        SiyaqText(
+          loc('onlineNow').toUpperCase(),
+          role: SiyaqTextRole.labelSmall,
+          script: SiyaqScript.mono,
+          color: c.textMuted,
+          header: true,
+        ),
+        const SizedBox(height: SiyaqSpacing.sm),
         if (players.isEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 40),
-            child: Column(
-              children: [
-                Icon(
-                  Icons.people_outline_rounded,
-                  size: 40,
-                  color: context.colors.textDisabled,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  loc('noPlayersTitle'),
-                  textAlign: TextAlign.center,
-                  style: context.legacyType.ar(15, weight: FontWeight.w600),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  loc('noPlayersBody'),
-                  textAlign: TextAlign.center,
-                  style: context.legacyType.ar(
-                    12.5,
-                    color: context.colors.textMuted,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                SiyagPrimaryButton(
-                  label: loc('refresh'),
-                  fullWidth: false,
-                  onTap: _refresh,
-                ),
-              ],
-            ),
+          SiyaqEmptyState(
+            title: loc('noPlayersTitle'),
+            body: loc('noPlayersBody'),
+            icon: SiyaqIcons.social,
+            actionLabel: loc('refresh'),
+            onAction: _refresh,
           )
         else
           for (final p in players) ...[
-            _PlayerRow(loc: loc, player: p),
-            const SizedBox(height: 8),
+            SiyaqPlayerRow(
+              name: p.displayName.isEmpty ? '—' : p.displayName,
+              subtitle: p.publicPlayerId,
+              avatarUrl: p.avatarUrl,
+              presence: p.presence.isOnline
+                  ? SiyaqPresence.online
+                  : SiyaqPresence.offline,
+              statusLabel: loc(_presenceKey(p.presence)),
+              trailing: SiyaqChip(
+                label: loc(_presenceKey(p.presence)),
+                variant: SiyaqChipVariant.accent,
+                accent: _presenceColor(context, p.presence),
+              ),
+            ),
+            const SizedBox(height: SiyaqSpacing.sm),
           ],
       ],
     );
   }
 }
 
-class _PlayerRow extends StatelessWidget {
-  const _PlayerRow({required this.loc, required this.player});
-  final AppLocalizations loc;
-  final SocialPlayer player;
-
-  @override
-  Widget build(BuildContext context) {
-    final name = player.displayName.isEmpty ? '—' : player.displayName;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: context.colors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: context.colors.border),
-      ),
-      child: Row(
-        children: [
-          Stack(
-            children: [
-              SiyagAvatar(
-                letter: name.characters.first,
-                imageUrl: player.avatarUrl,
-                active: player.presence.isOnline,
-              ),
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: _presenceColor(context, player.presence),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: context.colors.surface, width: 2),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: context.legacyType.ar(15, weight: FontWeight.w600),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  player.publicPlayerId,
-                  style: context.legacyType.mono(
-                    10,
-                    color: context.colors.textDisabled,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          _PresenceChip(loc: loc, presence: player.presence),
-        ],
-      ),
-    );
-  }
-}
-
-class _PresenceChip extends StatelessWidget {
-  const _PresenceChip({required this.loc, required this.presence});
-  final AppLocalizations loc;
-  final PresenceState presence;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = _presenceColor(context, presence);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: c.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        loc(_presenceKey(presence)),
-        style: context.legacyType.ar(10, weight: FontWeight.w600, color: c),
-      ),
-    );
-  }
-}
-
+/// A pending room invitation with accept/dismiss.
 class _InviteCard extends StatelessWidget {
   const _InviteCard({
     required this.loc,
@@ -401,74 +311,62 @@ class _InviteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final host = invitation.host.displayName.isEmpty
         ? invitation.host.publicPlayerId
         : invitation.host.displayName;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.colors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: context.colors.primary.withValues(alpha: 0.4),
-        ),
-      ),
+    final title = invitation.roomName.isEmpty
+        ? loc('gameInvitation')
+        : invitation.roomName;
+
+    return SiyaqSurface(
+      accent: c.primary,
+      selected: true,
+      semanticLabel: '$title, ${loc.fill('invitedBy', {'name': host})}',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(
-                Icons.mail_outline_rounded,
-                size: 20,
-                color: context.colors.primary,
+              SiyaqIcon.decorative(
+                SiyaqIcons.invite,
+                size: SiyaqIconSize.md,
+                color: c.primary,
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: SiyaqSpacing.sm),
               Expanded(
-                child: Text(
-                  invitation.roomName.isEmpty
-                      ? loc('gameInvitation')
-                      : invitation.roomName,
-                  style: context.legacyType.ar(15, weight: FontWeight.w700),
+                child: SiyaqText(
+                  title,
+                  role: SiyaqTextRole.bodyLarge,
+                  weight: FontWeight.w700,
+                  maxLines: 1,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          Text(
+          const SizedBox(height: SiyaqSpacing.xxxs),
+          SiyaqText(
             loc.fill('invitedBy', {'name': host}),
-            style: context.legacyType.ar(12, color: context.colors.textMuted),
+            role: SiyaqTextRole.bodySmall,
+            color: c.textMuted,
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: SiyaqSpacing.md),
           Row(
             children: [
               Expanded(
-                child: SiyagPrimaryButton(
+                child: SiyaqButton(
                   label: loc('accept'),
-                  busy: busy,
-                  onTap: busy ? null : onAccept,
+                  size: SiyaqButtonSize.medium,
+                  loading: busy,
+                  onPressed: busy ? null : onAccept,
                 ),
               ),
-              const SizedBox(width: 10),
-              SiyagTap(
-                onTap: busy ? null : onDecline,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: context.colors.border),
-                  ),
-                  child: Text(
-                    loc('dismiss'),
-                    style: context.legacyType.ar(
-                      13,
-                      color: context.colors.textSecondary,
-                    ),
-                  ),
-                ),
+              const SizedBox(width: SiyaqSpacing.smd),
+              SiyaqButton(
+                label: loc('dismiss'),
+                type: SiyaqButtonType.secondary,
+                size: SiyaqButtonSize.medium,
+                onPressed: busy ? null : onDecline,
               ),
             ],
           ),

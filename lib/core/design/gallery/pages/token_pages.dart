@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../a11y/siyaq_a11y.dart';
+import '../../components/foundation/siyaq_text.dart';
 import '../../theme/context_tokens.dart';
 import '../../tokens/siyaq_colors.dart';
 import '../../tokens/siyaq_elevation.dart';
@@ -355,6 +356,48 @@ class ColorTokensPage extends StatelessWidget {
                 ),
               ),
             ),
+            const SizedBox(height: SiyaqSpacing.lg),
+            // Gameplay heat ramp — theme-independent by design: "hot" must read
+            // hot on any background, so these three stops do not vary by
+            // brightness. `SiyaqHeat.color` interpolates between them.
+            SiyaqText(
+              'HEAT RAMP · cold → warm → hot',
+              role: SiyaqTextRole.labelSmall,
+              script: SiyaqScript.mono,
+              color: context.colors.textMuted,
+            ),
+            const SizedBox(height: SiyaqSpacing.sm),
+            Row(
+              children: [
+                for (final (name, colour) in SiyaqColors.heatRamp)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 2),
+                      child: Column(
+                        children: [
+                          Container(
+                            height: 20,
+                            decoration: BoxDecoration(
+                              color: colour,
+                              borderRadius: BorderRadius.circular(
+                                SiyaqRadius.sm,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: SiyaqSpacing.xxxs),
+                          SiyaqText(
+                            name,
+                            role: SiyaqTextRole.labelSmall,
+                            script: SiyaqScript.mono,
+                            color: context.colors.textMuted,
+                            maxLines: 1,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(height: SiyaqSpacing.sm),
             Row(
               children: [
@@ -591,6 +634,46 @@ class LayoutTokensPage extends StatelessWidget {
         GallerySection(
           title: 'MOTION  · carried from the app; Figma defines none',
           children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: SiyaqSpacing.sm),
+              child: Text(
+                context.motion.reduced
+                    ? 'reduce motion: ON — every role resolves to 0ms'
+                    : 'roles resolve via context.motion; they collapse to 0ms '
+                          'under the OS reduce-motion setting',
+                style: context.type.role(
+                  SiyaqTextRole.labelSmall,
+                  script: SiyaqScript.latin,
+                  color: c.textMuted,
+                ),
+              ),
+            ),
+            for (final (name, d) in SiyaqMotion.roles)
+              Padding(
+                padding: const EdgeInsets.only(bottom: SiyaqSpacing.xxs),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 96,
+                      child: Text(
+                        name,
+                        style: context.type.role(
+                          SiyaqTextRole.bodyMedium,
+                          script: SiyaqScript.latin,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${d.inMilliseconds}ms',
+                      style: context.type.numeric(
+                        SiyaqTextRole.labelSmall,
+                        color: c.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: SiyaqSpacing.sm),
             for (final (name, d) in SiyaqMotion.durations)
               Padding(
                 padding: const EdgeInsets.only(bottom: SiyaqSpacing.xxs),

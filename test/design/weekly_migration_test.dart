@@ -20,6 +20,7 @@ Future<void> _pump(
   Object? error,
   bool loading = false,
   double textScale = 1.0,
+  String? activeRunId,
   Size size = const Size(390, 1200),
 }) async {
   t.view.physicalSize = size;
@@ -36,6 +37,7 @@ Future<void> _pump(
       error: error,
       loading: loading,
       textScale: textScale,
+      activeRunId: activeRunId,
     ),
   );
   if (loading) {
@@ -51,20 +53,41 @@ Future<void> _pump(
 }
 
 void main() {
-  group('week progress derivation', () {
-    test('maps remaining time to elapsed fraction of the week', () {
-      // Pure function over the server's `timeRemaining` — no new API field.
+  group('week progress is remaining time, not elapsed work', () {
+    // The bar is labelled "time remaining", so the value has to *be* remaining
+    // time: full at the start of the week, empty when it expires. It used to
+    // return the elapsed fraction, so the meter filled up as the player ran out
+    // of time — the exact inverse of its own label.
+    test('starts full and drains to empty', () {
       expect(SiyagWeeklyScreen.weekProgress(null), isNull);
-      expect(SiyagWeeklyScreen.weekProgress(const Duration(days: 7)), 0.0);
-      expect(SiyagWeeklyScreen.weekProgress(Duration.zero), 1.0);
+      // Start of week: untouched.
+      expect(SiyagWeeklyScreen.weekProgress(const Duration(days: 7)), 1.0);
+      // Middle of week.
       expect(
         SiyagWeeklyScreen.weekProgress(const Duration(days: 3, hours: 12)),
         closeTo(0.5, 0.001),
       );
+      // Near expiration.
+      expect(
+        SiyagWeeklyScreen.weekProgress(const Duration(hours: 3)),
+        closeTo(0.018, 0.002),
+      );
+      // Expired.
+      expect(SiyagWeeklyScreen.weekProgress(Duration.zero), 0.0);
     });
 
-    test('clamps a remaining time longer than a week', () {
-      expect(SiyagWeeklyScreen.weekProgress(const Duration(days: 30)), 0.0);
+    test('is monotonically decreasing as time runs out', () {
+      final samples = [
+        for (final d in [7, 5, 3, 1, 0])
+          SiyagWeeklyScreen.weekProgress(Duration(days: d))!,
+      ];
+      for (var i = 1; i < samples.length; i++) {
+        expect(samples[i], lessThan(samples[i - 1]));
+      }
+    });
+
+    test('clamps a remaining time longer than a week to full', () {
+      expect(SiyagWeeklyScreen.weekProgress(const Duration(days: 30)), 1.0);
     });
   });
 
@@ -117,10 +140,24 @@ void main() {
       expect(find.text('Resume challenge'), findsNothing);
     });
 
-    testWidgets('participated shows Resume', (t) async {
-      await _pump(t, lang: 'en', participated: true);
+    testWidgets('no run yet shows Start', (t) async {
+      await _pump(t, lang: 'en');
+      expect(find.text('Start challenge'), findsOneWidget);
+      expect(find.text('Resume challenge'), findsNothing);
+    });
+
+    testWidgets('an active run shows Resume, not Start', (t) async {
+      // Driven by the persisted run id, not by `participated` — a player who
+      // took part in a *previous* week has nothing to resume.
+      await _pump(t, lang: 'en', activeRunId: 'run_1');
       expect(find.text('Resume challenge'), findsOneWidget);
       expect(find.text('Start challenge'), findsNothing);
+    });
+
+    testWidgets('a completed week offers neither Start nor Resume', (t) async {
+      await _pump(t, lang: 'en', state: WeeklyState.completed);
+      expect(find.text('Start challenge'), findsNothing);
+      expect(find.text('Resume challenge'), findsNothing);
     });
 
     testWidgets('completed shows a success banner and tinted state', (t) async {
@@ -246,12 +283,14 @@ void main() {
   });
 
   group('accessibility', () {
-    testWidgets('progress is announced as a percentage', (t) async {
+    testWidgets('progress announces the actual time left, not a percentage', (
+      t,
+    ) async {
       await _pump(t, lang: 'en');
       final handle = t.ensureSemantics();
-      // 2d 7h 41m remaining of 7 days ≈ 66% elapsed.
+      // "62% remaining" is not something a player can act on; the duration is.
       expect(
-        find.bySemanticsLabel(RegExp(r'Time remaining: \d+%')),
+        find.bySemanticsLabel(RegExp(r'Time remaining: 2 .*, 7 .*, 41 .*')),
         findsOneWidget,
       );
       handle.dispose();

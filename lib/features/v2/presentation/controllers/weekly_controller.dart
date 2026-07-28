@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/legacy.dart';
 
 import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../domain/entities/adaptive_hint.dart';
+import '../../../../core/sound/feedback_service.dart';
 import '../../domain/entities/gameplay_language.dart';
 import '../../domain/entities/hint_mode.dart';
 import '../../domain/entities/weekly.dart';
@@ -121,7 +122,9 @@ class WeeklyRunController extends Notifier<WeeklyRunState> {
           .read(weeklyRepositoryProvider)
           .guess(runId: run.runId, word: word);
       final outcome = res.outcome;
+      final feedback = ref.read(feedbackServiceProvider);
       if (outcome.unknown) {
+        feedback.invalidWord();
         state = state.copyWith(
           submitting: false,
           unknownWord: word,
@@ -130,6 +133,7 @@ class WeeklyRunController extends Notifier<WeeklyRunState> {
         return;
       }
       if (outcome.duplicate) {
+        feedback.guessResult(solved: false, duplicate: true);
         // Canonical duplicate — no attempt added.
         state = state.copyWith(
           submitting: false,
@@ -139,6 +143,16 @@ class WeeklyRunController extends Notifier<WeeklyRunState> {
         );
         return;
       }
+      // Best improved when the run's best rank moved down. The pre-submit best
+      // comes from the run we already had.
+      final prevBest = run.bestGuess?.rank;
+      final newBest = res.run.bestGuess?.rank;
+      feedback.guessResult(
+        solved: res.run.solved,
+        proximity: outcome.proximity,
+        bestImproved:
+            newBest != null && (prevBest == null || newBest < prevBest),
+      );
       state = state.copyWith(
         submitting: false,
         run: res.run,
@@ -161,6 +175,7 @@ class WeeklyRunController extends Notifier<WeeklyRunState> {
       final hint = await ref
           .read(weeklyRepositoryProvider)
           .hint(runId: run.runId, mode: mode);
+      ref.read(feedbackServiceProvider).hintRevealed();
       // A hint updates hint counters but is NOT a user attempt and its rank is
       // NOT the user's best rank.
       final updated = WeeklyRun(

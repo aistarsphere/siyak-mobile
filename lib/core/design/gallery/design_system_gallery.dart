@@ -8,6 +8,7 @@ import '../tokens/siyaq_typography.dart';
 import 'gallery_controls.dart';
 import 'gallery_stage.dart';
 import 'pages/component_pages.dart';
+import 'pages/gameplay_pages.dart';
 import 'pages/room_pages.dart';
 import 'pages/shared_pages.dart';
 import 'pages/token_pages.dart';
@@ -53,6 +54,7 @@ class _DesignSystemGalleryState extends State<DesignSystemGallery> {
     'Components',
     'Shared',
     'Room',
+    'Gameplay',
   ];
 
   @override
@@ -94,7 +96,8 @@ class _DesignSystemGalleryState extends State<DesignSystemGallery> {
     4 => const ButtonGalleryPage(),
     5 => const ComponentGalleryPage(),
     6 => const SharedComponentsPage(),
-    _ => const RoomComponentsPage(),
+    7 => const RoomComponentsPage(),
+    _ => const GameplayComponentsPage(),
   };
 }
 

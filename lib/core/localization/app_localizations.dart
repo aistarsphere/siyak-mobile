@@ -40,7 +40,11 @@ class AppLocalizations {
         case ApiErrorType.timeout:
           return this('errTimeout');
         case ApiErrorType.badRequest:
-          return error.detail ?? this('errUnknown');
+          // Server `detail` strings are authored in English only, so showing
+          // them verbatim put an English sentence in front of Arabic players
+          // (device: "Please enter a word." inside the Arabic UI). The detail
+          // stays on the exception for logs; the player gets localized copy.
+          return this('errRejectedWord');
         case ApiErrorType.server:
         case ApiErrorType.unknown:
           return this('errServer');

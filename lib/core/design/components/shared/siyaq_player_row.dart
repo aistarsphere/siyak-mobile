@@ -136,52 +136,79 @@ class SiyaqPlayerRow extends StatelessWidget {
         horizontal: SiyaqSpacing.lg,
         vertical: SiyaqSpacing.md,
       ),
-      child: Row(
-        children: [
-          SiyaqAvatar(
-            name: name,
-            imageUrl: avatarUrl,
-            size: SiyaqAvatarSize.small,
-            presence: presence,
-            accent: accent ?? (roleAccent ?? c.success),
-          ),
-          const SizedBox(width: SiyaqSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SiyaqText(
-                  displayName,
-                  role: SiyaqTextRole.bodyLarge,
-                  weight: isSelf ? FontWeight.w600 : FontWeight.w500,
-                  maxLines: 1,
+      child: LayoutBuilder(
+        builder: (context, box) {
+          final scale = MediaQuery.textScalerOf(context).scale(1);
+          // Below this the role chip cannot share a line with the name without
+          // pushing the row past its edge — a long label ("Your turn") at 2.0x
+          // on a 320px screen overflowed by 15px. It moves under the name
+          // instead, which is also where it reads better when it is that wide.
+          //
+          // 200 is deliberately tight: a 360dp phone at 1.0x has ~290px here and
+          // must keep the chip inline (a first pass used 300 and stacked the
+          // Lobby's host badge on an ordinary handset), while 320px at 1.6x has
+          // ~248px and must stack.
+          final stackRole = roleLabel != null && box.maxWidth < 200 * scale;
+
+          final chip = roleLabel == null
+              ? null
+              : SiyaqChip(
+                  label: roleLabel!,
+                  variant: SiyaqChipVariant.accent,
+                  accent: roleAccent ?? c.primary,
+                );
+
+          return Row(
+            children: [
+              SiyaqAvatar(
+                name: name,
+                imageUrl: avatarUrl,
+                size: SiyaqAvatarSize.small,
+                presence: presence,
+                accent: accent ?? (roleAccent ?? c.success),
+              ),
+              const SizedBox(width: SiyaqSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SiyaqText(
+                      displayName,
+                      role: SiyaqTextRole.bodyLarge,
+                      weight: isSelf ? FontWeight.w600 : FontWeight.w500,
+                      maxLines: 1,
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: SiyaqSpacing.xxxs),
+                      SiyaqText.numeric(
+                        subtitle!,
+                        role: SiyaqTextRole.labelSmall,
+                        color: c.textMuted,
+                        maxLines: 1,
+                      ),
+                    ],
+                    if (stackRole) ...[
+                      const SizedBox(height: SiyaqSpacing.xs),
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: chip,
+                      ),
+                    ],
+                  ],
                 ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: SiyaqSpacing.xxxs),
-                  SiyaqText.numeric(
-                    subtitle!,
-                    role: SiyaqTextRole.labelSmall,
-                    color: c.textMuted,
-                    maxLines: 1,
-                  ),
-                ],
+              ),
+              if (chip != null && !stackRole) ...[
+                const SizedBox(width: SiyaqSpacing.sm),
+                chip,
               ],
-            ),
-          ),
-          if (roleLabel != null) ...[
-            const SizedBox(width: SiyaqSpacing.sm),
-            SiyaqChip(
-              label: roleLabel!,
-              variant: SiyaqChipVariant.accent,
-              accent: roleAccent ?? c.primary,
-            ),
-          ],
-          if (trailing != null) ...[
-            const SizedBox(width: SiyaqSpacing.sm),
-            trailing!,
-          ],
-        ],
+              if (trailing != null) ...[
+                const SizedBox(width: SiyaqSpacing.sm),
+                trailing!,
+              ],
+            ],
+          );
+        },
       ),
     );
   }

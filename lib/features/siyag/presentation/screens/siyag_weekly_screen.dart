@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 
 import '../../../../core/design/siyaq_design.dart';
 import '../../../../core/localization/app_localizations.dart';
@@ -8,6 +9,7 @@ import '../../../v2/domain/entities/gameplay_language.dart';
 import '../../../v2/domain/entities/weekly.dart';
 import '../../../v2/presentation/controllers/weekly_controller.dart';
 import '../siyag_route.dart';
+import 'siyag_result_screen.dart';
 import 'siyag_weekly_game_screen.dart';
 
 /// Weekly challenge overview: hero with countdown, week progress, meta stats and
@@ -16,6 +18,13 @@ import 'siyag_weekly_game_screen.dart';
 /// Built from the Siyaq design system — no screen-local cards, meta tiles, error
 /// state or text styles. Providers, navigation and the start/resume contract are
 /// unchanged from the pre-migration implementation.
+/// Weekly vocabulary language. Seeded from the app language, then the player's
+/// choice for the session — the weekly challenge exists in both languages and
+/// the UI locale should not decide which one they play.
+final weeklyLangProvider = StateProvider<GameplayLanguage>(
+  (ref) => GameplayLanguage.fromCode(ref.watch(appSettingsProvider).lang),
+);
+
 class SiyagWeeklyScreen extends ConsumerWidget {
   const SiyagWeeklyScreen({super.key});
 
@@ -25,7 +34,7 @@ class SiyagWeeklyScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationsProvider);
-    final lang = GameplayLanguage.fromCode(ref.watch(appSettingsProvider).lang);
+    final lang = ref.watch(weeklyLangProvider);
     final async = ref.watch(weeklyChallengeProvider(lang));
 
     return Directionality(
@@ -50,9 +59,31 @@ class SiyagWeeklyScreen extends ConsumerWidget {
                   SiyaqSpacing.sm,
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  SiyaqSpacing.xl,
+                  0,
+                  SiyaqSpacing.xl,
+                  SiyaqSpacing.md,
+                ),
+                child: SiyaqSegmentedControl<GameplayLanguage>(
+                  value: lang,
+                  onChanged: (l) =>
+                      ref.read(weeklyLangProvider.notifier).state = l,
+                  segments: [
+                    for (final l in GameplayLanguage.values)
+                      SiyaqSegment(
+                        value: l,
+                        label: loc(l.labelKey),
+                        semanticLabel:
+                            '${loc('gameLanguage')}: ${loc(l.labelKey)}',
+                      ),
+                  ],
+                ),
+              ),
               Expanded(
                 child: AnimatedSwitcher(
-                  duration: SiyaqMotion.summaryIn,
+                  duration: context.motion.summaryIn,
                   child: async.when(
                     loading: () => SiyaqLoader(semanticLabel: loc('loading')),
                     error: (e, _) => SiyaqEmptyState.error(
@@ -73,18 +104,46 @@ class SiyagWeeklyScreen extends ConsumerWidget {
     );
   }
 
+  /// Lifecycle of the *challenge itself* — whether this week is still open.
   static String stateLabel(AppLocalizations loc, WeeklyState s) => switch (s) {
     WeeklyState.active => loc('inProgress'),
     WeeklyState.completed => loc('completed'),
     WeeklyState.notStarted => loc('notStarted'),
   };
 
-  /// Fraction of the week already elapsed, from the server's `timeRemaining`.
-  /// `null` when the server did not send a remaining duration.
+  /// What **this player** has done with the challenge.
+  ///
+  /// [WeeklyState] is mapped from the server's challenge `status`, so it reads
+  /// "active" for everyone the moment the week opens. Labelling that as the
+  /// player's participation told a first-time visitor they were already playing
+  /// (device: chip "قيد اللعب" beside a CTA reading "Start challenge").
+  ///
+  /// Derived from the same two signals the CTA trusts, so the card and the
+  /// button can never disagree: a finished run has a placement, an unfinished
+  /// one has a locally stored run id. (`WeeklyChallenge.participated` would be
+  /// the right source, but the API does not populate it.)
+  static String participationLabel(
+    AppLocalizations loc, {
+    required bool hasPlacement,
+    required bool hasActiveRun,
+  }) {
+    if (hasPlacement) return loc('completed');
+    if (hasActiveRun) return loc('inProgress');
+    return loc('notStarted');
+  }
+
+  /// Fraction of the week **still remaining**, from the server's
+  /// `timeRemaining`. Starts at 1.0 and drains to 0.0 as the week expires.
+  ///
+  /// This used to return the fraction *elapsed* while the bar was labelled
+  /// "time remaining", so the meter filled up as the player ran out of time —
+  /// the inverse of what it claimed. The fix is the value, not the fill
+  /// direction: an expired week must read empty, and an a11y label built from
+  /// this number must be able to say "0% remaining" truthfully.
   static double? weekProgress(Duration? remaining) {
     if (remaining == null) return null;
     final left = remaining.inSeconds.clamp(0, _week.inSeconds);
-    return 1 - (left / _week.inSeconds);
+    return left / _week.inSeconds;
   }
 }
 
@@ -109,6 +168,13 @@ class _Overview extends ConsumerWidget {
     ];
   }
 
+  /// "6 days, 21 hours, 10 minutes" from the same units the countdown shows.
+  String _spokenRemaining(Duration? d) {
+    if (d == null) return loc('noRankYet');
+    if (d <= Duration.zero) return loc('weeklyExpired');
+    return _countdown(d).map((e) => '${int.parse(e.$1)} ${e.$2}').join(', ');
+  }
+
   Future<void> _start(BuildContext context, WidgetRef ref) async {
     await ref.read(weeklyRunControllerProvider.notifier).start(lang);
     if (context.mounted) {
@@ -123,6 +189,12 @@ class _Overview extends ConsumerWidget {
     final c = context.colors;
     final completed = challenge.state == WeeklyState.completed;
     final progress = SiyagWeeklyScreen.weekProgress(challenge.timeRemaining);
+
+    // Attempt count and best rank live on the *run*, not on the weekly
+    // overview, so they can only be shown once a run is loaded. The persisted
+    // run id is what tells us a run exists at all without starting one.
+    final run = ref.watch(weeklyRunControllerProvider).run;
+    final hasActiveRun = ref.watch(activeWeeklyRunIdProvider) != null;
 
     return Column(
       children: [
@@ -180,7 +252,11 @@ class _Overview extends ConsumerWidget {
                       SiyaqProgressBar(
                         value: progress,
                         label: loc('timeRemaining'),
-                        semanticLabel: loc('timeRemaining'),
+                        // States the actual time left. "Time remaining: 62%"
+                        // tells a screen-reader user nothing they can act on.
+                        semanticLabel:
+                            '${loc('timeRemaining')}: '
+                            '${_spokenRemaining(challenge.timeRemaining)}',
                       ),
                     ],
                   ],
@@ -236,17 +312,61 @@ class _Overview extends ConsumerWidget {
                         ? '${loc('yourPlacement')}: ${challenge.placement}'
                         : loc('yourPlacement'),
                   ),
-                  SiyaqStatCard(
-                    value: SiyagWeeklyScreen.stateLabel(loc, challenge.state),
-                    label: loc('participation'),
-                    numeric: false,
-                    accent: completed ? c.success : null,
-                    semanticLabel:
-                        '${loc('participation')}: '
-                        '${SiyagWeeklyScreen.stateLabel(loc, challenge.state)}',
+                  Builder(
+                    builder: (context) {
+                      final participation =
+                          SiyagWeeklyScreen.participationLabel(
+                            loc,
+                            hasPlacement: challenge.placement != null,
+                            hasActiveRun: hasActiveRun,
+                          );
+                      return SiyaqStatCard(
+                        value: participation,
+                        label: loc('participation'),
+                        numeric: false,
+                        accent: challenge.placement != null ? c.success : null,
+                        semanticLabel:
+                            '${loc('participation')}: $participation',
+                      );
+                    },
                   ),
                 ],
               ),
+
+              // ── Player progress (only what the run actually carries) ───────
+              if (run != null) ...[
+                const SizedBox(height: SiyaqSpacing.sm),
+                SiyaqStatGrid(
+                  columns: 3,
+                  minCellWidth: 88,
+                  children: [
+                    SiyaqStatCard(
+                      value: '${run.attempts}',
+                      label: loc('guessHistory'),
+                      semanticLabel: '${loc('guessHistory')}: ${run.attempts}',
+                    ),
+                    SiyaqStatCard(
+                      value: run.bestGuess != null
+                          ? '#${run.bestGuess!.rank}'
+                          : null,
+                      label: loc('bestRankLabel'),
+                      accent: run.bestGuess != null ? c.primary : null,
+                      semanticLabel: run.bestGuess != null
+                          ? '${loc('bestRankLabel')}: ${run.bestGuess!.rank}'
+                          : loc('bestRankLabel'),
+                    ),
+                    SiyaqStatCard(
+                      value: run.bestGuess?.word,
+                      label: loc('bestGuess'),
+                      numeric: false,
+                      // Game content: the guess follows the run's language.
+                      semanticLabel:
+                          '${loc('bestGuess')}: '
+                          '${run.bestGuess?.word ?? loc('noRankYet')}',
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -259,16 +379,74 @@ class _Overview extends ConsumerWidget {
             SiyaqSpacing.xl,
             SiyaqSpacing.xxl,
           ),
-          child: SiyaqButton(
-            label: challenge.participated
-                ? loc('resumeWeekly')
-                : loc('startWeekly'),
-            icon: SiyaqIcons.play,
-            fullWidth: true,
-            onPressed: () => _start(context, ref),
+          child: _PrimaryAction(
+            loc: loc,
+            completed: completed,
+            hasActiveRun: hasActiveRun,
+            canViewResult: run != null,
+            onStart: () => _start(context, ref),
+            onViewResult: run == null
+                ? null
+                : () => Navigator.of(context).push(
+                    siyagRoute(
+                      SiyagResultScreen(
+                        secretWord: run.secretWord ?? '',
+                        attempts: run.attempts,
+                        hintsUsed: run.hintsUsed,
+                        elapsed: run.elapsed,
+                      ),
+                    ),
+                  ),
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The weekly primary action, which is not always "start".
+///
+/// Three distinct states the old single button collapsed into one:
+/// nothing started yet, a run already in flight, and a finished week. The
+/// finished case only offers a result when a run is actually loaded — the weekly
+/// *overview* endpoint returns no attempt count, best rank or secret word, so
+/// there is nothing to show a returning player whose run is not in memory. That
+/// gap is reported rather than papered over with a dead button.
+class _PrimaryAction extends StatelessWidget {
+  const _PrimaryAction({
+    required this.loc,
+    required this.completed,
+    required this.hasActiveRun,
+    required this.canViewResult,
+    required this.onStart,
+    required this.onViewResult,
+  });
+
+  final AppLocalizations loc;
+  final bool completed;
+  final bool hasActiveRun;
+  final bool canViewResult;
+  final VoidCallback onStart;
+  final VoidCallback? onViewResult;
+
+  @override
+  Widget build(BuildContext context) {
+    if (completed) {
+      // Nothing to open and nothing to replay: the completed banner above
+      // already states the outcome, so no action is better than a dead one.
+      if (!canViewResult) return const SizedBox.shrink();
+      return SiyaqButton(
+        label: loc('viewResult'),
+        icon: SiyaqIcons.trophy,
+        fullWidth: true,
+        onPressed: onViewResult,
+      );
+    }
+    return SiyaqButton(
+      label: hasActiveRun ? loc('resumeWeekly') : loc('startWeekly'),
+      icon: SiyaqIcons.play,
+      fullWidth: true,
+      onPressed: onStart,
     );
   }
 }

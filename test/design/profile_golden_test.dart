@@ -17,17 +17,16 @@ import '../helpers/profile_harness.dart';
 /// ```
 Future<void> _loadFonts() async {
   const families = <String, List<String>>{
+    'IBMPlexSansArabic': [
+      'assets/fonts/siyag/IBMPlexSansArabic-Regular.ttf',
+      'assets/fonts/siyag/IBMPlexSansArabic-Medium.ttf',
+      'assets/fonts/siyag/IBMPlexSansArabic-SemiBold.ttf',
+      'assets/fonts/siyag/IBMPlexSansArabic-Bold.ttf',
+    ],
+    'Inter': ['assets/fonts/siyag/Inter.ttf'],
     'NotoNaskhArabic': [
       'assets/fonts/siyag/NotoNaskhArabic-400.ttf',
-      'assets/fonts/siyag/NotoNaskhArabic-500.ttf',
-      'assets/fonts/siyag/NotoNaskhArabic-600.ttf',
       'assets/fonts/siyag/NotoNaskhArabic-700.ttf',
-    ],
-    'PlusJakartaSans': [
-      'assets/fonts/siyag/PlusJakartaSans-400.ttf',
-      'assets/fonts/siyag/PlusJakartaSans-500.ttf',
-      'assets/fonts/siyag/PlusJakartaSans-600.ttf',
-      'assets/fonts/siyag/PlusJakartaSans-700.ttf',
     ],
     'DMMono': [
       'assets/fonts/siyag/DMMono-400.ttf',

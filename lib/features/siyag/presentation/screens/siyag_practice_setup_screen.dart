@@ -2,17 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
-import '../../../../core/design/theme/context_tokens.dart';
-import '../../../../core/design/theme/legacy_type_bridge.dart';
-import '../../../../core/widgets/siyag/siyag_common.dart';
-import '../../../../core/widgets/siyag/siyag_tap.dart';
+import '../../../../core/design/siyaq_design.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../game/presentation/controllers/game_controller.dart';
 import '../../../game/presentation/controllers/providers.dart';
 import '../../../v2/domain/entities/gameplay_language.dart';
 import '../siyag_route.dart';
 import 'siyag_practice_game_screen.dart';
-import 'siyag_topbar.dart';
 
 final _practiceLangProvider = StateProvider<GameplayLanguage>(
   (ref) => GameplayLanguage.fromCode(ref.watch(appSettingsProvider).lang),
@@ -20,134 +16,175 @@ final _practiceLangProvider = StateProvider<GameplayLanguage>(
 final _practiceCatProvider = StateProvider<String?>((ref) => null);
 final _practiceDiffProvider = StateProvider<String>((ref) => 'medium');
 
-/// Solo Practice setup — choose game language + category + difficulty before
-/// starting an unlimited V1 practice game (V1 fallback preserved).
+/// Whether the start call is in flight — a proper provider instead of the old
+/// `var busy` mutated through a StatefulBuilder, which reset on any parent
+/// rebuild and could double-fire the start action.
+final _practiceStartingProvider = StateProvider<bool>((ref) => false);
+
+/// Solo Practice setup — game language, category and difficulty before an
+/// unlimited practice game (V1 fallback preserved).
+///
+/// Built from the Siyaq design system. The catalogue call, provider wiring and
+/// navigation are unchanged from the pre-migration implementation; the error
+/// state gained a retry it never had.
 class SiyagPracticeSetupScreen extends ConsumerWidget {
   const SiyagPracticeSetupScreen({super.key});
+
+  Future<void> _start(BuildContext context, WidgetRef ref) async {
+    final lang = ref.read(_practiceLangProvider);
+    final info = ref.read(modesByLanguageProvider(lang.code)).value;
+    if (info == null || info.playable.isEmpty) return;
+    if (ref.read(_practiceStartingProvider)) return;
+
+    final code = ref.read(_practiceCatProvider) ?? info.playable.first.code;
+    final cat = info.playable.firstWhere(
+      (c) => c.code == code,
+      orElse: () => info.playable.first,
+    );
+    ref.read(_practiceStartingProvider.notifier).state = true;
+    try {
+      await ref
+          .read(gameControllerProvider.notifier)
+          .startNewGame(
+            language: lang.code,
+            category: cat.code,
+            categoryLabel: cat.labelFor(lang.code),
+            difficulty: ref.read(_practiceDiffProvider),
+          );
+      if (context.mounted) {
+        Navigator.of(
+          context,
+        ).pushReplacement(siyagRoute(const SiyagPracticeGameScreen()));
+      }
+    } finally {
+      ref.read(_practiceStartingProvider.notifier).state = false;
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationsProvider);
+    final c = context.colors;
     final lang = ref.watch(_practiceLangProvider);
     final modes = ref.watch(modesByLanguageProvider(lang.code));
-    var busy = false;
+    final starting = ref.watch(_practiceStartingProvider);
+    final canStart = modes.value?.playable.isNotEmpty ?? false;
 
     return Directionality(
       textDirection: loc.direction,
       child: Scaffold(
-        backgroundColor: context.colors.background,
+        backgroundColor: c.background,
         body: SafeArea(
           bottom: false,
           child: Column(
             children: [
-              SiyagTopBar(
+              SiyaqScreenHeader(
                 kicker: loc('modeSolo'),
-                kickerColor: context.colors.info,
+                accent: c.info,
+                onBack: () => Navigator.of(context).maybePop(),
+                backLabel: loc('back'),
+                padding: const EdgeInsets.fromLTRB(
+                  SiyaqSpacing.xl,
+                  SiyaqSpacing.md,
+                  SiyaqSpacing.xl,
+                  SiyaqSpacing.sm,
+                ),
               ),
               Expanded(
                 child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
+                  duration: context.motion.summaryIn,
                   child: modes.when(
-                    loading: () => Center(
-                      child: CircularProgressIndicator(
-                        color: context.colors.primary,
-                      ),
-                    ),
-                    error: (e, _) => Center(
-                      child: Text(
-                        loc('somethingWrong'),
-                        style: context.legacyType.ar(
-                          15,
-                          color: context.colors.textMuted,
-                        ),
-                      ),
+                    loading: () => SiyaqLoader(semanticLabel: loc('loading')),
+                    error: (e, _) => SiyaqEmptyState.error(
+                      title: loc('somethingWrong'),
+                      body: loc('errNetwork'),
+                      actionLabel: loc('retry'),
+                      onAction: () =>
+                          ref.invalidate(modesByLanguageProvider(lang.code)),
                     ),
                     data: (info) {
                       final cats = info.playable;
+                      if (cats.isEmpty) {
+                        return SiyaqEmptyState(
+                          title: loc('emptyGeneric'),
+                          icon: SiyaqIcons.catGeneral,
+                        );
+                      }
                       final selCat =
-                          ref.watch(_practiceCatProvider) ??
-                          (cats.isNotEmpty ? cats.first.code : '');
+                          ref.watch(_practiceCatProvider) ?? cats.first.code;
                       final selDiff = ref.watch(_practiceDiffProvider);
                       return ListView(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                        padding: const EdgeInsets.fromLTRB(
+                          SiyaqSpacing.xl,
+                          SiyaqSpacing.sm,
+                          SiyaqSpacing.xl,
+                          SiyaqSpacing.xxl,
+                        ),
                         children: [
-                          _label(context, loc('chooseGameLang')),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              for (final l in GameplayLanguage.values) ...[
-                                _chip(
-                                  context,
-                                  l == GameplayLanguage.arabic
-                                      ? loc('langArabic')
-                                      : loc('langEnglish'),
-                                  l == lang,
-                                  () {
-                                    ref
-                                            .read(
-                                              _practiceLangProvider.notifier,
-                                            )
-                                            .state =
-                                        l;
-                                    ref
-                                            .read(_practiceCatProvider.notifier)
-                                            .state =
-                                        null;
-                                  },
+                          _Label(loc('chooseGameLang')),
+                          const SizedBox(height: SiyaqSpacing.sm),
+                          SiyaqSegmentedControl<GameplayLanguage>(
+                            value: lang,
+                            accent: c.info,
+                            onChanged: (l) {
+                              ref.read(_practiceLangProvider.notifier).state =
+                                  l;
+                              ref.read(_practiceCatProvider.notifier).state =
+                                  null;
+                            },
+                            segments: [
+                              for (final l in GameplayLanguage.values)
+                                SiyaqSegment(
+                                  value: l,
+                                  label: loc(l.labelKey),
+                                  semanticLabel:
+                                      '${loc('gameLanguage')}: ${loc(l.labelKey)}',
                                 ),
-                                const SizedBox(width: 8),
-                              ],
                             ],
                           ),
-                          const SizedBox(height: 20),
-                          _label(context, loc('category')),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: SiyaqSpacing.xl),
+                          _Label(loc('category')),
+                          const SizedBox(height: SiyaqSpacing.sm),
                           Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
+                            spacing: SiyaqSpacing.md,
+                            runSpacing: SiyaqSpacing.md,
                             children: [
-                              for (final c in cats)
-                                _chip(
-                                  context,
-                                  c.labelFor(lang.code),
-                                  c.code == selCat,
-                                  () =>
+                              for (final cat in cats)
+                                SiyaqSelectTile(
+                                  icon: SiyaqIcons.category(cat.code),
+                                  label: cat.labelFor(lang.code),
+                                  selected: cat.code == selCat,
+                                  accent: c.info,
+                                  onTap: () =>
                                       ref
                                           .read(_practiceCatProvider.notifier)
-                                          .state = c
+                                          .state = cat
                                           .code,
                                 ),
                             ],
                           ),
-                          const SizedBox(height: 20),
-                          _label(context, loc('difficulty')),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              for (final d in const [
-                                'easy',
-                                'medium',
-                                'hard',
-                              ]) ...[
-                                _chip(
-                                  context,
-                                  d == 'easy'
-                                      ? loc('diffEasy')
-                                      : d == 'hard'
-                                      ? loc('diffHard')
-                                      : loc('diffMedium'),
-                                  d == selDiff,
-                                  () =>
-                                      ref
-                                              .read(
-                                                _practiceDiffProvider.notifier,
-                                              )
-                                              .state =
-                                          d,
-                                  accent: context.colors.info,
-                                ),
-                                const SizedBox(width: 8),
-                              ],
+                          const SizedBox(height: SiyaqSpacing.xl),
+                          _Label(loc('difficulty')),
+                          const SizedBox(height: SiyaqSpacing.sm),
+                          SiyaqSegmentedControl<String>(
+                            value: selDiff,
+                            accent: c.info,
+                            onChanged: (d) =>
+                                ref.read(_practiceDiffProvider.notifier).state =
+                                    d,
+                            segments: [
+                              SiyaqSegment(
+                                value: 'easy',
+                                label: loc('diffEasy'),
+                              ),
+                              SiyaqSegment(
+                                value: 'medium',
+                                label: loc('diffMedium'),
+                              ),
+                              SiyaqSegment(
+                                value: 'hard',
+                                label: loc('diffHard'),
+                              ),
                             ],
                           ),
                         ],
@@ -157,41 +194,21 @@ class SiyagPracticeSetupScreen extends ConsumerWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                child: StatefulBuilder(
-                  builder: (context, setLocal) {
-                    return SiyagPrimaryButton(
-                      label: loc('startGame'),
-                      color: context.colors.info,
-                      icon: Icons.play_arrow_rounded,
-                      busy: busy,
-                      onTap: () async {
-                        final info = modes.value;
-                        if (info == null || info.playable.isEmpty) return;
-                        final code =
-                            ref.read(_practiceCatProvider) ??
-                            info.playable.first.code;
-                        final cat = info.playable.firstWhere(
-                          (c) => c.code == code,
-                          orElse: () => info.playable.first,
-                        );
-                        setLocal(() => busy = true);
-                        await ref
-                            .read(gameControllerProvider.notifier)
-                            .startNewGame(
-                              language: lang.code,
-                              category: cat.code,
-                              categoryLabel: cat.labelFor(lang.code),
-                              difficulty: ref.read(_practiceDiffProvider),
-                            );
-                        if (context.mounted) {
-                          Navigator.of(context).pushReplacement(
-                            siyagRoute(const SiyagPracticeGameScreen()),
-                          );
-                        }
-                      },
-                    );
-                  },
+                padding: const EdgeInsets.fromLTRB(
+                  SiyaqSpacing.xl,
+                  SiyaqSpacing.sm,
+                  SiyaqSpacing.xl,
+                  SiyaqSpacing.xxl,
+                ),
+                child: SiyaqButton(
+                  label: loc('startGame'),
+                  icon: SiyaqIcons.play,
+                  accent: c.info,
+                  fullWidth: true,
+                  loading: starting,
+                  onPressed: canStart && !starting
+                      ? () => _start(context, ref)
+                      : null,
                 ),
               ),
             ],
@@ -200,41 +217,21 @@ class SiyagPracticeSetupScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Widget _label(BuildContext context, String t) => Align(
+class _Label extends StatelessWidget {
+  const _Label(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Align(
     alignment: AlignmentDirectional.centerStart,
-    child: Text(
-      t,
-      style: context.legacyType.ar(13, color: context.colors.textSecondary),
-    ),
-  );
-
-  Widget _chip(
-    BuildContext context,
-    String label,
-    bool selected,
-    VoidCallback onTap, {
-    Color? accent,
-  }) => SiyagTap(
-    onTap: onTap,
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 160),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-      decoration: BoxDecoration(
-        color: selected
-            ? (accent ?? context.colors.primary)
-            : context.colors.surface,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: context.legacyType.ar(
-          13,
-          color: selected
-              ? context.colors.onColorLegacy(accent ?? context.colors.primary)
-              : context.colors.textMuted,
-        ),
-      ),
+    child: SiyaqText(
+      text,
+      role: SiyaqTextRole.bodySmall,
+      color: context.colors.textSecondary,
+      header: true,
     ),
   );
 }

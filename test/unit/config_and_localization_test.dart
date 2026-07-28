@@ -62,12 +62,19 @@ void main() {
   group('API error mapping', () {
     const ar = AppLocalizations('ar');
 
-    test('badRequest surfaces the server detail verbatim', () {
+    test('badRequest is localized, never the raw server detail', () {
+      // Regression: this test used to assert the detail was shown verbatim, on
+      // an *Arabic* fixture. The live API sends English ("Please enter a
+      // word."), so on device an Arabic player got an English sentence. The
+      // detail stays on the exception for logs; the player gets localized copy.
       const e = ApiException(
         ApiErrorType.badRequest,
-        detail: 'يرجى إدخال كلمة عربية صحيحة واحدة.',
+        detail: 'Please enter a word.',
       );
-      expect(ar.errorMessage(e), 'يرجى إدخال كلمة عربية صحيحة واحدة.');
+      const enLoc = AppLocalizations('en');
+      expect(ar.errorMessage(e), ar('errRejectedWord'));
+      expect(ar.errorMessage(e), isNot(contains('Please')));
+      expect(enLoc.errorMessage(e), enLoc('errRejectedWord'));
     });
 
     test('network/timeout/server map to localized messages', () {

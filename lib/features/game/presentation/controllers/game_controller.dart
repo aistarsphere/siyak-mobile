@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/config/app_config.dart';
+import '../../../../core/sound/feedback_service.dart';
 import '../../../../core/network/api_error.dart';
 import '../../data/models/game_snapshot.dart';
 import '../../data/models/hint_result.dart';
@@ -296,7 +296,7 @@ class GameController extends Notifier<GameState> {
 
       // Unknown / not in vocabulary → "did you mean" card.
       if (res.unknownWord) {
-        _haptic(HapticFeedback.vibrate);
+        _feedback.invalidWord();
         state = state.copyWith(
           submitting: false,
           unknown: UnknownWordState(
@@ -323,20 +323,27 @@ class GameController extends Notifier<GameState> {
 
       final wasDuplicate = res.duplicate || res.alreadyGuessed;
 
+      // Did this guess beat the previous best rank? Decided before the state
+      // is replaced, on the same data the UI will render.
+      final prevBest = state.bestRank;
+      final improvedBest =
+          !wasDuplicate &&
+          res.rank != null &&
+          res.rank! > 0 &&
+          (prevBest == 0 || res.rank! < prevBest);
+
       if (res.solved) {
-        _haptic(HapticFeedback.heavyImpact);
         ref.read(statsProvider.notifier).recordSolved();
       } else if (!wasDuplicate) {
         // Only count genuinely new guesses locally (server dedups too).
         ref.read(statsProvider.notifier).recordAttempt(res.rank ?? 0);
-        _haptic(
-          (res.proximity ?? 0) >= 50
-              ? HapticFeedback.mediumImpact
-              : HapticFeedback.lightImpact,
-        );
-      } else {
-        _haptic(HapticFeedback.selectionClick);
       }
+      _feedback.guessResult(
+        solved: res.solved,
+        duplicate: wasDuplicate,
+        proximity: res.proximity,
+        bestImproved: improvedBest,
+      );
 
       state = state.copyWith(
         submitting: false,
@@ -358,7 +365,7 @@ class GameController extends Notifier<GameState> {
       );
       _persist();
     } on ApiException catch (e) {
-      _haptic(HapticFeedback.vibrate);
+      _feedback.submitFailed();
       state = state.copyWith(submitting: false, error: e);
     } catch (e) {
       state = state.copyWith(submitting: false, error: e);
@@ -411,7 +418,7 @@ class GameController extends Notifier<GameState> {
       final hint = await ref
           .read(gameRepositoryProvider)
           .hint(gameId: state.gameId!, difficulty: state.difficulty);
-      _haptic(HapticFeedback.lightImpact);
+      _feedback.hintRevealed();
       state = state.copyWith(
         hintLoading: false,
         hints: [...state.hints, hint],
@@ -450,9 +457,7 @@ class GameController extends Notifier<GameState> {
     });
   }
 
-  void _haptic(Future<void> Function() fn) {
-    if (ref.read(appSettingsProvider).haptics) fn();
-  }
+  FeedbackService get _feedback => ref.read(feedbackServiceProvider);
 }
 
 final gameControllerProvider = NotifierProvider<GameController, GameState>(

@@ -1,5 +1,4 @@
 import 'package:context_game/core/design/theme/context_tokens.dart';
-import 'package:context_game/core/design/theme/legacy_type_bridge.dart';
 import 'package:context_game/core/design/theme/siyaq_theme_data.dart';
 import 'package:context_game/core/design/tokens/siyaq_colors.dart';
 import 'package:context_game/core/design/tokens/siyaq_typography.dart';
@@ -147,19 +146,8 @@ void main() {
       }
     });
 
-    test('onColorLegacy reproduces the OLD threshold behaviour exactly', () {
-      // Locked so the Phase 1 migration is provably pixel-identical. The rule is
-      // knowingly wrong in Light theme (light gold luminance 0.397 < 0.42 → light
-      // text, 2.19:1); fixed when components adopt onAction in Phase 3.
-      final d = SiyaqColors.dark;
-      expect(d.onColorLegacy(d.primary), SiyaqColors.graphiteDeep);
-      expect(
-        d.onColorLegacy(const Color(0xFF353A42)).computeLuminance(),
-        greaterThan(0.5),
-      );
-      final l = SiyaqColors.light;
-      expect(l.onColorLegacy(l.primary).computeLuminance(), greaterThan(0.5));
-    });
+    // `onColorLegacy` pin removed: the legacy rule was retired with its last
+    // call site — `foregroundOn`/`onAction` above cover the live behaviour.
   });
 
   group('typography', () {
@@ -253,36 +241,8 @@ void main() {
       expect(outer.background, isNot(inner.background));
     });
 
-    testWidgets(
-      'legacy type bridge is metric-identical to the old ST helpers',
-      (t) async {
-        late TextStyle ar, mono, sys;
-        await t.pumpWidget(
-          MaterialApp(
-            theme: SiyaqThemeData.dark(),
-            home: Builder(
-              builder: (ctx) {
-                ar = ctx.legacyType.ar(13);
-                mono = ctx.legacyType.mono(10, letterSpacing: 1.8);
-                sys = ctx.legacyType.sys(15, weight: FontWeight.w600);
-                return const SizedBox();
-              },
-            ),
-          ),
-        );
-        // Old ST.ar(13): Naskh, 13px, w400, colour = textPrimary, height null.
-        expect(ar.fontFamily, SiyaqFonts.arabic);
-        expect(ar.fontSize, 13);
-        expect(ar.fontWeight, FontWeight.w400);
-        expect(ar.height, isNull, reason: 'ST.ar defaulted to no line-height');
-        expect(ar.color, SiyaqColors.dark.textPrimary);
-
-        expect(mono.fontFamily, SiyaqFonts.mono);
-        expect(mono.letterSpacing, 1.8);
-        expect(sys.fontFamily, SiyaqFonts.latin);
-        expect(sys.fontWeight, FontWeight.w600);
-      },
-    );
+    // The legacy type bridge itself was deleted once its final consumer
+    // migrated — its metric pins went with it.
 
     testWidgets('a dark subtree inside a light app keeps its own palette', (
       t,

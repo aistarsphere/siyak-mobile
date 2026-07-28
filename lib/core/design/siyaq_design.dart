@@ -13,6 +13,10 @@
 library;
 
 export 'a11y/siyaq_a11y.dart';
+export 'components/gameplay/siyaq_guess_composer.dart';
+export 'components/gameplay/siyaq_guess_highlight.dart';
+export 'components/gameplay/siyaq_guess_row.dart';
+export 'components/gameplay/siyaq_hint_panel.dart';
 export 'components/foundation/siyaq_button.dart';
 export 'components/foundation/siyaq_divider.dart';
 export 'components/foundation/siyaq_icon.dart';
@@ -36,6 +40,8 @@ export 'components/shared/siyaq_select_tile.dart';
 export 'components/shared/siyaq_states.dart';
 export 'components/shared/siyaq_stat_card.dart';
 export 'components/shared/siyaq_text_field.dart';
+export 'feedback/siyaq_feedback.dart';
+export 'gameplay/siyaq_heat.dart';
 export 'theme/context_tokens.dart';
 export 'theme/siyaq_theme_data.dart';
 export 'tokens/siyaq_colors.dart';

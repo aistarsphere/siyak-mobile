@@ -1,7 +1,3 @@
-import 'dart:ui';
-
-import '../../../../core/theme/app_colors.dart';
-
 /// Heat tiers as shown on the Stitch gameplay screen (icon + accent color).
 /// The backend is authoritative about closeness: every guess carries a
 /// `heat_level` string and a `proximity` (0–100). We map the server's level
@@ -46,33 +42,4 @@ class Heat {
     if (proximity >= 25) return HeatTier.cold;
     return HeatTier.freezing;
   }
-
-  /// Localization key of a tier's label (resolved via AppLocalizations).
-  static String labelKey(HeatTier tier) => switch (tier) {
-    HeatTier.blazing => 'heatBlazing',
-    HeatTier.warm => 'heatWarm',
-    HeatTier.cold => 'heatCold',
-    HeatTier.freezing => 'heatFreezing',
-  };
-
-  static Color color(HeatTier tier) => switch (tier) {
-    HeatTier.blazing => AppColors.error,
-    HeatTier.warm => AppColors.secondary,
-    HeatTier.cold => AppColors.tertiary,
-    HeatTier.freezing => AppColors.outline,
-  };
-
-  /// Rank/label text color in the history list.
-  static Color rankColor(HeatTier tier) => switch (tier) {
-    HeatTier.blazing => AppColors.primary,
-    HeatTier.warm => AppColors.secondary,
-    HeatTier.cold => AppColors.onSurfaceVariant,
-    HeatTier.freezing => AppColors.onSurfaceVariant,
-  };
-
-  /// Bar fill fraction in [0, 1] from the server proximity (0–100).
-  static double fraction(double proximity) =>
-      (proximity / 100).clamp(0.02, 1.0);
-
-  static String percentLabel(double proximity) => '${proximity.round()}%';
 }

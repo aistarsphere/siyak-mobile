@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../design/theme/context_tokens.dart';
-import '../../design/theme/legacy_type_bridge.dart';
-import 'siyag_tap.dart';
+import '../../design/siyaq_design.dart';
 
 class SiyagNavItem {
   const SiyagNavItem({required this.icon, required this.label});
@@ -10,8 +8,13 @@ class SiyagNavItem {
   final String label;
 }
 
-/// Bottom navigation (App.tsx `BottomNav`): 3 destinations, top hairline,
-/// active item coral with a small dot that slides between destinations.
+/// Bottom navigation: 3 destinations, top hairline, gold active state with a
+/// small indicator dot.
+///
+/// Presentational migration onto the design system only — the 3-tab IA itself
+/// is pinned on open product decision **D7** (audit §22) and is deliberately
+/// unchanged here. Each destination is a proper semantics node announcing its
+/// label and selection.
 class SiyagBottomNav extends StatelessWidget {
   const SiyagBottomNav({
     super.key,
@@ -26,17 +29,18 @@ class SiyagBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
     return Container(
       decoration: BoxDecoration(
-        color: context.colors.background,
-        border: Border(top: BorderSide(color: context.colors.border)),
+        color: c.background,
+        border: Border(top: BorderSide(color: c.border)),
       ),
       padding: EdgeInsets.only(
-        top: 8,
-        bottom: 8 + bottomPad,
-        left: 8,
-        right: 8,
+        top: SiyaqSpacing.sm,
+        bottom: SiyaqSpacing.sm + bottomPad,
+        left: SiyaqSpacing.sm,
+        right: SiyaqSpacing.sm,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -66,38 +70,49 @@ class _NavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Active tab uses the deeper gold (goldStrong) — richer, higher-contrast
-    // selection in both themes; inactive stays soft gray.
-    final color = active
-        ? context.colors.primaryStrong
-        : context.colors.textMuted;
-    return SiyagTap(
+    final c = context.colors;
+    // Deeper gold for the active tab — higher contrast in both themes.
+    final color = active ? c.primaryStrong : c.textMuted;
+    return SiyaqPressable(
       onTap: onTap,
-      scale: 0.9,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 4),
+      selected: active,
+      semanticLabel: item.label,
+      pressScale: 0.9,
+      enforceMinTarget: false,
+      // Tab switches are navigation, not game actions.
+      sound: false,
+      builder: (context, state) => Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: SiyaqSpacing.xxl,
+          vertical: SiyaqSpacing.xxs,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
               height: 6,
               child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 220),
+                duration: context.motion.quick,
                 opacity: active ? 1 : 0,
                 child: Container(
                   width: 6,
                   height: 6,
                   decoration: BoxDecoration(
-                    color: context.colors.primary,
+                    color: c.primary,
                     shape: BoxShape.circle,
                   ),
                 ),
               ),
             ),
             const SizedBox(height: 2),
-            Icon(item.icon, size: 21, color: color),
-            const SizedBox(height: 4),
-            Text(item.label, style: context.legacyType.ar(10, color: color)),
+            Icon(item.icon, size: SiyaqIconSize.md, color: color),
+            const SizedBox(height: SiyaqSpacing.xxs),
+            SiyaqText(
+              item.label,
+              role: SiyaqTextRole.labelSmall,
+              color: color,
+              maxLines: 1,
+            ),
           ],
         ),
       ),

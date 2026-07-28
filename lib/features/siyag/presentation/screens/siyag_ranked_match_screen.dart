@@ -3,12 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/design/siyaq_design.dart';
+import '../../../../core/sound/feedback_service.dart';
 import '../../../../core/localization/app_localizations.dart';
-import '../../../../core/design/theme/context_tokens.dart';
-import '../../../../core/design/theme/legacy_type_bridge.dart';
-import '../../../../core/widgets/siyag/siyag_common.dart';
-import '../../../../core/widgets/siyag/siyag_tap.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
+import '../../../v2/domain/entities/gameplay_language.dart';
 import '../../../v2/domain/entities/ranked.dart';
 import '../../../v2/domain/repositories/ranked_repository.dart';
 import '../../../v2/presentation/controllers/ranked_controller.dart';
@@ -78,8 +77,22 @@ final rankedMatchStreamProvider = StreamProvider.autoDispose
       return controller.stream;
     });
 
+/// Ranked 1v1: turn-based, coin-staked, both players guessing the same secret.
+///
+/// Built from the Siyaq gameplay components. Two things make it read differently
+/// from solo, and both are properties of the mode rather than of the design:
+///
+/// * **No closeness signal.** A `MatchGuess` carries a rank and nothing else —
+///   no proximity, and the snapshot has no vocabulary size to scale a rank into
+///   a heat band. Rows therefore render rank-only (`SiyaqGuessData.heat == null`)
+///   instead of inventing a band from a guessed denominator.
+/// * **Turn gating.** The composer is disabled unless it is the player's turn,
+///   which the turn banner above it states in words.
+///
+/// Matchmaking, turn logic, settlement and rating are untouched.
 class SiyagRankedMatchScreen extends ConsumerWidget {
   const SiyagRankedMatchScreen({required this.matchId, super.key});
+
   final String matchId;
 
   Future<void> _act(
@@ -95,7 +108,7 @@ class SiyagRankedMatchScreen extends ConsumerWidget {
   /// Confirm before forfeiting — a forfeit counts as a loss and forfeits the stake.
   Future<void> _confirmForfeit(BuildContext context, WidgetRef ref) async {
     final loc = ref.read(localizationsProvider);
-    final ok = await showSiyagConfirm(
+    final ok = await showSiyaqConfirm(
       context,
       direction: loc.direction,
       title: loc('confirmForfeitTitle'),
@@ -109,53 +122,27 @@ class SiyagRankedMatchScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationsProvider);
-    final async = ref.watch(rankedMatchStreamProvider(matchId));
-    final match = async.value;
+    final c = context.colors;
+    final match = ref.watch(rankedMatchStreamProvider(matchId)).value;
 
     return Directionality(
       textDirection: loc.direction,
       child: Scaffold(
-        backgroundColor: context.colors.background,
-        appBar: AppBar(
-          backgroundColor: context.colors.background,
-          elevation: 0,
-          title: Text(
-            loc('competitive'),
-            style: context.legacyType.ar(18, weight: FontWeight.w700),
-          ),
-          centerTitle: true,
-        ),
+        backgroundColor: c.background,
+        resizeToAvoidBottomInset: true,
         body: SafeArea(
+          bottom: false,
           child: match == null
-              ? Center(
-                  child: CircularProgressIndicator(
-                    color: context.colors.primary,
+              ? SiyaqLoader(semanticLabel: loc('loading'))
+              : _Match(
+                  loc: loc,
+                  match: match,
+                  onReady: () => _act(ref, (r) => r.ready(matchId)),
+                  onGuess: (w) => _act(
+                    ref,
+                    (r) => r.guess(matchId, w, language: match.language),
                   ),
-                )
-              : ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                  children: [
-                    _Players(loc: loc, match: match),
-                    const SizedBox(height: 16),
-                    if (match.isOver)
-                      _Result(loc: loc, match: match)
-                    else if (match.isPreparing)
-                      _Preparing(
-                        loc: loc,
-                        match: match,
-                        onReady: () => _act(ref, (r) => r.ready(matchId)),
-                      )
-                    else
-                      _Active(
-                        loc: loc,
-                        match: match,
-                        onGuess: (w) => _act(
-                          ref,
-                          (r) => r.guess(matchId, w, language: match.language),
-                        ),
-                        onForfeit: () => _confirmForfeit(context, ref),
-                      ),
-                  ],
+                  onForfeit: () => _confirmForfeit(context, ref),
                 ),
         ),
       ),
@@ -163,97 +150,317 @@ class SiyagRankedMatchScreen extends ConsumerWidget {
   }
 }
 
-class _Players extends StatelessWidget {
-  const _Players({required this.loc, required this.match});
+class _Match extends ConsumerStatefulWidget {
+  const _Match({
+    required this.loc,
+    required this.match,
+    required this.onReady,
+    required this.onGuess,
+    required this.onForfeit,
+  });
+
   final AppLocalizations loc;
   final RankedMatch match;
+  final VoidCallback onReady;
+  final ValueChanged<String> onGuess;
+  final VoidCallback onForfeit;
+
+  @override
+  ConsumerState<_Match> createState() => _MatchState();
+}
+
+class _MatchState extends ConsumerState<_Match> {
+  final _input = TextEditingController();
+
+  /// Turn number the countdown cue already fired for — once per turn.
+  int? _cuedTurn;
+
+  @override
+  void dispose() {
+    _input.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(_Match old) {
+    super.didUpdateWidget(old);
+    final feedback = ref.read(feedbackServiceProvider);
+    final m = widget.match;
+
+    // Match just ended → one celebration, decided by who won.
+    if (m.isOver && !old.match.isOver) {
+      feedback.play(
+        m.didIWin ? SiyaqSoundEvent.victory : SiyaqSoundEvent.defeat,
+      );
+    }
+
+    // Turn clock running low on MY turn → a single pip per turn.
+    final remaining = m.turnRemainingSeconds;
+    if (m.isActive &&
+        m.isMyTurn &&
+        remaining != null &&
+        remaining <= 10 &&
+        _cuedTurn != m.turnNumber) {
+      _cuedTurn = m.turnNumber;
+      feedback.play(SiyaqSoundEvent.countdown);
+    }
+  }
+
+  void _submit(String word) {
+    widget.onGuess(word);
+    _input.clear();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final you = match.you;
-    final opp = match.opponent;
-    return Row(
+    final loc = widget.loc;
+    final c = context.colors;
+    final m = widget.match;
+    final language = GameplayLanguage.fromCode(m.language);
+    final script = language.isArabic ? SiyaqScript.arabic : SiyaqScript.latin;
+
+    // Closest-first, matching every other mode: the ranking is the point, and
+    // recency is already answered by the Latest highlight. An unranked guess
+    // (the server has not scored it yet) is excluded — it has no place in a
+    // ranked list and can never be the best.
+    final ranked = [
+      for (final g in m.guesses)
+        if (g.rank != null) g,
+    ]..sort((a, b) => a.rank!.compareTo(b.rank!));
+    MatchGuess? best;
+    for (final g in ranked) {
+      if (best == null || g.rank! < best.rank!) best = g;
+    }
+    final latest = m.guesses.isNotEmpty ? m.guesses.last : null;
+    final showLatest =
+        latest != null && best != null && latest.word != best.word;
+
+    SiyaqGuessData data(MatchGuess g) => SiyaqGuessData(
+      word: g.word,
+      rank: g.rank ?? 0,
+      // Deliberately null — see the class doc.
+      solved: g.rank == 1,
+    );
+
+    SiyaqGuessAttribution author(MatchGuess g) => SiyaqGuessAttribution(
+      label: g.isYou ? loc('you') : loc('opponentLabel'),
+      icon: g.isYou ? SiyaqIcons.profile : SiyaqIcons.opponent,
+      color: g.isYou ? c.primary : c.textMuted,
+    );
+
+    return Column(
       children: [
+        SiyaqScreenHeader(
+          kicker: loc('competitive'),
+          accent: c.primary,
+          onBack: () => Navigator.of(context).maybePop(),
+          backLabel: loc('back'),
+          padding: const EdgeInsets.fromLTRB(
+            SiyaqSpacing.lg,
+            SiyaqSpacing.md,
+            SiyaqSpacing.lg,
+            SiyaqSpacing.sm,
+          ),
+          trailing: SiyaqChip(
+            label: loc(language.labelKey),
+            icon: SiyaqIcons.language,
+            semanticLabel: '${loc('gameLanguage')}: ${loc(language.labelKey)}',
+          ),
+        ),
         Expanded(
-          child: _Chip(
-            loc: loc,
-            p: you,
-            highlight: match.isMyTurn,
-            isYou: true,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(
+              SiyaqSpacing.lg,
+              0,
+              SiyaqSpacing.lg,
+              SiyaqSpacing.md,
+            ),
+            children: [
+              _Players(loc: loc, match: m),
+              const SizedBox(height: SiyaqSpacing.md),
+              if (m.isOver)
+                _Result(loc: loc, match: m, script: script)
+              else if (m.isPreparing)
+                _Preparing(loc: loc, match: m, onReady: widget.onReady)
+              else ...[
+                _TurnBanner(loc: loc, match: m),
+                if (best != null) ...[
+                  const SizedBox(height: SiyaqSpacing.md),
+                  SiyaqGuessHighlight(
+                    label: loc('closest'),
+                    guess: data(best),
+                    distanceLabel: loc('distanceLabel'),
+                    script: script,
+                    accent: c.primary,
+                    emphasised: true,
+                  ),
+                ],
+                if (showLatest) ...[
+                  const SizedBox(height: SiyaqSpacing.sm),
+                  SiyaqGuessHighlight(
+                    label: loc('latest'),
+                    guess: data(latest),
+                    distanceLabel: loc('distanceLabel'),
+                    script: script,
+                    accent: c.info,
+                  ),
+                ],
+                const SizedBox(height: SiyaqSpacing.lg),
+                if (m.guesses.isEmpty)
+                  SiyaqEmptyState(
+                    title: loc('noGuessesYet'),
+                    body: loc('noGuessesBody'),
+                    icon: SiyaqIcons.hint,
+                  )
+                else ...[
+                  SiyaqText(
+                    '${loc('sharedHistory').toUpperCase()} · '
+                    '${loc.fill('guessesCount', {'n': '${m.guesses.length}'})}',
+                    role: SiyaqTextRole.labelSmall,
+                    script: SiyaqScript.mono,
+                    color: c.textMuted,
+                    header: true,
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: SiyaqSpacing.sm),
+                  for (final g in ranked)
+                    Padding(
+                      key: ValueKey('${g.word}-${g.turnNumber}'),
+                      padding: const EdgeInsets.only(bottom: SiyaqSpacing.xs),
+                      child: SiyaqGuessRow(
+                        guess: data(g),
+                        rankLabel: loc('rankLabel'),
+                        script: script,
+                        isBest: g.word == best?.word,
+                        isLatest: g.word == latest?.word,
+                        attribution: author(g),
+                        statusLabel: g.word == best?.word
+                            ? loc('closest')
+                            : null,
+                      ),
+                    ),
+                ],
+                const SizedBox(height: SiyaqSpacing.lg),
+                SiyaqButton(
+                  label: loc('leave'),
+                  icon: SiyaqIcons.forfeit,
+                  type: SiyaqButtonType.ghost,
+                  onPressed: widget.onForfeit,
+                ),
+              ],
+            ],
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Text(
-            loc('vs'),
-            style: context.legacyType.ar(13, color: context.colors.textMuted),
+        if (m.isActive)
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              SiyaqSpacing.lg,
+              SiyaqSpacing.sm,
+              SiyaqSpacing.lg,
+              MediaQuery.viewInsetsOf(context).bottom > 0
+                  ? SiyaqSpacing.md
+                  : SiyaqSpacing.xl,
+            ),
+            child: SiyaqGuessComposer(
+              controller: _input,
+              onSubmit: _submit,
+              // The placeholder itself carries the turn gate, so a disabled
+              // composer says why it is disabled.
+              hintText: m.isMyTurn ? loc('guessAWord') : loc('waitYourTurn'),
+              submitLabel: loc('submitGuess'),
+              fieldSemanticLabel: loc('guessAWord'),
+              direction: language.direction,
+              script: script,
+              enabled: m.isMyTurn,
+              accent: c.primary,
+            ),
           ),
-        ),
-        Expanded(
-          child: _Chip(
-            loc: loc,
-            p: opp,
-            highlight: match.isActive && !match.isMyTurn,
-            isYou: false,
-          ),
-        ),
       ],
     );
   }
 }
 
-class _Chip extends StatelessWidget {
-  const _Chip({
-    required this.loc,
-    required this.p,
-    required this.highlight,
-    required this.isYou,
-  });
+// ── Players ───────────────────────────────────────────────────────────────────
+
+/// The two slots, stacked rather than side by side: a pair of narrow columns
+/// truncates both display names at large text scales, where full-width rows do
+/// not.
+class _Players extends StatelessWidget {
+  const _Players({required this.loc, required this.match});
+
   final AppLocalizations loc;
-  final MatchPlayer? p;
-  final bool highlight;
-  final bool isYou;
+  final RankedMatch match;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: context.colors.surface,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(
-        color: highlight ? context.colors.primary : context.colors.border,
-        width: highlight ? 2 : 1,
-      ),
-    ),
-    child: Column(
+  Widget build(BuildContext context) {
+    final c = context.colors;
+
+    Widget row(MatchPlayer? p, {required bool isYou}) {
+      final active = isYou ? match.isMyTurn : match.isActive && !match.isMyTurn;
+      final ready = p?.ready ?? false;
+      return SiyaqPlayerRow(
+        name: isYou ? loc('you') : (p?.label ?? loc('opponentLabel')),
+        subtitle: ready ? loc('ready') : p?.connectionState,
+        isSelf: isYou,
+        presence: (p?.connectionState ?? 'connected') == 'connected'
+            ? SiyaqPresence.online
+            : SiyaqPresence.offline,
+        roleLabel: active ? loc('yourTurn') : null,
+        roleAccent: c.primary,
+        accent: isYou ? c.primary : c.info,
+        statusLabel: ready ? loc('ready') : null,
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SiyagAvatar(
-          letter: (p?.label.isNotEmpty ?? false)
-              ? p!.label.characters.first
-              : '?',
-          size: 40,
-          active: true,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          isYou ? loc('you') : (p?.label ?? '—'),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: context.legacyType.ar(13, weight: FontWeight.w600),
-        ),
-        Text(
-          (p?.ready ?? false) ? loc('ready') : (p?.connectionState ?? ''),
-          style: context.legacyType.ar(
-            10,
-            color: (p?.ready ?? false)
-                ? context.colors.success
-                : context.colors.textMuted,
-          ),
-        ),
+        row(match.you, isYou: true),
+        const SizedBox(height: SiyaqSpacing.sm),
+        row(match.opponent, isYou: false),
       ],
-    ),
-  );
+    );
+  }
 }
+
+// ── Turn banner ───────────────────────────────────────────────────────────────
+
+class _TurnBanner extends StatelessWidget {
+  const _TurnBanner({required this.loc, required this.match});
+
+  final AppLocalizations loc;
+  final RankedMatch match;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final mine = match.isMyTurn;
+    final seconds = match.turnRemainingSeconds?.round();
+    final label = mine
+        ? (seconds != null
+              ? '${loc('yourTurn')} · $seconds${loc('secShort')}'
+              : loc('yourTurn'))
+        : loc('opponentTurn');
+
+    return SiyaqSurface(
+      variant: mine ? SiyaqSurfaceVariant.accent : SiyaqSurfaceVariant.base,
+      accent: c.primary,
+      padding: const EdgeInsets.symmetric(
+        horizontal: SiyaqSpacing.lg,
+        vertical: SiyaqSpacing.smd,
+      ),
+      child: Center(
+        child: SiyaqStatusIndicator(
+          label: label,
+          tone: mine ? SiyaqTone.accent : SiyaqTone.info,
+          pulse: !mine,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Preparing ─────────────────────────────────────────────────────────────────
 
 class _Preparing extends StatelessWidget {
   const _Preparing({
@@ -261,6 +468,7 @@ class _Preparing extends StatelessWidget {
     required this.match,
     required this.onReady,
   });
+
   final AppLocalizations loc;
   final RankedMatch match;
   final VoidCallback onReady;
@@ -268,201 +476,76 @@ class _Preparing extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ready = match.you?.ready ?? false;
-    return Column(
-      children: [
-        Text(
-          loc('getReady'),
-          style: context.legacyType.ar(16, weight: FontWeight.w600),
-        ),
-        const SizedBox(height: 12),
-        SiyagPrimaryButton(
-          label: ready ? loc('waitingOpponent') : loc('imReady'),
-          icon: ready ? null : Icons.check_rounded,
-          onTap: ready ? null : onReady,
-        ),
-      ],
+    return SiyaqEmptyState(
+      title: loc('getReady'),
+      body: ready ? loc('waitingOpponent') : null,
+      icon: SiyaqIcons.target,
+      actionLabel: ready ? null : loc('imReady'),
+      onAction: ready ? null : onReady,
     );
   }
 }
 
-class _Active extends ConsumerStatefulWidget {
-  const _Active({
-    required this.loc,
-    required this.match,
-    required this.onGuess,
-    required this.onForfeit,
-  });
-  final AppLocalizations loc;
-  final RankedMatch match;
-  final void Function(String) onGuess;
-  final VoidCallback onForfeit;
-
-  @override
-  ConsumerState<_Active> createState() => _ActiveState();
-}
-
-class _ActiveState extends ConsumerState<_Active> {
-  final _c = TextEditingController();
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    final w = _c.text.trim();
-    if (w.isEmpty) return;
-    widget.onGuess(w);
-    _c.clear();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final m = widget.match;
-    final myTurn = m.isMyTurn;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-          decoration: BoxDecoration(
-            color: myTurn
-                ? context.colors.primary.withValues(alpha: 0.14)
-                : context.colors.surface,
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Text(
-            myTurn
-                ? '${widget.loc('yourTurn')} · ${m.turnRemainingSeconds?.round() ?? '—'}${widget.loc('secShort')}'
-                : widget.loc('opponentTurn'),
-            textAlign: TextAlign.center,
-            style: context.legacyType.ar(
-              14,
-              weight: FontWeight.w600,
-              color: myTurn ? context.colors.primary : context.colors.textMuted,
-            ),
-          ),
-        ),
-        const SizedBox(height: 14),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _c,
-                enabled: myTurn,
-                textAlign: TextAlign.center,
-                style: context.legacyType.ar(18),
-                onSubmitted: (_) => _submit(),
-                decoration: InputDecoration(
-                  hintText: myTurn
-                      ? widget.loc('guessAWord')
-                      : widget.loc('waitYourTurn'),
-                  filled: true,
-                  fillColor: context.colors.surfaceElevated,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            SiyagPrimaryButton(
-              label: widget.loc('send'),
-              onTap: myTurn ? _submit : null,
-              fullWidth: false,
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        for (final g in m.guesses.reversed.take(20))
-          Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    g.word,
-                    style: context.legacyType.ar(
-                      15,
-                      color: g.isYou
-                          ? context.colors.textPrimary
-                          : context.colors.textSecondary,
-                      weight: g.isYou ? FontWeight.w600 : FontWeight.w400,
-                    ),
-                  ),
-                ),
-                Text(
-                  g.rank != null ? '#${g.rank}' : '—',
-                  style: context.legacyType.mono(
-                    13,
-                    color: context.colors.primary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        const SizedBox(height: 8),
-        SiyagTap(
-          onTap: widget.onForfeit,
-          child: Center(
-            child: Text(
-              widget.loc('leave'),
-              style: context.legacyType.ar(12, color: context.colors.primary),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
+// ── Result ────────────────────────────────────────────────────────────────────
 
 class _Result extends StatelessWidget {
-  const _Result({required this.loc, required this.match});
+  const _Result({required this.loc, required this.match, required this.script});
+
   final AppLocalizations loc;
   final RankedMatch match;
+  final SiyaqScript script;
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final won = match.didIWin;
+    final delta = match.ratingDelta;
+
     return Column(
       children: [
-        const SizedBox(height: 12),
-        Icon(
-          won ? Icons.emoji_events_rounded : Icons.flag_outlined,
-          size: 56,
-          color: won ? context.colors.primary : context.colors.textMuted,
+        const SizedBox(height: SiyaqSpacing.lg),
+        SiyaqIconTile(
+          icon: won ? SiyaqIcons.trophy : SiyaqIcons.forfeit,
+          size: SiyaqIconTileSize.large,
+          accent: won ? c.success : c.textMuted,
         ),
-        const SizedBox(height: 12),
-        Text(
+        const SizedBox(height: SiyaqSpacing.md),
+        SiyaqText(
           won ? loc('youWon') : loc('matchEnded'),
-          style: context.legacyType.ar(22, weight: FontWeight.w700),
+          role: SiyaqTextRole.headingLarge,
+          align: TextAlign.center,
+          header: true,
         ),
         if (match.secretWord != null) ...[
-          const SizedBox(height: 6),
-          Text(
-            '${loc('theWordLabel')}: ${match.secretWord}',
-            style: context.legacyType.ar(
-              14,
-              color: context.colors.textSecondary,
-            ),
+          const SizedBox(height: SiyaqSpacing.md),
+          SiyaqText(
+            loc('theWordLabel'),
+            role: SiyaqTextRole.labelSmall,
+            color: c.textMuted,
+          ),
+          SiyaqText(
+            match.secretWord!,
+            role: SiyaqTextRole.headingMedium,
+            // Game content: the secret follows the match language.
+            script: script,
+            align: TextAlign.center,
           ),
         ],
-        if (match.ratingDelta != null) ...[
-          const SizedBox(height: 4),
-          Text(
-            '${match.ratingDelta! >= 0 ? '+' : ''}${match.ratingDelta} ${loc('ratingPts')}',
-            style: context.legacyType.mono(
-              14,
-              color: won ? context.colors.success : context.colors.primary,
-            ),
+        if (delta != null) ...[
+          const SizedBox(height: SiyaqSpacing.md),
+          SiyaqChip(
+            label: '${delta >= 0 ? '+' : ''}$delta ${loc('ratingPts')}',
+            numeric: true,
+            variant: SiyaqChipVariant.accent,
+            accent: delta >= 0 ? c.success : c.error,
           ),
         ],
-        const SizedBox(height: 20),
-        SiyagPrimaryButton(
+        const SizedBox(height: SiyaqSpacing.xxl),
+        SiyaqButton(
           label: loc('back'),
-          onTap: () => Navigator.of(context).popUntil((r) => r.isFirst),
+          icon: SiyaqIcons.home,
+          fullWidth: true,
+          onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst),
         ),
       ],
     );

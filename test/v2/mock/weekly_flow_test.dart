@@ -1,3 +1,5 @@
+import 'package:context_game/core/sound/sound_player_adapter.dart';
+import 'package:context_game/core/sound/sound_service.dart';
 import 'package:context_game/features/game/presentation/controllers/app_settings_controller.dart';
 import 'package:context_game/features/v2/domain/entities/gameplay_language.dart';
 import 'package:context_game/features/v2/domain/entities/hint_mode.dart';
@@ -16,6 +18,8 @@ Future<ProviderContainer> makeContainer() async {
   return ProviderContainer(
     overrides: [
       sharedPreferencesProvider.overrideWithValue(prefs),
+      // Controllers fire feedback sounds; keep the audio plugin out of tests.
+      soundPlayerAdapterProvider.overrideWithValue(const SilentSoundAdapter()),
       // Weekly run + leaderboard both read weeklyRepositoryProvider; one shared
       // mock instance keeps their state consistent.
       weeklyRepositoryProvider.overrideWithValue(MockWeeklyRepository()),

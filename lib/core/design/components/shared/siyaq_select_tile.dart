@@ -55,7 +55,7 @@ class SiyaqSelectTile extends StatelessWidget {
       pressScale: 0.97,
       enforceMinTarget: false,
       builder: (context, state) => AnimatedContainer(
-        duration: SiyaqMotion.quick,
+        duration: context.motion.quick,
         curve: SiyaqMotion.easeOut,
         width: size * scale.clamp(1.0, 1.6),
         constraints: BoxConstraints(minHeight: size * scale.clamp(1.0, 1.6)),
@@ -130,7 +130,7 @@ class SiyaqStepDots extends StatelessWidget {
           children: [
             for (var i = 0; i < total; i++)
               AnimatedContainer(
-                duration: SiyaqMotion.quick,
+                duration: context.motion.quick,
                 curve: SiyaqMotion.easeOut,
                 margin: const EdgeInsets.symmetric(
                   horizontal: SiyaqSpacing.xxxs,

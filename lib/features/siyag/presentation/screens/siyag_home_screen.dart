@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/design/siyaq_design.dart';
 import '../../../../core/localization/app_localizations.dart';
-import '../../../../core/design/theme/context_tokens.dart';
-import '../../../../core/design/theme/legacy_type_bridge.dart';
-import '../../../../core/widgets/siyag/siyag_common.dart';
-import '../../../../core/widgets/siyag/siyag_tap.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../v2/domain/entities/gameplay_language.dart';
 import '../../../v2/presentation/controllers/capabilities_controller.dart';
@@ -18,8 +15,11 @@ import 'siyag_multiplayer_hub_screen.dart';
 import 'siyag_practice_setup_screen.dart';
 import 'siyag_weekly_screen.dart';
 
-/// Home launcher (home.tsx): big "سياق" wordmark, weekly hero, play modes,
-/// secondary launchers. RTL. Wired to live V2 profile/capabilities/weekly.
+/// Home launcher: "سياق" wordmark, weekly hero, play modes, secondary
+/// launchers. Wired to live V2 profile/capabilities/weekly.
+///
+/// Built from the Siyaq design system — the last screen off the legacy layer.
+/// Navigation targets and provider wiring are unchanged.
 class SiyagHomeScreen extends ConsumerWidget {
   const SiyagHomeScreen({super.key});
 
@@ -33,23 +33,27 @@ class SiyagHomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loc = ref.watch(localizationsProvider);
+    final c = context.colors;
     final profile = ref.watch(profileControllerProvider).value;
     final caps = ref.watch(capabilitiesProvider).value;
     final lang = GameplayLanguage.fromCode(ref.watch(appSettingsProvider).lang);
     final weekly = ref.watch(weeklyChallengeProvider(lang)).value;
     final wallet = ref.watch(walletControllerProvider).value;
-    final letter = (profile?.label.isNotEmpty ?? false)
-        ? profile!.label.characters.first
-        : 'س';
+    final name = (profile?.label.isNotEmpty ?? false) ? profile!.label : 'س';
 
     return Directionality(
       textDirection: loc.direction,
       child: ListView(
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: const EdgeInsets.only(bottom: SiyaqSpacing.xxl),
         children: [
-          // Header
+          // ── Header ───────────────────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+            padding: const EdgeInsets.fromLTRB(
+              SiyaqSpacing.xxl,
+              SiyaqSpacing.xl,
+              SiyaqSpacing.xxl,
+              SiyaqSpacing.xl,
+            ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -57,123 +61,146 @@ class SiyagHomeScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Kicker(loc('tagline')),
-                      const SizedBox(height: 8),
-                      Text(
+                      SiyaqText(
+                        loc('tagline').toUpperCase(),
+                        role: SiyaqTextRole.labelSmall,
+                        script: SiyaqScript.mono,
+                        color: c.textMuted,
+                      ),
+                      const SizedBox(height: SiyaqSpacing.sm),
+                      SiyaqText(
                         'سياق',
-                        style: context.legacyType.ar(
-                          54,
-                          weight: FontWeight.w700,
-                          height: 1,
-                        ),
+                        role: SiyaqTextRole.displayLarge,
+                        script: SiyaqScript.arabic,
+                        header: true,
                       ),
                     ],
                   ),
                 ),
                 if (wallet != null) ...[
-                  _CoinsPill(coins: wallet.availableBalance),
-                  const SizedBox(width: 12),
+                  SiyaqChip(
+                    label: '${wallet.availableBalance}',
+                    icon: SiyaqIcons.coins,
+                    variant: SiyaqChipVariant.accent,
+                    accent: c.primary,
+                    numeric: true,
+                    semanticLabel:
+                        '${loc('coins')}: ${wallet.availableBalance}',
+                  ),
+                  const SizedBox(width: SiyaqSpacing.md),
                 ],
-                SiyagTap(
+                SiyaqPressable(
                   onTap: () => ref.read(siyagTabProvider.notifier).state = 2,
-                  child: SiyagAvatar(letter: letter, size: 44, active: true),
+                  semanticLabel: loc('account'),
+                  builder: (context, state) =>
+                      SiyaqAvatar(name: name, size: SiyaqAvatarSize.medium),
                 ),
               ],
             ),
           ),
 
-          // Identity strip (real profile: code + games)
+          // ── Identity strip ───────────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: context.colors.surface,
-                borderRadius: BorderRadius.circular(12),
+            padding: const EdgeInsets.fromLTRB(
+              SiyaqSpacing.xxl,
+              0,
+              SiyaqSpacing.xxl,
+              SiyaqSpacing.xl,
+            ),
+            child: SiyaqSurface(
+              padding: const EdgeInsets.symmetric(
+                horizontal: SiyaqSpacing.lg,
+                vertical: SiyaqSpacing.smd,
               ),
+              radius: SiyaqRadius.md,
+              semanticLabel: profile == null
+                  ? loc('unknownPlayer')
+                  : '${profile.gamesSolved} ${loc('gamesSolved')}, '
+                        '${profile.gamesPlayed} ${loc('gamesPlayed')}',
               child: Row(
                 children: [
-                  Icon(
-                    Icons.local_fire_department_rounded,
-                    size: 15,
-                    color: context.colors.primary,
+                  SiyaqIcon.decorative(
+                    SiyaqIcons.hot,
+                    size: SiyaqIconSize.xs,
+                    color: c.primary,
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    profile == null
-                        ? loc('unknownPlayer')
-                        : '${profile.gamesSolved} ${loc('gamesSolved')} · ${profile.gamesPlayed} ${loc('gamesPlayed')}',
-                    style: context.legacyType.ar(
-                      13,
-                      color: context.colors.textSecondary,
+                  const SizedBox(width: SiyaqSpacing.sm),
+                  Expanded(
+                    child: SiyaqText(
+                      profile == null
+                          ? loc('unknownPlayer')
+                          : '${profile.gamesSolved} ${loc('gamesSolved')} · '
+                                '${profile.gamesPlayed} ${loc('gamesPlayed')}',
+                      role: SiyaqTextRole.bodySmall,
+                      color: c.textSecondary,
+                      maxLines: 1,
                     ),
                   ),
-                  const Spacer(),
-                  Text(
+                  SiyaqText.numeric(
                     profile?.weeklyBestPlacement != null
-                        ? 'RANK #${profile!.weeklyBestPlacement}'
+                        ? '#${profile!.weeklyBestPlacement}'
                         : profile?.shortCode ?? '',
-                    style: context.legacyType.mono(
-                      12,
-                      color: context.colors.textMuted,
-                    ),
+                    role: SiyaqTextRole.labelSmall,
+                    color: c.textMuted,
+                    maxLines: 1,
                   ),
                 ],
               ),
             ),
           ),
 
-          // Weekly hero
+          // ── Weekly hero ──────────────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-            child: SiyagTap(
-              scale: 0.98,
-              onTap: () => Navigator.of(
+            padding: const EdgeInsets.fromLTRB(
+              SiyaqSpacing.xxl,
+              0,
+              SiyaqSpacing.xxl,
+              SiyaqSpacing.lg,
+            ),
+            child: _WeeklyHero(
+              loc: loc,
+              remaining: _fmtRemaining(loc, weekly?.timeRemaining),
+              subtitle: weekly == null
+                  ? loc('modeWeekly')
+                  : weekly.categoryLabel(loc.isArabic) +
+                        (weekly.placement != null
+                            ? ' · ${loc('yourPlacement')} #${weekly.placement}'
+                            : ''),
+              onPlay: () => Navigator.of(
                 context,
               ).push(siyagRoute(const SiyagWeeklyScreen())),
-              child: _WeeklyHeroCard(
-                remaining: _fmtRemaining(loc, weekly?.timeRemaining),
-                endsInLabel: loc('timeRemaining'),
-                subtitle: weekly == null
-                    ? loc('modeWeekly')
-                    : weekly.categoryLabel(true) +
-                          (weekly.placement != null
-                              ? ' · ${loc('yourPlacement')} #${weekly.placement}'
-                              : ''),
-                cta: loc('startWeekly'),
-                heroTitle: loc('modeWeekly'),
-                onPlay: () => Navigator.of(
-                  context,
-                ).push(siyagRoute(const SiyagWeeklyScreen())),
-              ),
             ),
           ),
 
-          // Play modes
+          // ── Play modes ───────────────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+            padding: const EdgeInsets.fromLTRB(
+              SiyaqSpacing.xxl,
+              0,
+              SiyaqSpacing.xxl,
+              SiyaqSpacing.lg,
+            ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: _ModeTile(
                     title: loc('modeSolo'),
                     subtitle: loc('modeSoloDesc'),
-                    icon: Icons.bolt_rounded,
-                    color: context.colors.info, // blue = solo (design system)
+                    icon: SiyaqIcons.solo,
+                    color: c.info, // blue = solo (design system)
                     onTap: () => Navigator.of(
                       context,
                     ).push(siyagRoute(const SiyagPracticeSetupScreen())),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: SiyaqSpacing.md),
                 Expanded(
                   child: _ModeTile(
                     title: loc('modeMultiplayer'),
                     subtitle: loc('modeMultiplayerDesc'),
-                    icon: Icons.groups_rounded,
-                    color: context
-                        .colors
-                        .success, // green = social (design system)
+                    icon: SiyaqIcons.social,
+                    color: c.success, // green = social (design system)
                     enabled: caps?.multiplayerEnabled ?? true,
                     onTap: () => Navigator.of(
                       context,
@@ -184,22 +211,35 @@ class SiyagHomeScreen extends ConsumerWidget {
             ),
           ),
 
-          // Secondary launchers
+          // ── Secondary launchers ──────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+            padding: const EdgeInsets.fromLTRB(
+              SiyaqSpacing.xxl,
+              0,
+              SiyaqSpacing.xxl,
+              SiyaqSpacing.sm,
+            ),
             child: Column(
               children: [
-                _Launcher(
-                  label: loc('leaderboard'),
+                SiyaqListRow(
+                  title: loc('leaderboard'),
                   subtitle: loc('yourPlacement'),
-                  icon: Icons.emoji_events_rounded,
+                  leading: const SiyaqIconTile(
+                    icon: SiyaqIcons.leaderboard,
+                    size: SiyaqIconTileSize.small,
+                  ),
+                  showChevron: true,
                   onTap: () => ref.read(siyagTabProvider.notifier).state = 1,
                 ),
-                const SizedBox(height: 10),
-                _Launcher(
-                  label: loc('account'),
+                const SizedBox(height: SiyaqSpacing.smd),
+                SiyaqListRow(
+                  title: loc('account'),
                   subtitle: loc('stats'),
-                  icon: Icons.insights_rounded,
+                  leading: const SiyaqIconTile(
+                    icon: SiyaqIcons.stats,
+                    size: SiyaqIconTileSize.small,
+                  ),
+                  showChevron: true,
                   onTap: () => ref.read(siyagTabProvider.notifier).state = 2,
                 ),
               ],
@@ -211,123 +251,83 @@ class SiyagHomeScreen extends ConsumerWidget {
   }
 }
 
-class _WeeklyHeroCard extends StatelessWidget {
-  const _WeeklyHeroCard({
+/// The featured weekly card — elevated surface, gold frame, tokenized glow.
+class _WeeklyHero extends StatelessWidget {
+  const _WeeklyHero({
+    required this.loc,
     required this.remaining,
     required this.subtitle,
-    required this.cta,
-    required this.endsInLabel,
-    required this.heroTitle,
     required this.onPlay,
   });
 
+  final AppLocalizations loc;
   final String remaining;
   final String subtitle;
-  final String cta;
-  final String endsInLabel;
-  final String heroTitle;
   final VoidCallback onPlay;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        decoration: BoxDecoration(
-          // Elevated surface + stronger gold border → reads as the primary
-          // (featured) action without becoming a solid-gold card.
-          color: context.colors.surfaceElevated,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: context.colors.primary.withValues(alpha: 0.38),
-            width: 1.5,
-          ),
-        ),
-        child: Stack(
-          children: [
-            PositionedDirectional(
-              top: -40,
-              end: -40,
-              child: Container(
-                width: 160,
-                height: 160,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: context.colors.primary.withValues(alpha: 0.14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: context.colors.primary.withValues(alpha: 0.14),
-                      blurRadius: 60,
-                      spreadRadius: 20,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    final c = context.colors;
+    return SiyaqSurface(
+      variant: SiyaqSurfaceVariant.elevated,
+      radius: SiyaqRadius.xxxl,
+      accent: c.primary,
+      selected: true,
+      padding: const EdgeInsets.all(SiyaqSpacing.xxl),
+      onTap: onPlay,
+      semanticLabel:
+          '${loc('modeWeekly')}, $subtitle, ${loc('timeRemaining')}: $remaining',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const SiyaqIconTile(icon: SiyaqIcons.ranked, glow: true),
+              const Spacer(),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: context.colors.primary,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Icon(
-                          Icons.emoji_events_rounded,
-                          size: 20,
-                          color: context.colors.onPrimary,
-                        ),
-                      ),
-                      const Spacer(),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Kicker(endsInLabel, color: context.colors.primary),
-                          Text(remaining, style: context.legacyType.mono(18)),
-                        ],
-                      ),
-                    ],
+                  SiyaqText(
+                    loc('timeRemaining').toUpperCase(),
+                    role: SiyaqTextRole.labelSmall,
+                    script: SiyaqScript.mono,
+                    color: c.primary,
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    heroTitle,
-                    style: context.legacyType.ar(
-                      24,
-                      weight: FontWeight.w700,
-                      height: 1.1,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: context.legacyType.ar(
-                      14,
-                      color: context.colors.textMuted,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  SiyagPrimaryButton(
-                    label: cta,
-                    icon: Icons.play_arrow_rounded,
-                    onTap: onPlay,
+                  SiyaqText.numeric(
+                    remaining,
+                    role: SiyaqTextRole.headingSmall,
                   ),
                 ],
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
+          const SizedBox(height: SiyaqSpacing.lg),
+          SiyaqText(
+            loc('modeWeekly'),
+            role: SiyaqTextRole.headingLarge,
+            header: true,
+          ),
+          const SizedBox(height: SiyaqSpacing.xxxs),
+          SiyaqText(
+            subtitle,
+            role: SiyaqTextRole.bodyMedium,
+            color: c.textMuted,
+            maxLines: 2,
+          ),
+          const SizedBox(height: SiyaqSpacing.xl),
+          SiyaqButton(
+            label: loc('startWeekly'),
+            icon: SiyaqIcons.play,
+            fullWidth: true,
+            onPressed: onPlay,
+          ),
+        ],
       ),
     );
   }
 }
 
+/// A square play-mode tile: tinted icon, title, description.
 class _ModeTile extends StatelessWidget {
   const _ModeTile({
     required this.title,
@@ -347,150 +347,41 @@ class _ModeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SiyagTap(
+    final c = context.colors;
+    return SiyaqSurface(
+      radius: SiyaqRadius.xxxl,
+      padding: const EdgeInsets.all(SiyaqSpacing.xl),
       onTap: enabled ? onTap : null,
-      child: Opacity(
-        opacity: enabled ? 1 : 0.5,
-        child: Container(
-          height: 168,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: context.colors.surface,
-            borderRadius: BorderRadius.circular(24),
+      disabled: !enabled,
+      semanticLabel: '$title, $subtitle',
+      constraints: const BoxConstraints(minHeight: 168),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SiyaqIconTile(
+            icon: icon,
+            size: SiyaqIconTileSize.small,
+            accent: color,
+            tinted: true,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.13),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(icon, size: 19, color: color),
-              ),
-              const Spacer(),
-              Text(
-                title,
-                style: context.legacyType.ar(16, weight: FontWeight.w600),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: context.legacyType.ar(
-                  11,
-                  color: context.colors.textMuted,
-                  height: 1.3,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+          const SizedBox(height: SiyaqSpacing.xl),
+          SiyaqText(
+            title,
+            role: SiyaqTextRole.bodyLarge,
+            weight: FontWeight.w600,
+            color: enabled ? c.textPrimary : c.textDisabled,
+            maxLines: 2,
           ),
-        ),
+          const SizedBox(height: SiyaqSpacing.xxxs),
+          SiyaqText(
+            subtitle,
+            role: SiyaqTextRole.bodySmall,
+            color: c.textMuted,
+            maxLines: 2,
+          ),
+        ],
       ),
     );
   }
-}
-
-class _Launcher extends StatelessWidget {
-  const _Launcher({
-    required this.label,
-    required this.subtitle,
-    required this.icon,
-    required this.onTap,
-  });
-
-  final String label;
-  final String subtitle;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return SiyagTap(
-      onTap: onTap,
-      scale: 0.98,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        decoration: BoxDecoration(
-          color: context.colors.surface,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: context.colors.surfaceElevated,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, size: 16, color: context.colors.textSecondary),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: context.legacyType.ar(15, weight: FontWeight.w500),
-                  ),
-                  Text(
-                    subtitle,
-                    style: context.legacyType.ar(
-                      11,
-                      color: context.colors.textMuted,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.chevron_left_rounded,
-              size: 18,
-              color: context.colors.textDisabled,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Compact coin balance pill (gold), shown in the Home header.
-class _CoinsPill extends StatelessWidget {
-  const _CoinsPill({required this.coins});
-  final int coins;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-    decoration: BoxDecoration(
-      color: context.colors.primary.withValues(alpha: 0.14),
-      borderRadius: BorderRadius.circular(999),
-      border: Border.all(color: context.colors.primary.withValues(alpha: 0.40)),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          Icons.monetization_on_rounded,
-          size: 15,
-          color: context.colors.primary,
-        ),
-        const SizedBox(width: 5),
-        Text(
-          '$coins',
-          style: context.legacyType.mono(14, color: context.colors.primary),
-        ),
-      ],
-    ),
-  );
 }

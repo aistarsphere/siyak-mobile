@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../a11y/siyaq_a11y.dart';
+import '../../feedback/siyaq_feedback.dart';
 import '../../theme/context_tokens.dart';
 import '../../tokens/siyaq_motion.dart';
 import '../../tokens/siyaq_spacing.dart';
@@ -49,7 +50,8 @@ class SiyaqPressable extends StatefulWidget {
     this.selected = false,
     this.loading = false,
     this.pressScale = 0.97,
-    this.haptics = true,
+    this.haptics = false,
+    this.sound = false,
     this.focusRadius = 12,
     this.enforceMinTarget = true,
     this.autofocus = false,
@@ -74,7 +76,22 @@ class SiyaqPressable extends StatefulWidget {
   final bool loading;
 
   final double pressScale;
+
+  /// Whether this control fires a selection haptic on activation.
+  ///
+  /// **Off by default, opt in per control.** Beta playtesting: with this on for
+  /// every pressable, a single guess produced two haptics (the send tap, then
+  /// the scored result ~300ms later) and simply browsing menus buzzed
+  /// constantly. Feedback that fires for everything stops meaning anything, so
+  /// it is now reserved for controls that commit something — see
+  /// [SiyaqButton], which opts in for its primary variant.
+  ///
+  /// Still gated by the player's Haptics setting via [SiyaqFeedbackScope].
   final bool haptics;
+
+  /// Whether this control fires the primary-tap sound. Off by default for the
+  /// same reason as [haptics]; still subject to the player's Sound setting.
+  final bool sound;
 
   /// Corner radius of the focus ring; should match the control's own radius.
   final double focusRadius;
@@ -104,7 +121,15 @@ class _SiyaqPressableState extends State<SiyaqPressable> {
 
   void _activate() {
     if (!_enabled) return;
-    if (widget.haptics) HapticFeedback.selectionClick();
+    // Gated by the *player's* preferences via the feedback scope, not only the
+    // widget param — the param says "this control wants feedback", the scope
+    // says whether the player allows it. With no scope installed (tests,
+    // gallery) haptics behave exactly as before and sound is a no-op.
+    final fb = SiyaqFeedbackScope.of(context);
+    if (widget.haptics && fb.hapticsEnabled) HapticFeedback.selectionClick();
+    if (widget.sound && fb.soundEnabled) {
+      fb.play?.call(SiyaqSoundEvent.primaryTap);
+    }
     widget.onTap!();
   }
 
@@ -124,7 +149,7 @@ class _SiyaqPressableState extends State<SiyaqPressable> {
     // to respond.
     child = AnimatedScale(
       scale: _pressed && _enabled ? widget.pressScale : 1.0,
-      duration: SiyaqMotion.tap,
+      duration: context.motion.tap,
       curve: SiyaqMotion.easeOut,
       child: child,
     );

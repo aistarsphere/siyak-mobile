@@ -53,6 +53,7 @@ class V2Mappers {
       weeklyEnabled: f['weekly_challenge'] == true,
       multiplayerEnabled: f['multiplayer'] == true,
       adaptiveHintsEnabled: f['adaptive_hints'] == true,
+      translationEnabled: f['translation'] == true,
       apiVersion: j['api_version']?.toString(),
     );
   }

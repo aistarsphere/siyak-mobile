@@ -1,31 +1,51 @@
 import 'package:flutter/material.dart';
 
 /// Bundled font families. No runtime fetching — every family ships in `assets/`.
+///
+/// The stack is **script-aware by design**. One family for both scripts is what
+/// the Figma spec asked for (Inter everywhere) and it cannot work: Inter has no
+/// Arabic glyphs, so Arabic silently fell through to whatever the OS provided,
+/// which differs between Android and iOS and between OEM skins.
+///
+///   Arabic content → IBM Plex Sans Arabic → Noto Naskh Arabic → system sans
+///   Latin  content → Inter → system sans
+///   Numerals       → DM Mono
 class SiyaqFonts {
   SiyaqFonts._();
 
-  /// Arabic game content and UI copy (Noto Naskh Arabic).
-  static const arabic = 'NotoNaskhArabic';
+  /// Arabic game content and Arabic UI copy.
+  ///
+  /// IBM Plex Sans Arabic: a sans (not naskh) Arabic with a real 400–700 range,
+  /// which is what dense gameplay rows and stat figures need. Naskh's
+  /// calligraphic stroke contrast loses legibility at label sizes.
+  static const arabic = 'IBMPlexSansArabic';
 
-  /// Latin / system base (Plus Jakarta Sans).
-  static const latin = 'PlusJakartaSans';
+  /// Latin / Western content and Latin UI copy.
+  ///
+  /// Inter, shipped as a single variable asset; weight is applied through the
+  /// `wght` axis — see [SiyaqTypography.variationsFor].
+  static const latin = 'Inter';
 
-  /// Ranks, numbers, timers, kicker labels (DM Mono).
+  /// Ranks, distances, timers, room codes, kicker labels.
   static const mono = 'DMMono';
+
+  /// Arabic safety net. Only renders glyphs [arabic] happens to lack, so it
+  /// ships two weights rather than four.
+  static const arabicFallback = 'NotoNaskhArabic';
+
+  /// True when [family] is variable and takes its weight from an axis.
+  static bool isVariable(String family) => family == latin;
 
   /// Fallback chain for a primary family.
   ///
-  /// No bundled family covers both scripts: Plus Jakarta Sans and DM Mono have
-  /// no Arabic glyphs, and Noto Naskh Arabic has no Latin design. Mixed-script
-  /// strings are unavoidable in this product — a player's display name, a room
-  /// code beside an Arabic label, an English category in an Arabic sentence — so
-  /// every style declares the other families as fallbacks. Without this, the
-  /// non-primary script renders as tofu boxes (the failure mode the audit found
-  /// in Figma, where Inter is specified for Arabic text).
+  /// Mixed-script strings are unavoidable here — a Latin display name beside an
+  /// Arabic label, a room code inside an Arabic sentence — so every style names
+  /// the other scripts' families after its own. Without this the non-primary
+  /// script renders as tofu boxes.
   static List<String> fallbackFor(String primary) => switch (primary) {
-    arabic => const [latin, mono],
-    mono => const [latin, arabic],
-    _ => const [arabic, mono],
+    arabic => const [arabicFallback, latin, mono],
+    mono => const [latin, arabic, arabicFallback],
+    _ => const [latin, arabic, arabicFallback],
   };
 }
 
@@ -136,11 +156,13 @@ class SiyaqTypography extends ThemeExtension<SiyaqTypography> {
     final s = script ?? this.script;
     final isArabic = s == SiyaqScript.arabic;
     final family = _familyFor(s);
+    final resolvedWeight = weight ?? role.weight;
     return TextStyle(
       fontFamily: family,
       fontFamilyFallback: SiyaqFonts.fallbackFor(family),
+      fontVariations: variationsFor(family, resolvedWeight),
       fontSize: role.size,
-      fontWeight: weight ?? role.weight,
+      fontWeight: resolvedWeight,
       color: color ?? defaultColor,
       height: height ?? (isArabic ? role.arabicHeight : role.latinHeight),
       // Arabic is cursive: positive tracking breaks letter joining, so the
@@ -151,9 +173,9 @@ class SiyaqTypography extends ThemeExtension<SiyaqTypography> {
 
   /// Escape hatch for an explicit pixel size, bypassing the named scale.
   ///
-  /// Exists so the migration bridge (`context.legacyType`) can reproduce the old
-  /// `ST.*` metrics **exactly**, keeping Phase 1 pixel-identical. New code must
-  /// use [role] — a raw size here defeats the purpose of the scale.
+  /// Originally the seam for the (now deleted) legacy type bridge; retained for
+  /// the rare glyph that genuinely has no role — emoji sizing, the room-code
+  /// display. New code must use [role] — a raw size here defeats the scale.
   TextStyle custom({
     required SiyaqScript script,
     required double size,
@@ -164,6 +186,7 @@ class SiyaqTypography extends ThemeExtension<SiyaqTypography> {
   }) => TextStyle(
     fontFamily: _familyFor(script),
     fontFamilyFallback: SiyaqFonts.fallbackFor(_familyFor(script)),
+    fontVariations: variationsFor(_familyFor(script), weight),
     fontSize: size,
     fontWeight: weight,
     color: color ?? defaultColor,
@@ -226,6 +249,17 @@ class SiyaqTypography extends ThemeExtension<SiyaqTypography> {
   );
 
   /// Script for a locale code. Arabic is the primary locale.
+  /// Drives a variable font's `wght` axis from a [FontWeight].
+  ///
+  /// Inter ships as one variable asset, so `fontWeight` alone would not move the
+  /// axis — without this every Latin string renders at the default weight and
+  /// the whole type scale flattens. Returns null for static families, where
+  /// `fontWeight` already selects the right file.
+  static List<FontVariation>? variationsFor(String family, FontWeight weight) =>
+      SiyaqFonts.isVariable(family)
+      ? [FontVariation('wght', weight.value.toDouble())]
+      : null;
+
   static SiyaqScript scriptForLocale(String languageCode) =>
       languageCode == 'ar' ? SiyaqScript.arabic : SiyaqScript.latin;
 

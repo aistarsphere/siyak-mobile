@@ -130,7 +130,7 @@ class _WizardState extends ConsumerState<SiyagCreateRoomScreen> {
               const SizedBox(height: SiyaqSpacing.sm),
               Expanded(
                 child: AnimatedSwitcher(
-                  duration: SiyaqMotion.summaryIn,
+                  duration: context.motion.summaryIn,
                   child: KeyedSubtree(
                     key: ValueKey(_step),
                     child: _stepBody(loc, lang, modes),

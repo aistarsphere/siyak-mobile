@@ -1,3 +1,5 @@
+import 'package:context_game/core/sound/sound_player_adapter.dart';
+import 'package:context_game/core/sound/sound_service.dart';
 import 'package:context_game/features/game/presentation/controllers/app_settings_controller.dart';
 import 'package:context_game/features/game/presentation/controllers/game_controller.dart';
 import 'package:context_game/features/game/presentation/controllers/providers.dart';
@@ -24,6 +26,10 @@ void main() {
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         gameRepositoryProvider.overrideWithValue(fake),
+        // Controllers fire feedback sounds; keep the audio plugin out of tests.
+        soundPlayerAdapterProvider.overrideWithValue(
+          const SilentSoundAdapter(),
+        ),
       ],
     );
     addTearDown(container.dispose);

@@ -48,8 +48,15 @@ Future<Widget> buildWeekly({
   Object? error,
   bool loading = false,
   double textScale = 1.0,
+
+  /// Persisted weekly run id. Non-null is what tells the screen a run is already
+  /// in flight, which is the difference between "Start" and "Resume".
+  String? activeRunId,
 }) async {
-  SharedPreferences.setMockInitialValues({'siyaq.lang': lang});
+  SharedPreferences.setMockInitialValues({
+    'siyaq.lang': lang,
+    'siyaq.v2.weeklyRunId': ?activeRunId,
+  });
   final prefs = await SharedPreferences.getInstance();
 
   // Inferred rather than annotated: the override type is not exported.

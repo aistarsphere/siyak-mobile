@@ -68,7 +68,7 @@ class _SiyagLeaderboardScreenState
           ),
           Expanded(
             child: AnimatedSwitcher(
-              duration: SiyaqMotion.summaryIn,
+              duration: context.motion.summaryIn,
               child: _body(context, state, loc),
             ),
           ),

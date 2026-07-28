@@ -358,7 +358,7 @@ class _Place extends StatelessWidget {
                 tween: Tween(begin: 0, end: height),
                 duration: Duration(
                   milliseconds:
-                      SiyaqMotion.barFill.inMilliseconds + delayIndex * 80,
+                      context.motion.barFill.inMilliseconds + delayIndex * 80,
                 ),
                 curve: SiyaqMotion.easeOutQuint,
                 builder: (context, h, child) =>

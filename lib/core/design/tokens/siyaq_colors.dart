@@ -104,10 +104,7 @@ class SiyaqColors extends ThemeExtension<SiyaqColors> {
   final Color primaryContainer; // soft translucent gold fill
 
   /// Correct foreground for [primary] fills. Also exposed as [onAction].
-  ///
-  /// This is the contrast-correct value in **both** themes. The legacy
-  /// [onColorLegacy] helper does **not** agree with it in Light theme — see that
-  /// method's doc for the measured defect.
+  /// Contrast-correct in **both** themes.
   final Color onPrimary;
 
   /// Foreground for primary-action fills.
@@ -192,6 +189,21 @@ class SiyaqColors extends ThemeExtension<SiyaqColors> {
   ];
 
   // ── Brand constants ───────────────────────────────────────────────────────
+  // Gameplay closeness ramp (cold → warm → hot). Interpolated continuously by
+  // `SiyaqHeat.color`; identical in both themes because "hot" must read hot on
+  // any background. Kept here so every palette value in the app lives in one
+  // file, not scattered through the gameplay layer.
+  static const heatCold = Color(0xFF2DD4E8);
+  static const heatWarm = Color(0xFFFF8A4A);
+  static const heatHot = Color(0xFFFF4436);
+
+  /// The gameplay heat ramp in order, for gallery/documentation use.
+  static const heatRamp = <(String, Color)>[
+    ('heatCold', heatCold),
+    ('heatWarm', heatWarm),
+    ('heatHot', heatHot),
+  ];
+
   static const graphiteDeep = Color(0xFF1B1D22);
   static const _onDark = Color(0xFFF5F6F8);
   static const goldDark = Color(0xFFDDB75F);
@@ -208,20 +220,9 @@ class SiyaqColors extends ThemeExtension<SiyaqColors> {
       ? graphiteDeep
       : _onDark;
 
-  /// **Legacy behaviour, retained only to keep Phase 1 visually identical.**
-  ///
-  /// Reproduces the previous `SC.onColor` luminance-threshold rule exactly.
-  /// That rule is measurably wrong in Light theme: light-gold `#CDA34B` has
-  /// luminance `0.397`, falls under the `0.42` threshold, and so returns the
-  /// *light* foreground — giving **2.19:1** on the Light primary button (a WCAG
-  /// AA failure). The correct value, [onPrimary] `#262A31`, gives **5.99:1**.
-  ///
-  /// Migrate call sites to [onAction] (fixed fills) or [foregroundOn] (dynamic
-  /// fills) when each component is rebuilt in Phase 3; that change is a
-  /// deliberate, visible Light-theme fix and is out of scope for this phase.
-  Color onColorLegacy(Color fill) =>
-      fill.computeLuminance() > 0.42 ? graphiteDeep : _onDark;
-
+  // `onColorLegacy` — the old `SC.onColor` luminance-threshold rule, which was
+  // measurably wrong in Light theme (2.19:1 on the primary button) — was
+  // retired once its last call site migrated to [onAction]/[foregroundOn].
   static double _contrast(Color a, Color b) {
     final la = a.computeLuminance(), lb = b.computeLuminance();
     final hi = la > lb ? la : lb, lo = la > lb ? lb : la;

@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/design/theme/context_tokens.dart';
-import '../../../../core/design/theme/legacy_type_bridge.dart';
-import '../../../../core/widgets/siyag/siyag_common.dart';
+import '../../../../core/design/siyaq_design.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../game/presentation/widgets/confetti_overlay.dart';
 import '../siyag_shell.dart';
 
-/// Result screen (result.tsx): emerald medal, secret word, 3 stats, actions.
-/// Confetti in the coral/cyan/emerald palette. Data is passed in (weekly or
-/// practice), keeping the screen independent of any specific controller.
+/// Victory screen: medal, the secret word, three stats, actions — under
+/// confetti. Data is passed in (weekly or practice), keeping the screen
+/// independent of any specific controller.
+///
+/// Built from the Siyaq design system. The entrance pop runs on
+/// `context.motion` and collapses (with the confetti) under reduced motion.
 class SiyagResultScreen extends ConsumerStatefulWidget {
   const SiyagResultScreen({
     super.key,
@@ -35,10 +36,19 @@ class _SiyagResultScreenState extends ConsumerState<SiyagResultScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pop = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 600),
+    duration: SiyaqMotion.reward,
     lowerBound: 0.6,
     upperBound: 1.0,
-  )..forward();
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Duration depends on MediaQuery (reduced motion), so it is set here, not
+    // in initState. Zero-duration forward() completes in one frame.
+    _pop.duration = context.motion.reward;
+    if (!_pop.isAnimating && _pop.value == _pop.lowerBound) _pop.forward();
+  }
 
   @override
   void dispose() {
@@ -53,15 +63,19 @@ class _SiyagResultScreenState extends ConsumerState<SiyagResultScreen>
   @override
   Widget build(BuildContext context) {
     final loc = ref.watch(localizationsProvider);
+    final c = context.colors;
+
     return Directionality(
       textDirection: loc.direction,
       child: Scaffold(
-        backgroundColor: context.colors.background,
+        backgroundColor: c.background,
         body: Stack(
           children: [
             SafeArea(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: SiyaqSpacing.xxl,
+                ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -69,85 +83,82 @@ class _SiyagResultScreenState extends ConsumerState<SiyagResultScreen>
                     ScaleTransition(
                       scale: CurvedAnimation(
                         parent: _pop,
-                        curve: Curves.easeOutBack,
+                        curve: SiyaqMotion.easeOutQuint,
                       ),
-                      child: Center(
-                        child: Container(
-                          width: 80,
-                          height: 80,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: context.colors.success,
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          child: const Text(
-                            '🎉',
-                            style: TextStyle(fontSize: 38),
-                          ),
+                      child: const Center(
+                        child: SiyaqIconTile(
+                          icon: SiyaqIcons.trophy,
+                          size: SiyaqIconTileSize.large,
+                          glow: true,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    Center(
-                      child: Kicker(
-                        loc('solved'),
-                        color: context.colors.success,
-                      ),
+                    const SizedBox(height: SiyaqSpacing.xl),
+                    SiyaqText(
+                      loc('solved').toUpperCase(),
+                      role: SiyaqTextRole.labelSmall,
+                      script: SiyaqScript.mono,
+                      color: c.success,
+                      align: TextAlign.center,
                     ),
-                    const SizedBox(height: 8),
-                    Center(
-                      child: Text(
-                        loc('theWordWas'),
-                        style: context.legacyType.ar(
-                          16,
-                          color: context.colors.textMuted,
-                        ),
-                      ),
+                    const SizedBox(height: SiyaqSpacing.sm),
+                    SiyaqText(
+                      loc('theWordWas'),
+                      role: SiyaqTextRole.bodyMedium,
+                      color: c.textMuted,
+                      align: TextAlign.center,
                     ),
-                    const SizedBox(height: 8),
-                    Center(
-                      child: Text(
-                        widget.secretWord,
-                        textAlign: TextAlign.center,
-                        style: context.legacyType.ar(
-                          52,
-                          weight: FontWeight.w700,
-                          height: 1,
-                        ),
-                      ),
+                    const SizedBox(height: SiyaqSpacing.sm),
+                    SiyaqText(
+                      widget.secretWord,
+                      role: SiyaqTextRole.displayLarge,
+                      align: TextAlign.center,
+                      header: true,
                     ),
-                    const SizedBox(height: 32),
-                    Row(
+                    const SizedBox(height: SiyaqSpacing.xxl),
+                    SiyaqStatGrid(
+                      columns: 3,
+                      minCellWidth: 80,
                       children: [
-                        _stat(
-                          context,
-                          '${widget.attempts}',
-                          loc('attemptsLabel'),
+                        SiyaqStatCard(
+                          value: '${widget.attempts}',
+                          label: loc('attemptsLabel'),
+                          semanticLabel:
+                              '${loc('attemptsLabel')}: ${widget.attempts}',
                         ),
-                        const SizedBox(width: 12),
-                        _stat(
-                          context,
-                          '${widget.hintsUsed}',
-                          loc('hintsLabel'),
+                        SiyaqStatCard(
+                          value: '${widget.hintsUsed}',
+                          label: loc('hintsLabel'),
+                          semanticLabel:
+                              '${loc('hintsLabel')}: ${widget.hintsUsed}',
                         ),
-                        const SizedBox(width: 12),
-                        _stat(context, _fmt(widget.elapsed), loc('elapsed')),
+                        SiyaqStatCard(
+                          value: _fmt(widget.elapsed),
+                          label: loc('elapsed'),
+                          semanticLabel:
+                              '${loc('elapsed')}: ${_fmt(widget.elapsed)}',
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 40),
-                    if (widget.showLeaderboard)
-                      SiyagPrimaryButton(
+                    const SizedBox(height: SiyaqSpacing.huge),
+                    if (widget.showLeaderboard) ...[
+                      SiyaqButton(
                         label: loc('viewMyRank'),
-                        color: context.colors.success,
-                        onTap: () {
+                        icon: SiyaqIcons.leaderboard,
+                        accent: c.success,
+                        fullWidth: true,
+                        onPressed: () {
                           ref.read(siyagTabProvider.notifier).state = 1;
                           Navigator.of(context).popUntil((r) => r.isFirst);
                         },
                       ),
-                    if (widget.showLeaderboard) const SizedBox(height: 10),
-                    SiyagGhostButton(
+                      const SizedBox(height: SiyaqSpacing.smd),
+                    ],
+                    SiyaqButton(
                       label: loc('returnHome'),
-                      onTap: () =>
+                      type: SiyaqButtonType.ghost,
+                      fullWidth: true,
+                      onPressed: () =>
                           Navigator.of(context).popUntil((r) => r.isFirst),
                     ),
                   ],
@@ -162,24 +173,4 @@ class _SiyagResultScreenState extends ConsumerState<SiyagResultScreen>
       ),
     );
   }
-
-  Widget _stat(BuildContext context, String v, String l) => Expanded(
-    child: Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      decoration: BoxDecoration(
-        color: context.colors.surface,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          Text(v, style: context.legacyType.mono(26)),
-          const SizedBox(height: 6),
-          Text(
-            l,
-            style: context.legacyType.ar(11, color: context.colors.textMuted),
-          ),
-        ],
-      ),
-    ),
-  );
 }

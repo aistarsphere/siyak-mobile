@@ -7,24 +7,29 @@ import '../../../v2/domain/entities/gameplay_language.dart';
 import '../../../v2/presentation/controllers/capabilities_controller.dart';
 import '../../domain/translation/translation_service.dart';
 
-/// The active translation backend, or null when the feature is unavailable.
+/// The active translation backend for one gameplay language, or null when the
+/// feature is unavailable for it.
 ///
-/// Release builds require the backend `translation` capability — which no
-/// backend ships yet, so in production this is null and the assistant simply
-/// does not exist. Debug builds fall back to the deterministic
-/// [DevTranslationAdapter] so the UX can be exercised end-to-end.
-final translationServiceProvider = Provider<TranslationService?>((ref) {
-  final caps = ref.watch(capabilitiesProvider).value;
-  if (caps?.translationEnabled ?? false) {
-    // The remote adapter plugs in here once the backend ships the contract in
-    // docs/TRANSLATION_CONTRACT.md. Until then the flag cannot be true in
-    // production (fail-closed mapper), so this branch is unreachable — but a
-    // debug backend that sets it still gets the dev adapter rather than a lie.
-    return const DevTranslationAdapter();
-  }
-  if (kDebugMode) return const DevTranslationAdapter();
-  return null;
-});
+/// Keyed by language because the capability is per language: the live contract
+/// carries `translation_assistant` inside each
+/// `capabilities_contract.languages.<code>` entry, so Arabic and English can
+/// differ. A release build asks the server; today the server reports false for
+/// both and explains why in `capabilities_contract.unimplemented`.
+///
+/// Debug builds fall back to the deterministic [DevTranslationAdapter] so the UX
+/// can be exercised end-to-end before any service exists.
+final translationServiceProvider =
+    Provider.family<TranslationService?, GameplayLanguage>((ref, language) {
+      final caps = ref.watch(capabilitiesProvider).value;
+      if (caps?.translationAssistantFor(language.code) ?? false) {
+        // The remote adapter plugs in here once a translation service ships; see
+        // docs/TRANSLATION_CONTRACT.md. A backend that flips the flag before then
+        // still gets the dev fixture rather than a silent lie.
+        return const DevTranslationAdapter();
+      }
+      if (kDebugMode) return const DevTranslationAdapter();
+      return null;
+    });
 
 /// Compact, dismissible translation assist above the gameplay composer.
 ///
@@ -89,7 +94,7 @@ class _TranslationAssistState extends ConsumerState<TranslationAssist> {
 
   Future<void> _resolve() async {
     final text = widget.text.trim();
-    final service = ref.read(translationServiceProvider);
+    final service = ref.read(translationServiceProvider(widget.gameLanguage));
     if (service == null ||
         !isLikelyOtherLanguage(text, widget.gameLanguage) ||
         text == _dismissedFor) {
@@ -121,7 +126,7 @@ class _TranslationAssistState extends ConsumerState<TranslationAssist> {
   Widget build(BuildContext context) {
     final c = context.colors;
     final text = widget.text.trim();
-    final service = ref.watch(translationServiceProvider);
+    final service = ref.watch(translationServiceProvider(widget.gameLanguage));
 
     final active =
         service != null &&

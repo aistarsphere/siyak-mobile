@@ -180,7 +180,9 @@ void main() {
     testWidgets('disabled service (release gating) renders nothing', (t) async {
       await t.pumpWidget(
         ProviderScope(
-          overrides: [translationServiceProvider.overrideWithValue(null)],
+          overrides: [
+            translationServiceProvider.overrideWith((ref, language) => null),
+          ],
           child: MaterialApp(
             theme: SiyaqThemeData.dark(script: SiyaqScript.latin),
             supportedLocales: const [Locale('en')],

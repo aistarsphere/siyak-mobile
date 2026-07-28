@@ -54,9 +54,29 @@ class V2Mappers {
       weeklyEnabled: f['weekly_challenge'] == true,
       multiplayerEnabled: f['multiplayer'] == true,
       adaptiveHintsEnabled: f['adaptive_hints'] == true,
-      translationEnabled: f['translation'] == true,
+      translationAssistantLanguages: _translationLanguages(j),
       apiVersion: j['api_version']?.toString(),
     );
+  }
+
+  /// Languages whose `translation_assistant` flag is true.
+  ///
+  /// Read from `capabilities_contract.languages.<code>` — the only place the
+  /// live contract carries this. There is no top-level `features.translation`
+  /// key; mapping that non-existent field meant the assistant could never be
+  /// enabled by the backend.
+  static Set<String> _translationLanguages(Map<String, dynamic> j) {
+    final contract = j['capabilities_contract'];
+    if (contract is! Map) return const {};
+    final languages = contract['languages'];
+    if (languages is! Map) return const {};
+    final out = <String>{};
+    languages.forEach((code, entry) {
+      if (entry is Map && entry['translation_assistant'] == true) {
+        out.add(code.toString());
+      }
+    });
+    return out;
   }
 
   // ---- release visibility --------------------------------------------------

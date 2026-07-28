@@ -6,7 +6,7 @@ class V2Capabilities {
     this.weeklyEnabled = false,
     this.multiplayerEnabled = false,
     this.adaptiveHintsEnabled = false,
-    this.translationEnabled = false,
+    this.translationAssistantLanguages = const <String>{},
     this.apiVersion,
   });
 
@@ -15,11 +15,24 @@ class V2Capabilities {
   final bool multiplayerEnabled;
   final bool adaptiveHintsEnabled;
 
-  /// Gameplay translation assistant (`features.translation`). No backend ships
-  /// this yet — fail-closed like every flag, so the feature stays invisible
-  /// until the contract in docs/TRANSLATION_CONTRACT.md is implemented.
-  final bool translationEnabled;
+  /// Gameplay-language codes for which the server reports a working translation
+  /// assistant, from `capabilities_contract.languages.<code>.translation_assistant`.
+  ///
+  /// **Per language, not global.** The live contract carries this flag inside each
+  /// language entry, and the backend states plainly why it is currently off:
+  /// `capabilities_contract.unimplemented.translation_assistant` reads "no
+  /// translation service is wired into gameplay".
+  ///
+  /// This previously read a top-level `features.translation` key, which does not
+  /// exist in the contract — so the flag could never have turned on, and the
+  /// assistant would have stayed dark even after the backend shipped one.
+  /// Fail-closed: an unknown or missing entry means disabled.
+  final Set<String> translationAssistantLanguages;
   final String? apiVersion;
+
+  /// Whether the assistant is available for [languageCode] (`ar` / `en`).
+  bool translationAssistantFor(String languageCode) =>
+      translationAssistantLanguages.contains(languageCode);
 
   /// The state used whenever V2 cannot be reached or is not deployed.
   static const unavailable = V2Capabilities(available: false);
@@ -29,7 +42,7 @@ class V2Capabilities {
     weeklyEnabled: weeklyEnabled,
     multiplayerEnabled: multiplayerEnabled,
     adaptiveHintsEnabled: adaptiveHintsEnabled,
-    translationEnabled: translationEnabled,
+    translationAssistantLanguages: translationAssistantLanguages,
     apiVersion: apiVersion,
   );
 }

@@ -18,14 +18,36 @@ untouched** — translation is strictly an input aid.
 
 ## 1. Capability flag
 
-Add to `GET /api/v1/capabilities` → `features`:
+**Corrected 2026-07-29 against the live contract.** The client originally mapped a
+top-level `features.translation` key. No such key exists. The authoritative switch
+is per gameplay language:
 
 ```json
-{ "features": { "translation": true } }
+{
+  "capabilities_contract": {
+    "languages": {
+      "ar": { "translation_assistant": false },
+      "en": { "translation_assistant": false }
+    },
+    "unimplemented": {
+      "translation_assistant": "no translation service is wired into gameplay"
+    }
+  }
+}
 ```
 
-Client mapping already exists (`V2Capabilities.translationEnabled`,
-fail-closed: absent/non-`true` ⇒ disabled).
+Both languages currently report `false`, and the backend states why in
+`capabilities_contract.unimplemented`. Because the flag is per language, Arabic
+and English can be enabled independently — an Arabic game may have an assistant
+while an English one does not.
+
+Client mapping: `V2Capabilities.translationAssistantLanguages` (the set of codes
+whose flag is true) with `translationAssistantFor(code)`. Fail-closed: a missing,
+non-map or non-`true` entry means disabled. `translationServiceProvider` is keyed
+by `GameplayLanguage` accordingly.
+
+The previous mapping was not merely unused — it read a field the backend never
+sends, so the assistant could never have activated even after a service shipped.
 
 ## 2. Endpoint
 

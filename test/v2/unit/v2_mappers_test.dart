@@ -1,5 +1,6 @@
 import 'package:context_game/features/v2/data/remote/v2_mappers.dart';
 import 'package:context_game/features/v2/domain/entities/gameplay_language.dart';
+import 'package:context_game/features/v2/domain/entities/v2_capabilities.dart';
 import 'package:context_game/features/v2/domain/entities/room.dart';
 import 'package:context_game/features/v2/domain/entities/room_event.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -22,6 +23,121 @@ void main() {
       expect(c.multiplayerEnabled, isTrue);
       expect(c.adaptiveHintsEnabled, isTrue);
       expect(c.apiVersion, '2.0');
+    });
+
+    group('translation assistant', () {
+      // Verbatim from the live backend (2026-07-29). Note there is no
+      // `features.translation` key anywhere in the payload — the flag lives per
+      // language inside `capabilities_contract`, and the contract explains why it
+      // is currently off.
+      const live = {
+        'features': {
+          'anonymous_profiles': true,
+          'weekly_challenge': true,
+          'multiplayer': true,
+          'adaptive_hints': true,
+          'ranked_1v1': true,
+          'coins_wallet': true,
+          'accounts': true,
+          'social_rooms': true,
+          'presence': true,
+          'invitations': true,
+          'join_requests': true,
+          'push_registration': true,
+        },
+        'capabilities_contract': {
+          'contract_version': 1,
+          'features': {'weekly': true, 'ranked': true, 'multiplayer': true},
+          'unimplemented': {
+            'translation_assistant':
+                'no translation service is wired into gameplay',
+          },
+          'languages': {
+            'ar': {
+              'semantic': true,
+              'translation_assistant': false,
+              'engine_ready': true,
+              'release_id': 'siyak-ar-2026-07-26-v001',
+            },
+            'en': {
+              'semantic': true,
+              'translation_assistant': false,
+              'engine_ready': true,
+              'release_id': 'siyak-en-2026-07-26-v001',
+            },
+          },
+        },
+        'api_version': '2.0',
+      };
+
+      test('live payload: disabled for both languages', () {
+        final c = V2Mappers.capabilities(live);
+        expect(c.translationAssistantLanguages, isEmpty);
+        expect(c.translationAssistantFor('ar'), isFalse);
+        expect(c.translationAssistantFor('en'), isFalse);
+      });
+
+      test('reads the per-language flag, so one language can be enabled', () {
+        final c = V2Mappers.capabilities({
+          ...live,
+          'capabilities_contract': {
+            'languages': {
+              'ar': {'translation_assistant': true},
+              'en': {'translation_assistant': false},
+            },
+          },
+        });
+        expect(c.translationAssistantLanguages, {'ar'});
+        expect(c.translationAssistantFor('ar'), isTrue);
+        expect(
+          c.translationAssistantFor('en'),
+          isFalse,
+          reason: 'the flag is per language, not global',
+        );
+      });
+
+      test('a top-level features.translation key is NOT the switch', () {
+        // Regression: this was the field the client used to read. It does not
+        // exist in the contract, so honouring it would keep the assistant dark
+        // forever — and treating it as authoritative would be inventing a field.
+        final c = V2Mappers.capabilities({
+          'features': {'translation': true},
+        });
+        expect(c.translationAssistantLanguages, isEmpty);
+        expect(c.translationAssistantFor('ar'), isFalse);
+      });
+
+      test('fails closed on missing or malformed contract', () {
+        for (final payload in <Map<String, dynamic>>[
+          const {},
+          const {'capabilities_contract': 'nonsense'},
+          const {
+            'capabilities_contract': {'languages': 'nonsense'},
+          },
+          const {
+            'capabilities_contract': {
+              'languages': {'ar': 'nonsense'},
+            },
+          },
+          const {
+            'capabilities_contract': {
+              'languages': {
+                'ar': {'translation_assistant': 'true'},
+              },
+            },
+          },
+        ]) {
+          final c = V2Mappers.capabilities(payload);
+          expect(c.translationAssistantLanguages, isEmpty, reason: '$payload');
+        }
+      });
+
+      test('unavailable capabilities expose no language', () {
+        expect(
+          V2Capabilities.unavailable.translationAssistantFor('ar'),
+          isFalse,
+        );
+      });
     });
   });
 

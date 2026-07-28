@@ -6,6 +6,7 @@ import '../../domain/entities/hint_mode.dart';
 import '../../domain/entities/installation_profile.dart';
 import '../../domain/entities/leaderboard.dart';
 import '../../domain/entities/room.dart';
+import '../../domain/entities/release_visibility.dart';
 import '../../domain/entities/room_event.dart';
 import '../../domain/entities/v2_capabilities.dart';
 import '../../domain/entities/weekly.dart';
@@ -57,6 +58,58 @@ class V2Mappers {
       apiVersion: j['api_version']?.toString(),
     );
   }
+
+  // ---- release visibility --------------------------------------------------
+
+  /// `GET /release-visibility` → [ReleaseVisibility].
+  ///
+  /// Tolerant by construction: unknown extra keys are ignored, an unknown
+  /// `scope` decodes to [ReleaseVisibilityScope.unknown], and a gated key that
+  /// is simply missing stays [Gated.absent] rather than becoming null. Anything
+  /// structurally unexpected throws, and the repository turns that into the
+  /// hidden fallback.
+  static ReleaseVisibility releaseVisibility(Map<String, dynamic> j) {
+    if (j['visible'] != true) return ReleaseVisibility.hidden;
+    return ReleaseVisibility(
+      visible: true,
+      scope: ReleaseVisibilityScope.fromCode(j['scope']),
+      resolvedRelease: _resolvedRelease(j['resolved_release']),
+      currentGameRelease: _currentGameRelease(j['current_game_release']),
+      releaseChangedForNewGames: j['release_changed_for_new_games'] == true,
+      lastUpdated: j['last_updated']?.toString(),
+    );
+  }
+
+  /// Present-and-null means "no active release"; a non-map is not something to
+  /// guess about, so it is treated the same way.
+  static ResolvedRelease? _resolvedRelease(Object? raw) {
+    if (raw is! Map) return null;
+    return ResolvedRelease(
+      releaseId: _gatedString(raw, 'release_id'),
+      displayName: raw['display_name']?.toString(),
+      datasetVersion: _gatedString(raw, 'dataset_version'),
+      language: raw['language']?.toString(),
+      pack: _gatedString(raw, 'pack'),
+      status: raw['status']?.toString(),
+      sourceCommit: _gatedString(raw, 'source_commit'),
+    );
+  }
+
+  static CurrentGameRelease? _currentGameRelease(Object? raw) {
+    if (raw is! Map) return null;
+    return CurrentGameRelease(
+      releaseId: _gatedString(raw, 'release_id'),
+      displayName: raw['display_name']?.toString(),
+      pinned: raw['pinned'] == true,
+      unknownRelease: raw['unknown_release'] == true,
+    );
+  }
+
+  /// Absent key → [Gated.absent]; present key → [Gated.of], keeping a null.
+  static Gated<String> _gatedString(Map<dynamic, dynamic> j, String key) =>
+      j.containsKey(key)
+      ? Gated<String>.of(j[key]?.toString())
+      : const Gated<String>.absent();
 
   // ---- profile -------------------------------------------------------------
   static InstallationProfile profile(

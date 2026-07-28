@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:context_game/features/v2/domain/entities/release_visibility.dart';
+
 import '../helpers/profile_harness.dart';
 
 /// Golden coverage for the Profile screen across theme × language × state.
@@ -68,6 +70,7 @@ void main() {
     bool appleSupported = false,
     double textScale = 1.0,
     Size size = const Size(390, 1000),
+    FakeReleaseVisibilityRepository? releaseVisibility,
   }) async {
     t.view.physicalSize = size;
     t.view.devicePixelRatio = 1.0;
@@ -84,6 +87,7 @@ void main() {
             : null,
         appleSupported: appleSupported,
         textScale: textScale,
+        releaseVisibility: releaseVisibility,
       ),
     );
     // Let the async controllers resolve.
@@ -157,6 +161,103 @@ void main() {
         textScale: 1.6,
         signedIn: true,
         size: const Size(320, 1400),
+      );
+    });
+  });
+
+  // ── Release visibility ────────────────────────────────────────────────────
+  //
+  // The "Game data" section is absent by default (the harness serves the hidden
+  // response), so every pre-existing golden above doubles as proof that a hidden
+  // policy leaves Profile untouched. These four capture the visible states.
+  group('release visibility', () {
+    final resolved = ResolvedRelease(
+      releaseId: const Gated<String>.of('siyak-ar-lexicon-v003-ar-iq'),
+      displayName: 'Arabic Iraqi v003',
+      datasetVersion: const Gated<String>.of('arabic-lexicon-v003'),
+      language: 'ar',
+      pack: const Gated<String>.of('ar-IQ'),
+      status: 'active',
+    );
+
+    ReleaseVisibility visible({bool changed = false}) => ReleaseVisibility(
+      visible: true,
+      scope: ReleaseVisibilityScope.internalTesters,
+      resolvedRelease: resolved,
+      currentGameRelease: changed
+          ? const CurrentGameRelease(
+              releaseId: Gated<String>.of('siyak-ar-lexicon-v002-ar-iq'),
+              displayName: 'Arabic Iraqi v002',
+              pinned: true,
+            )
+          : const CurrentGameRelease(
+              releaseId: Gated<String>.of('siyak-ar-lexicon-v003-ar-iq'),
+              displayName: 'Arabic Iraqi v003',
+              pinned: true,
+            ),
+      releaseChangedForNewGames: changed,
+    );
+
+    testWidgets('visible · dark · Arabic', (t) async {
+      await shoot(
+        t,
+        'profile_release_visible_dark_ar',
+        brightness: Brightness.dark,
+        size: const Size(390, 1500),
+        releaseVisibility: FakeReleaseVisibilityRepository(value: visible()),
+      );
+    });
+
+    testWidgets('visible · light · English', (t) async {
+      await shoot(
+        t,
+        'profile_release_visible_light_en',
+        brightness: Brightness.light,
+        lang: 'en',
+        size: const Size(390, 1500),
+        releaseVisibility: FakeReleaseVisibilityRepository(value: visible()),
+      );
+    });
+
+    testWidgets('changed release · dark · Arabic', (t) async {
+      await shoot(
+        t,
+        'profile_release_changed_dark_ar',
+        brightness: Brightness.dark,
+        size: const Size(390, 1500),
+        releaseVisibility: FakeReleaseVisibilityRepository(
+          value: visible(changed: true),
+        ),
+      );
+    });
+
+    testWidgets('legacy unknown current game · light · English', (t) async {
+      await shoot(
+        t,
+        'profile_release_legacy_light_en',
+        brightness: Brightness.light,
+        lang: 'en',
+        size: const Size(390, 1500),
+        releaseVisibility: FakeReleaseVisibilityRepository(
+          value: ReleaseVisibility(
+            visible: true,
+            resolvedRelease: resolved,
+            currentGameRelease: const CurrentGameRelease(
+              releaseId: Gated<String>.of(null),
+              unknownRelease: true,
+            ),
+          ),
+        ),
+      );
+    });
+
+    testWidgets('hidden · section absent · dark · Arabic', (t) async {
+      await shoot(
+        t,
+        'profile_release_hidden_dark_ar',
+        brightness: Brightness.dark,
+        size: const Size(390, 1500),
+        releaseVisibility: FakeReleaseVisibilityRepository(),
       );
     });
   });

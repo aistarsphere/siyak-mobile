@@ -6,9 +6,11 @@ import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../data/installation_id_store.dart';
 import '../../data/remote/ranked_realtime_nudge.dart';
 import '../../data/remote/remote_realtime_gateway.dart';
+import '../../data/remote/remote_release_visibility_repository.dart';
 import '../../data/remote/remote_repositories.dart';
 import '../../data/remote/v2_api_client.dart';
 import '../../data/session_store.dart';
+import '../../domain/repositories/release_visibility_repository.dart';
 import '../../domain/repositories/v2_repositories.dart';
 import 'profile_controller.dart';
 
@@ -63,6 +65,11 @@ String? _myProfileId(Ref ref) =>
 final capabilitiesRepositoryProvider = Provider<CapabilitiesRepository>((ref) {
   return RemoteCapabilitiesRepository(ref.watch(v2ApiClientProvider));
 });
+
+final releaseVisibilityRepositoryProvider =
+    Provider<ReleaseVisibilityRepository>((ref) {
+      return RemoteReleaseVisibilityRepository(ref.watch(v2ApiClientProvider));
+    });
 
 final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
   final uiLang = ref.read(appSettingsProvider).lang;

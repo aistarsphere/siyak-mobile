@@ -7,7 +7,10 @@ import 'package:context_game/features/auth/presentation/controllers/session_cont
 import 'package:context_game/features/game/presentation/controllers/app_settings_controller.dart';
 import 'package:context_game/features/siyag/presentation/screens/siyag_profile_screen.dart';
 import 'package:context_game/features/v2/domain/entities/installation_profile.dart';
+import 'package:context_game/features/v2/domain/entities/release_visibility.dart';
+import 'package:context_game/features/v2/domain/repositories/release_visibility_repository.dart';
 import 'package:context_game/features/v2/presentation/controllers/profile_controller.dart';
+import 'package:context_game/features/v2/presentation/controllers/v2_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,6 +35,38 @@ class FakeSessionController extends SessionController {
 
   @override
   Future<SessionState> build() async => _state;
+}
+
+/// Serves a canned release-visibility answer, or fails.
+///
+/// Defaulting to [ReleaseVisibility.hidden] keeps every pre-existing Profile
+/// test deterministic and off the network: the section is simply absent unless a
+/// test asks for it.
+class FakeReleaseVisibilityRepository implements ReleaseVisibilityRepository {
+  FakeReleaseVisibilityRepository({
+    this.value = ReleaseVisibility.hidden,
+    this.throws = false,
+    this.delay,
+  });
+
+  final ReleaseVisibility value;
+  final bool throws;
+
+  /// When set, the fetch stays pending for this long — used to prove that a slow
+  /// endpoint never blocks Profile.
+  final Duration? delay;
+
+  int calls = 0;
+  final languages = <String?>[];
+
+  @override
+  Future<ReleaseVisibility> fetch({String? language}) async {
+    calls++;
+    languages.add(language);
+    if (delay != null) await Future<void>.delayed(delay!);
+    if (throws) throw StateError('release-visibility unavailable');
+    return value;
+  }
 }
 
 class FakeAppleGateway implements AppleAuthGateway {
@@ -89,6 +124,7 @@ Future<Widget> buildProfile({
   bool appleSupported = false,
   bool signingIn = false,
   double textScale = 1.0,
+  FakeReleaseVisibilityRepository? releaseVisibility,
 }) async {
   SharedPreferences.setMockInitialValues({'siyaq.lang': lang});
   final prefs = await SharedPreferences.getInstance();
@@ -106,6 +142,9 @@ Future<Widget> buildProfile({
       ),
       appleAuthGatewayProvider.overrideWithValue(
         FakeAppleGateway(isSupported: appleSupported),
+      ),
+      releaseVisibilityRepositoryProvider.overrideWithValue(
+        releaseVisibility ?? FakeReleaseVisibilityRepository(),
       ),
     ],
     child: MaterialApp(

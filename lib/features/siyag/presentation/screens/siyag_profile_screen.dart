@@ -9,6 +9,8 @@ import '../../../auth/presentation/controllers/session_controller.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../v2/domain/entities/installation_profile.dart';
 import '../../../v2/presentation/controllers/profile_controller.dart';
+import '../../../v2/presentation/controllers/release_visibility_controller.dart';
+import '../siyag_shell.dart';
 
 /// Profile: identity, stats, account link, appearance and language.
 ///
@@ -50,6 +52,10 @@ class SiyagProfileScreen extends ConsumerWidget {
           const _LanguageSelector(),
           const SizedBox(height: SiyaqSpacing.xl),
           const _FeedbackToggles(),
+          // Informational metadata, deliberately last: it is absent most of the
+          // time, and placing it after the settings means its appearance can
+          // never reflow anything above it.
+          const _ReleaseInfoSection(),
         ],
       ),
     );
@@ -587,6 +593,241 @@ class _LanguageSelector extends ConsumerWidget {
         segments: [
           SiyaqSegment(value: 'ar', label: loc('langArabic')),
           SiyaqSegment(value: 'en', label: loc('langEnglish')),
+        ],
+      ),
+    );
+  }
+}
+
+/// Index of the Profile destination in the shell's `IndexedStack`.
+///
+/// The shell keeps every tab alive, so nothing remounts when the player switches
+/// destinations — "Profile opened" has to be observed from the tab index rather
+/// than from `initState`.
+const _profileTabIndex = 2;
+
+/// Release/version information, shown only when the backend says so.
+///
+/// Everything about this section is fail-closed. It renders when — and only
+/// when — `GET /release-visibility` returns `visible: true` with something to
+/// draw. While loading, on `visible: false`, on a request failure and on a decode
+/// failure it occupies **zero height**: no error card, no toast, no retry prompt,
+/// no empty section, no spinner. A player who is not eligible cannot tell the
+/// feature exists.
+///
+/// Eligibility is never inferred locally — not from the build type, not from the
+/// presence of a session. The server decides and the client obeys.
+class _ReleaseInfoSection extends ConsumerWidget {
+  const _ReleaseInfoSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Opening Profile re-asks, so an admin policy change lands without an app
+    // restart. Invalidating outside the build phase keeps this out of the
+    // provider's own dependency cycle.
+    ref.listen<int>(siyagTabProvider, (previous, next) {
+      if (next == _profileTabIndex && previous != next) {
+        ref.invalidate(releaseVisibilityProvider);
+      }
+    });
+
+    final info = ref.watch(releaseVisibilityProvider).value;
+    if (info == null || !info.hasAnythingToShow) return const SizedBox.shrink();
+
+    final loc = ref.watch(localizationsProvider);
+    final resolved = info.resolvedRelease;
+    final current = info.currentGameRelease;
+    final changed = info.releaseChangedForNewGames;
+
+    final rows = <Widget>[
+      // Primary row. Documented fallback: display_name, else release_id, else
+      // no row at all — never a placeholder.
+      if (resolved?.label != null)
+        _ReleaseDataRow(
+          label: loc('wordDataVersionLabel'),
+          value: resolved!.label!,
+          emphasise: true,
+          mono: resolved.displayName == null,
+        ),
+
+      // Optional rows, each rendered only when the server both sent the key and
+      // gave it a value. A key omitted by policy and a key that is present-null
+      // on a legacy release both render nothing, so neither case reveals itself.
+      if (resolved?.datasetVersion.hasValue ?? false)
+        _ReleaseDataRow(
+          label: loc('datasetVersionLabel'),
+          value: resolved!.datasetVersion.value!,
+          mono: true,
+        ),
+      if (resolved?.pack.hasValue ?? false)
+        _ReleaseDataRow(
+          label: loc('languagePackLabel'),
+          value: resolved!.pack.value!,
+          mono: true,
+        ),
+      if (resolved?.releaseId.hasValue ?? false)
+        _ReleaseDataRow(
+          label: loc('releaseIdLabel'),
+          value: resolved!.releaseId.value!,
+          mono: true,
+        ),
+      if (resolved?.sourceCommit.hasValue ?? false)
+        _ReleaseDataRow(
+          label: loc('sourceCommitLabel'),
+          value: resolved!.sourceCommit.value!,
+          mono: true,
+        ),
+
+      // Only worth naming the new-games release separately once it differs from
+      // what the current game is pinned to; otherwise it repeats the row above.
+      if (changed && resolved?.label != null)
+        _ReleaseDataRow(
+          label: loc('newGamesReleaseLabel'),
+          value: resolved!.label!,
+          mono: resolved.displayName == null,
+        ),
+
+      if (current != null)
+        _ReleaseDataRow(
+          label: loc('currentGameReleaseLabel'),
+          // A game created before release pinning has no recorded release. Say
+          // so neutrally — never substitute the resolved release, which would
+          // claim the game is on a version it is not.
+          value: current.isUnknownLegacy
+              ? loc('legacyUnknownReleaseLabel')
+              : current.label!,
+          mono: !current.isUnknownLegacy && current.displayName == null,
+          badge: current.pinned ? loc('currentGamePinnedLabel') : null,
+        ),
+    ];
+
+    if (rows.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: SiyaqSpacing.xl),
+      child: _Section(
+        label: loc('releaseInfoSectionTitle'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SiyaqSurface(
+              padding: const EdgeInsets.symmetric(
+                horizontal: SiyaqSpacing.lg,
+                vertical: SiyaqSpacing.smd,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: rows,
+              ),
+            ),
+            if (changed) ...[
+              const SizedBox(height: SiyaqSpacing.smd),
+              // Informational, not a warning: nothing is wrong and nothing was
+              // migrated. The current game simply keeps the version it was
+              // created with, which is the documented pinning guarantee.
+              SiyaqTintedSurface(
+                tone: SiyaqTone.info,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SiyaqIcon.decorative(
+                      SiyaqIcons.info,
+                      size: SiyaqIconSize.sm,
+                      color: context.colors.info,
+                    ),
+                    const SizedBox(width: SiyaqSpacing.sm),
+                    Expanded(
+                      child: SiyaqText(
+                        loc('releaseChangedForNewGamesMessage'),
+                        role: SiyaqTextRole.bodySmall,
+                        color: context.colors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One `label — value` line of release metadata.
+///
+/// Machine-readable values (ids, dataset versions, packs, commits) render in the
+/// mono face so they stay legible in both scripts and never reflow with the
+/// surrounding Arabic or Latin text.
+class _ReleaseDataRow extends StatelessWidget {
+  const _ReleaseDataRow({
+    required this.label,
+    required this.value,
+    this.mono = false,
+    this.emphasise = false,
+    this.badge,
+  });
+
+  final String label;
+  final String value;
+  final bool mono;
+  final bool emphasise;
+
+  /// Small trailing tag, e.g. the pinned marker on the current-game row.
+  final String? badge;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: SiyaqSpacing.xs),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 4,
+            child: SiyaqText(
+              label,
+              role: SiyaqTextRole.bodySmall,
+              color: c.textMuted,
+            ),
+          ),
+          const SizedBox(width: SiyaqSpacing.sm),
+          Expanded(
+            flex: 6,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                mono
+                    ? SiyaqText.numeric(
+                        value,
+                        role: SiyaqTextRole.bodySmall,
+                        color: emphasise ? c.textPrimary : c.textSecondary,
+                        align: TextAlign.end,
+                        maxLines: 2,
+                      )
+                    : SiyaqText(
+                        value,
+                        role: emphasise
+                            ? SiyaqTextRole.bodyMedium
+                            : SiyaqTextRole.bodySmall,
+                        weight: emphasise ? FontWeight.w600 : null,
+                        color: emphasise ? c.textPrimary : c.textSecondary,
+                        align: TextAlign.end,
+                        maxLines: 2,
+                      ),
+                if (badge != null) ...[
+                  const SizedBox(height: SiyaqSpacing.xxs),
+                  SiyaqText(
+                    badge!,
+                    role: SiyaqTextRole.labelSmall,
+                    color: c.textMuted,
+                    align: TextAlign.end,
+                  ),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );

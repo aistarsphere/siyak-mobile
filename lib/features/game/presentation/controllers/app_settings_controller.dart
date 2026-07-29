@@ -12,6 +12,7 @@ class AppSettings {
     this.haptics = true,
     this.themeMode = ThemeMode.system,
     this.baseUrlOverride = '',
+    this.gameplayMode = GameplayMode.classic,
   });
 
   final String lang; // 'ar' | 'en' — Arabic-first
@@ -24,6 +25,14 @@ class AppSettings {
   /// Developer-only override; empty means use --dart-define / default.
   final String baseUrlOverride;
 
+  /// Which gameplay presentation the player last chose.
+  ///
+  /// Presentation only: both modes share one game session, one backend call and
+  /// one set of rules — see `docs/ORBIT_NASIJ_SPEC.md`. Defaults to
+  /// [GameplayMode.classic] so an existing install is never moved onto the new
+  /// board without asking, and so Orbit stays opt-in until its QA passes.
+  final GameplayMode gameplayMode;
+
   String get effectiveBaseUrl => AppConfig.resolveBaseUrl(baseUrlOverride);
 
   AppSettings copyWith({
@@ -32,13 +41,29 @@ class AppSettings {
     bool? haptics,
     ThemeMode? themeMode,
     String? baseUrlOverride,
+    GameplayMode? gameplayMode,
   }) => AppSettings(
     lang: lang ?? this.lang,
     sound: sound ?? this.sound,
     haptics: haptics ?? this.haptics,
     themeMode: themeMode ?? this.themeMode,
     baseUrlOverride: baseUrlOverride ?? this.baseUrlOverride,
+    gameplayMode: gameplayMode ?? this.gameplayMode,
   );
+}
+
+/// How gameplay is presented. **Not** a different game.
+///
+/// Classic is the shipping timeline. Orbit is the Nasīj weave from the Claude
+/// Design prototype. Both drive the same session, secret, ranking, hints and
+/// result — only the presentation and interaction model differ, so nothing here
+/// reaches the backend.
+enum GameplayMode {
+  classic,
+  orbit;
+
+  static GameplayMode fromCode(String? code) =>
+      code == 'orbit' ? orbit : classic;
 }
 
 /// Loaded synchronously at startup (main.dart) and overridden in the scope.
@@ -52,6 +77,7 @@ class AppSettingsController extends Notifier<AppSettings> {
   static const _kHaptics = 'siyaq.haptics';
   static const _kThemeMode = 'siyaq.themeMode';
   static const _kBaseUrl = 'siyaq.baseUrlOverride';
+  static const _kGameplayMode = 'siyaq.gameplayMode';
 
   @override
   AppSettings build() {
@@ -62,6 +88,7 @@ class AppSettingsController extends Notifier<AppSettings> {
       haptics: sp.getBool(_kHaptics) ?? true,
       themeMode: _parseThemeMode(sp.getString(_kThemeMode)),
       baseUrlOverride: sp.getString(_kBaseUrl) ?? '',
+      gameplayMode: GameplayMode.fromCode(sp.getString(_kGameplayMode)),
     );
   }
 
@@ -72,6 +99,13 @@ class AppSettingsController extends Notifier<AppSettings> {
   };
 
   SharedPreferences get _sp => ref.read(sharedPreferencesProvider);
+
+  /// Remembers the player's last choice so the setup screen can preselect it,
+  /// while leaving it trivially changeable before the next game starts.
+  void setGameplayMode(GameplayMode mode) {
+    state = state.copyWith(gameplayMode: mode);
+    _sp.setString(_kGameplayMode, mode.name);
+  }
 
   void setThemeMode(ThemeMode mode) {
     state = state.copyWith(themeMode: mode);

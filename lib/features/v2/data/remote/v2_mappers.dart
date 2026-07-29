@@ -55,8 +55,37 @@ class V2Mappers {
       multiplayerEnabled: f['multiplayer'] == true,
       adaptiveHintsEnabled: f['adaptive_hints'] == true,
       translationAssistantLanguages: _translationLanguages(j),
+      languageReleases: _languageReleases(j),
       apiVersion: j['api_version']?.toString(),
     );
+  }
+
+  /// Per-language release state from `capabilities_contract.languages`.
+  ///
+  /// `release_id` is copied verbatim — composed (`a+b`) and plain ids both pass
+  /// through untouched, because the client never parses the identifier.
+  static Map<String, LanguageReleaseState> _languageReleases(
+    Map<String, dynamic> j,
+  ) {
+    final contract = j['capabilities_contract'];
+    if (contract is! Map) return const {};
+    final languages = contract['languages'];
+    if (languages is! Map) return const {};
+    final out = <String, LanguageReleaseState>{};
+    languages.forEach((code, entry) {
+      if (entry is! Map) return;
+      final id = entry['release_id']?.toString();
+      out[code.toString()] = LanguageReleaseState(
+        releaseId: (id != null && id.isNotEmpty) ? id : null,
+        engineReady: entry['engine_ready'] == true,
+        unavailableReason: ReleaseUnavailableReason.fromCode(
+          entry['release_unavailable_reason'],
+        ),
+        translationAssistant: entry['translation_assistant'] == true,
+        semantic: entry['semantic'] == true,
+      );
+    });
+    return out;
   }
 
   /// Languages whose `translation_assistant` flag is true.

@@ -61,6 +61,9 @@ class GameState {
     this.duplicateSeq = 0,
     this.unknown,
     this.autocomplete = const [],
+    this.releaseId,
+    this.activeReleaseId,
+    this.releaseChanged = false,
   });
 
   final String? gameId;
@@ -90,6 +93,16 @@ class GameState {
   final UnknownWordState? unknown;
   final List<String> autocomplete;
 
+  /// Word-data release this session is pinned to, as the server spelled it.
+  /// Opaque — the client never parses or composes it. See [GameSnapshot].
+  final String? releaseId;
+
+  /// Release a new game would use now; differs after an activation/rollback.
+  final String? activeReleaseId;
+
+  /// Server-reported: the active release moved on since this game started.
+  final bool releaseChanged;
+
   bool get hasGame => gameId != null;
   int get attempts => guesses.length;
   bool get hintsExhausted => hintsRemaining <= 0;
@@ -112,6 +125,9 @@ class GameState {
   GameState copyWith({
     String? gameId,
     String? language,
+    String? releaseId,
+    String? activeReleaseId,
+    bool? releaseChanged,
     String? category,
     String? categoryLabel,
     String? difficulty,
@@ -136,6 +152,9 @@ class GameState {
   }) => GameState(
     gameId: gameId ?? this.gameId,
     language: language ?? this.language,
+    releaseId: releaseId ?? this.releaseId,
+    activeReleaseId: activeReleaseId ?? this.activeReleaseId,
+    releaseChanged: releaseChanged ?? this.releaseChanged,
     category: category ?? this.category,
     categoryLabel: categoryLabel ?? this.categoryLabel,
     difficulty: difficulty ?? this.difficulty,
@@ -184,6 +203,10 @@ class GameController extends Notifier<GameState> {
         'categoryLabel': state.categoryLabel,
         'difficulty': state.difficulty,
         'solved': state.solved,
+        // Recorded so a resumed session can be attributed to the release it was
+        // created on even before the refetch returns. Only ever read back for
+        // display; the server remains authoritative on resume.
+        'releaseId': state.releaseId,
       }),
     );
   }
@@ -225,6 +248,9 @@ class GameController extends Notifier<GameState> {
     hintsUsed: s.hintsUsed,
     hintsRemaining: s.hintsRemaining,
     maxHints: s.maxHints,
+    releaseId: s.releaseId,
+    activeReleaseId: s.activeReleaseId,
+    releaseChanged: s.releaseChanged,
   );
 
   // ---- game lifecycle -------------------------------------------------------
@@ -264,8 +290,17 @@ class GameController extends Notifier<GameState> {
       );
       return true;
     } on ApiException catch (e) {
-      if (e.type == ApiErrorType.badRequest) {
-        _clearSaved(); // game expired/unknown server-side
+      // The saved pointer is only a game id, so anything meaning "that game no
+      // longer exists" must drop it — otherwise resume fails forever and the
+      // only cure is clearing app data.
+      //
+      // `GET /game/{id}` answers 404 `GAME_NOT_FOUND` for an expired game and
+      // for one whose release was withdrawn by a rollback. The client maps 404
+      // to [ApiErrorType.server] (400/422 are the only badRequest codes), so
+      // checking `badRequest` alone never fired for the very case the original
+      // comment described.
+      if (e.type == ApiErrorType.badRequest || e.statusCode == 404) {
+        _clearSaved();
         return false;
       }
       rethrow;

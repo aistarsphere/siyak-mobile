@@ -23,6 +23,9 @@ class GameSnapshot {
     this.bestRank,
     this.secretWord,
     this.model,
+    this.releaseId,
+    this.activeReleaseId,
+    this.releaseChanged = false,
   });
 
   final String gameId;
@@ -44,6 +47,24 @@ class GameSnapshot {
   final String? secretWord;
   final String? model;
 
+  /// The word-data release this game is **pinned** to, exactly as the server
+  /// spells it — an opaque identifier, never parsed.
+  ///
+  /// The backend resolves Arabic by locale and composes Iraq from `ar-MSA` +
+  /// `ar-IQ`, but exposes the result as one id. Formats already vary in
+  /// production (`siyak-ar-iq-corpus-v3-candidate` alongside
+  /// `siyak-en-2026-07-26-v001`), so any structure read out of this string
+  /// would be a client-side assumption the contract does not make.
+  final String? releaseId;
+
+  /// The release a **new** game would use right now. Differs from [releaseId]
+  /// after an activation or rollback while this game keeps its original data.
+  final String? activeReleaseId;
+
+  /// Server's own statement that the active release moved on since this game
+  /// was created. Taken verbatim — never recomputed by comparing the two ids.
+  final bool releaseChanged;
+
   factory GameSnapshot.fromJson(Map<String, dynamic> j) => GameSnapshot(
     gameId: j['game_id'] as String,
     language: j['language'] as String? ?? 'ar',
@@ -56,6 +77,9 @@ class GameSnapshot {
     bestRank: (j['best_rank'] as num?)?.toInt(),
     secretWord: j['secret_word'] as String?,
     model: j['model'] as String?,
+    releaseId: j['release_id']?.toString(),
+    activeReleaseId: j['active_release_id']?.toString(),
+    releaseChanged: j['release_changed'] == true,
     guesses: (j['previous_guesses'] as List<dynamic>? ?? const [])
         .map((e) => Guess.fromEntry(e as Map<String, dynamic>))
         .toList(),

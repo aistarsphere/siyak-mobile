@@ -8,6 +8,7 @@ import '../../../auth/presentation/controllers/auth_providers.dart';
 import '../../../auth/presentation/controllers/session_controller.dart';
 import '../../../game/presentation/controllers/app_settings_controller.dart';
 import '../../../v2/domain/entities/installation_profile.dart';
+import '../../../game/presentation/controllers/game_controller.dart';
 import '../../../v2/presentation/controllers/profile_controller.dart';
 import '../../../v2/presentation/controllers/release_visibility_controller.dart';
 import '../siyag_shell.dart';
@@ -639,6 +640,13 @@ class _ReleaseInfoSection extends ConsumerWidget {
     final current = info.currentGameRelease;
     final changed = info.releaseChangedForNewGames;
 
+    // Effective release of the running session, straight from the gameplay
+    // response. Independent of the visibility payload: a game can be in progress
+    // while the policy reports nothing about releases at all.
+    final game = ref.watch(gameControllerProvider);
+    final sessionRelease = game.releaseId;
+    final sessionChanged = game.releaseChanged;
+
     final rows = <Widget>[
       // Primary row. Documented fallback: display_name, else release_id, else
       // no row at all — never a placeholder.
@@ -687,6 +695,15 @@ class _ReleaseInfoSection extends ConsumerWidget {
           mono: resolved.displayName == null,
         ),
 
+      // Components of a composed identity, named for diagnostics. Empty for a
+      // plain id, so English (still `siyak-en-…-v001`) shows no extra row.
+      for (final part in resolved?.components ?? const <String>[])
+        _ReleaseDataRow(
+          label: loc('releaseComponentsLabel'),
+          value: part,
+          mono: true,
+        ),
+
       if (current != null)
         _ReleaseDataRow(
           label: loc('currentGameReleaseLabel'),
@@ -698,6 +715,26 @@ class _ReleaseInfoSection extends ConsumerWidget {
               : current.label!,
           mono: !current.isUnknownLegacy && current.displayName == null,
           badge: current.pinned ? loc('currentGamePinnedLabel') : null,
+        ),
+
+      // The release the *live gameplay session* is actually pinned to, read from
+      // the game controller rather than the policy payload — this is the value
+      // that determines the words in front of the player right now. Shown only
+      // when a session exists, and still inside the policy-gated section so it
+      // cannot leak to an ineligible player.
+      if (sessionRelease != null)
+        _ReleaseDataRow(
+          label: loc('sessionReleaseLabel'),
+          value: sessionRelease,
+          mono: true,
+          badge: sessionChanged ? loc('currentGamePinnedLabel') : null,
+        ),
+
+      if (info.lastUpdated != null)
+        _ReleaseDataRow(
+          label: loc('releaseUpdatedLabel'),
+          value: info.lastUpdated!,
+          mono: true,
         ),
     ];
 

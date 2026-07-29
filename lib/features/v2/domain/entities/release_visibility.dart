@@ -13,6 +13,28 @@ library;
 
 import 'package:flutter/foundation.dart';
 
+/// Splits a composed release identity into its parts, for **display only**.
+///
+/// The backend resolves Arabic by locale and composes Iraq from `ar-MSA` +
+/// `ar-IQ`, reporting the result as one `a+b` identifier — live example:
+/// `siyak-ar-msa-corpus-v3-candidate+siyak-ar-iq-corpus-v3-candidate`. Naming the
+/// components is useful in diagnostics, so this exists purely to render them.
+///
+/// **Nothing in the app branches on the result.** The identifier stays opaque
+/// everywhere else: releases are resolved and composed server-side, and a plain
+/// id (English still returns `siyak-en-2026-07-26-v001`) yields a single element,
+/// which callers treat as "not composed".
+List<String> releaseComponents(String? releaseId) {
+  final id = releaseId?.trim() ?? '';
+  if (id.isEmpty) return const [];
+  final parts = id
+      .split('+')
+      .map((p) => p.trim())
+      .where((p) => p.isNotEmpty)
+      .toList();
+  return parts.length > 1 ? parts : const [];
+}
+
 /// A field the server may **omit** (switched off by policy) or send as **null**
 /// (genuinely absent from a legacy release). Those are different things, and
 /// collapsing them into one nullable would lose the distinction the contract is
@@ -110,6 +132,10 @@ class ResolvedRelease {
   /// Null when neither is available — the caller renders no row rather than a
   /// placeholder.
   String? get label => displayName ?? releaseId.value;
+
+  /// Parts of a composed identity, or empty when the id is plain. Display only —
+  /// see [releaseComponents].
+  List<String> get components => releaseComponents(releaseId.value);
 }
 
 /// The release the caller's most recent resumable game is **pinned** to.

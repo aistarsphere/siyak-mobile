@@ -4,6 +4,7 @@ import 'package:context_game/features/game/data/models/hint_result.dart';
 import 'package:context_game/features/game/data/models/languages_info.dart';
 import 'package:context_game/features/game/data/models/modes_info.dart';
 import 'package:context_game/features/game/data/models/word_suggestions.dart';
+import 'package:context_game/core/network/api_error.dart';
 import 'package:context_game/features/game/domain/repositories/game_repository.dart';
 
 /// Scripted in-memory backend mirroring the real `/api/context-game` schema:
@@ -23,6 +24,17 @@ class FakeGameRepository implements GameRepository {
   };
 
   int newGameCalls = 0;
+
+  /// Composed release the fake "activates" — mirrors the live Arabic shape
+  /// `ar-MSA + ar-IQ`. Tests reassign this to simulate an activation/rollback.
+  String activeReleaseId =
+      'siyak-ar-msa-corpus-v3-candidate+siyak-ar-iq-corpus-v3-candidate';
+
+  /// Release each created game was pinned to, by game id.
+  final Map<String, String> pinnedRelease = {};
+
+  /// When true, `game()` answers like the live 404 `GAME_NOT_FOUND`.
+  bool gameNotFound = false;
   final Map<String, List<Map<String, dynamic>>> _history = {};
   final Map<String, List<Map<String, dynamic>>> _hints = {};
 
@@ -128,8 +140,13 @@ class FakeGameRepository implements GameRepository {
     final id = 'game-$newGameCalls';
     _history[id] = [];
     _hints[id] = [];
+    // A game is pinned to whatever is active at creation time.
+    pinnedRelease[id] = activeReleaseId;
     return GameSnapshot.fromJson({
       'game_id': id,
+      'release_id': activeReleaseId,
+      'active_release_id': activeReleaseId,
+      'release_changed': false,
       'language': language,
       'dir': language == 'ar' ? 'rtl' : 'ltr',
       'category': category,
@@ -149,9 +166,23 @@ class FakeGameRepository implements GameRepository {
 
   @override
   Future<GameSnapshot> game({required String gameId}) async {
+    if (gameNotFound) {
+      // Exactly how the live API answers for an expired game, or one whose
+      // release was withdrawn: 404 GAME_NOT_FOUND, which the client maps to
+      // ApiErrorType.server (400/422 are the only badRequest codes).
+      throw const ApiException(
+        ApiErrorType.server,
+        detail: 'game_not_found',
+        statusCode: 404,
+      );
+    }
     final hist = _history[gameId] ?? [];
+    final pinned = pinnedRelease[gameId] ?? activeReleaseId;
     return GameSnapshot.fromJson({
       'game_id': gameId,
+      'release_id': pinned,
+      'active_release_id': activeReleaseId,
+      'release_changed': pinned != activeReleaseId,
       'language': 'ar',
       'dir': 'rtl',
       'category': 'general',

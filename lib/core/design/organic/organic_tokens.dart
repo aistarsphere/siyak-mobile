@@ -180,14 +180,25 @@ enum OrganicScript { latin, arabic }
 
 /// Font families, per script.
 ///
-/// ⚠️ None of these four families are bundled yet. Declaring them here does not
-/// make them render — `assets/fonts/` and `pubspec.yaml` still need the faces.
-/// Until then Flutter falls back to the platform font.
+/// All four ship in `assets/fonts/organic/` under SIL OFL 1.1, with their licence
+/// texts beside them.
+///
+/// The names are the **Flutter family names declared in `pubspec.yaml`**, which is
+/// what `TextStyle.fontFamily` resolves against — not the CSS names the design
+/// uses. `Baloo Bhaijaan 2` in CSS is declared here as `BalooBhaijaan2`; a space
+/// in the pubspec family would work but invites silent mismatches.
 abstract final class OrganicFonts {
   static const latinDisplay = 'Caprasimo';
   static const latinBody = 'Figtree';
-  static const arabicDisplay = 'Baloo Bhaijaan 2';
+  static const arabicDisplay = 'BalooBhaijaan2';
   static const arabicBody = 'Tajawal';
+
+  /// Families shipped as variable fonts. Their weight must be driven through
+  /// `TextStyle.fontVariations` — `fontWeight` alone does not move an axis, a
+  /// trap this project already hit once with Inter.
+  static const variableFamilies = <String>{latinBody, arabicDisplay};
+
+  static bool isVariable(String family) => variableFamilies.contains(family);
 
   static String display(OrganicScript s) =>
       s == OrganicScript.arabic ? arabicDisplay : latinDisplay;

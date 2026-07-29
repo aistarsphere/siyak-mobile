@@ -122,3 +122,34 @@ flutter:
           weight: 400
         - asset: assets/fonts/siyag/DMMono-500.ttf
           weight: 500
+
+    # ── Organic design system (Claude Design adoption) ──────────────────────
+    # All four are SIL OFL 1.1; the licence texts ship beside the faces in
+    # assets/fonts/organic/. Variable files are used where they exist so one
+    # asset covers a weight range instead of several static cuts.
+    #
+    #   Latin  display : Caprasimo (single weight by design)
+    #   Latin  body    : Figtree            — variable wght 300..900
+    #   Arabic display : Baloo Bhaijaan 2   — variable wght 400..800
+    #   Arabic body    : Tajawal            — static 400/500/700 (no variable cut)
+    #
+    # Weight is driven through TextStyle.fontVariations for the two variable
+    # families; fontWeight alone does not move a variable axis.
+    - family: Caprasimo
+      fonts:
+        - asset: assets/fonts/organic/Caprasimo-Regular.ttf
+          weight: 400
+    - family: Figtree
+      fonts:
+        - asset: assets/fonts/organic/Figtree-Variable.ttf
+    - family: BalooBhaijaan2
+      fonts:
+        - asset: assets/fonts/organic/BalooBhaijaan2-Variable.ttf
+    - family: Tajawal
+      fonts:
+        - asset: assets/fonts/organic/Tajawal-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/organic/Tajawal-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/organic/Tajawal-Bold.ttf
+          weight: 700

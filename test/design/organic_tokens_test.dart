@@ -140,7 +140,7 @@ void main() {
 
   group('script-aware type', () {
     test('Arabic gets faces that can actually render it', () {
-      expect(OrganicFonts.display(OrganicScript.arabic), 'Baloo Bhaijaan 2');
+      expect(OrganicFonts.display(OrganicScript.arabic), 'BalooBhaijaan2');
       expect(OrganicFonts.body(OrganicScript.arabic), 'Tajawal');
       // Caprasimo and Figtree are Latin-only, so they must never be selected
       // for Arabic — that would produce tofu in the app's primary language.

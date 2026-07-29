@@ -24,7 +24,27 @@ void main() {
       expect(NasijBand.forScore(70), NasijBand.near);
       expect(NasijBand.forScore(89.9), NasijBand.near);
       expect(NasijBand.forScore(90), NasijBand.touching);
-      expect(NasijBand.forScore(100), NasijBand.touching);
+      expect(NasijBand.forScore(99.9), NasijBand.touching);
+      // The prototype adds a sixth band for the secret itself.
+      expect(NasijBand.forScore(100), NasijBand.solved);
+    });
+
+    test('solved is the heaviest stroke but shares the closest colour', () {
+      expect(NasijBand.solved.strokeCompact, 6.0);
+      expect(
+        NasijBand.solved.strokeCompact,
+        greaterThan(NasijBand.touching.strokeCompact),
+      );
+      // Six bands map onto the five-colour ramp: solved reuses touching's tier.
+      expect(NasijBand.solved.tier, NasijBand.touching.tier);
+      expect(NasijBand.solved.rampIndex, NasijBand.touching.rampIndex);
+      expect(NasijBand.solved.rampIndex, 4, reason: 'p5, zero-based');
+    });
+
+    test('every band indexes inside the five-colour ramp', () {
+      for (final b in NasijBand.values) {
+        expect(b.rampIndex, inInclusiveRange(0, 4), reason: b.name);
+      }
     });
 
     test('stroke width grows with the band, so colour is not load-bearing', () {
@@ -44,7 +64,9 @@ void main() {
           ordered[i].strokeExpanded,
           greaterThan(ordered[i - 1].strokeExpanded),
         );
-        // The larger board always draws heavier than the compact one.
+        // The larger board always draws heavier than the compact one. `solved`
+        // is excluded from this list: it is a terminal state at a single weight,
+        // not another step on the proximity scale.
         expect(
           ordered[i].strokeExpanded,
           greaterThan(ordered[i].strokeCompact),

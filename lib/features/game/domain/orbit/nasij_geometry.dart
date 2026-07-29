@@ -75,7 +75,12 @@ enum NasijBand {
   adjacent(tier: 2, minScore: 20, strokeCompact: 2.2, strokeExpanded: 3.2),
   related(tier: 3, minScore: 45, strokeCompact: 3.0, strokeExpanded: 4.0),
   near(tier: 4, minScore: 70, strokeCompact: 4.0, strokeExpanded: 5.0),
-  touching(tier: 5, minScore: 90, strokeCompact: 5.5, strokeExpanded: 6.5);
+  touching(tier: 5, minScore: 90, strokeCompact: 5.5, strokeExpanded: 6.5),
+
+  /// The secret itself. The prototype gives it the same colour tier as
+  /// [touching] but the heaviest stroke, so the winning thread reads as the
+  /// thickest line on the board.
+  solved(tier: 5, minScore: 100, strokeCompact: 6.0, strokeExpanded: 6.0);
 
   const NasijBand({
     required this.tier,
@@ -107,6 +112,7 @@ enum NasijBand {
     related => 'nasijBandRelated',
     near => 'nasijBandNear',
     touching => 'nasijBandTouching',
+    solved => 'nasijBandSolved',
   };
 
   /// Bead radius: `2.4 + index * 0.5`.
@@ -114,6 +120,7 @@ enum NasijBand {
 
   /// Band for a 0–100 proximity score, highest threshold first.
   static NasijBand forScore(num score) {
+    if (score >= solved.minScore) return solved;
     if (score >= touching.minScore) return touching;
     if (score >= near.minScore) return near;
     if (score >= related.minScore) return related;
@@ -124,6 +131,12 @@ enum NasijBand {
   /// Whether a thread in this band keeps a visible label once the board is
   /// crowded past [NasijSpace.labelCollapseThreshold].
   bool get survivesCollapse => tier >= near.tier;
+
+  /// Zero-based index into the five-colour `--sy-p1…p5` ramp.
+  ///
+  /// [solved] deliberately shares [touching]'s colour, so this is `tier - 1`
+  /// rather than the enum's own ordinal — six bands map onto five colours.
+  int get rampIndex => tier - 1;
 }
 
 /// One placed thread: everything the painter and the semantic list both need.

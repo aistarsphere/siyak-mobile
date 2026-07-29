@@ -52,7 +52,9 @@ class OrganicColors extends ThemeExtension<OrganicColors> {
   /// `--sy-gold` — the Siyaq brand carry-over.
   final Color gold;
 
-  /// `--sy-hot` — foreground on the strongest proximity tier.
+  /// `--sy-hot` — the **background** of the best-guess row, not a foreground.
+  /// Pale warm tint in light, deep brown at night; getting these the wrong way
+  /// round turns the light theme's hot row almost black.
   final Color hot;
 
   /// `--sy-indicator` — page/step indicators in their inactive state.
@@ -62,6 +64,11 @@ class OrganicColors extends ThemeExtension<OrganicColors> {
   final Color keyboard;
 
   /// `--sy-p1 … --sy-p5`, ordered **far → closest**.
+  ///
+  /// Taken from `Siyaq Prototype.dc.html`, which is the authority. Note the two
+  /// themes are **not** light/dark variants of one ramp: night reaches its
+  /// strongest at `#e2704a` while light lands on the deeper `#a33f22`, because
+  /// each has to hold its own against a different ground.
   ///
   /// Five tiers, not a continuous gradient. Colour is only one channel: the Orbit
   /// view must also vary radial distance, line weight, scale and the accessible
@@ -99,15 +106,15 @@ class OrganicColors extends ThemeExtension<OrganicColors> {
     muted: OrganicPalette.neutral600,
     line: OrganicPalette.neutral300,
     gold: Color(0xFFD9A441),
-    hot: Color(0xFF3A2B20),
+    hot: Color(0xFFF7E3D3),
     indicator: Color(0xFF3A342C),
     keyboard: Color(0xFFD6CBB8),
     proximity: <Color>[
-      OrganicPalette.neutral600,
-      OrganicPalette.accent2400,
+      OrganicPalette.neutral400,
+      OrganicPalette.accent2300,
       OrganicPalette.accent2500,
-      OrganicPalette.accent400,
-      Color(0xFFE2704A),
+      OrganicPalette.accent,
+      Color(0xFFA33F22),
     ],
     sheetShadow: OrganicElevation.sheetLight,
   );
@@ -122,15 +129,15 @@ class OrganicColors extends ThemeExtension<OrganicColors> {
     muted: OrganicPalette.neutral500,
     line: Color(0xFF3D342A),
     gold: Color(0xFFE8B559),
-    hot: Color(0xFFF7E3D3),
+    hot: Color(0xFF3A2B20),
     indicator: Color(0xFF5A5046),
     keyboard: Color(0xFF241E18),
     proximity: <Color>[
-      OrganicPalette.neutral400,
+      OrganicPalette.neutral600,
+      OrganicPalette.accent2400,
       OrganicPalette.accent2300,
-      OrganicPalette.accent2300,
-      OrganicPalette.accent,
-      Color(0xFFA33F22),
+      OrganicPalette.accent400,
+      Color(0xFFE2704A),
     ],
     sheetShadow: OrganicElevation.sheetDark,
   );

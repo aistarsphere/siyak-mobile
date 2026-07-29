@@ -226,8 +226,41 @@ void main() {
     });
 
     test('the closest tier is the strongest accent, not a neutral', () {
-      expect(OrganicColors.light.closest, const Color(0xFFE2704A));
-      expect(OrganicColors.dark.closest, const Color(0xFFA33F22));
+      // Per Siyaq Prototype.dc.html, the authority. The two themes are not
+      // light/dark variants of one ramp: each lands on a different strongest
+      // value so it holds against its own ground. An earlier pass had these
+      // inverted, so they are pinned per theme.
+      expect(OrganicColors.light.closest, const Color(0xFFA33F22));
+      expect(OrganicColors.dark.closest, const Color(0xFFE2704A));
+    });
+
+    test('each theme carries its own ramp, verbatim from the prototype', () {
+      expect(OrganicColors.light.proximity, const <Color>[
+        OrganicPalette.neutral400,
+        OrganicPalette.accent2300,
+        OrganicPalette.accent2500,
+        OrganicPalette.accent,
+        Color(0xFFA33F22),
+      ]);
+      expect(OrganicColors.dark.proximity, const <Color>[
+        OrganicPalette.neutral600,
+        OrganicPalette.accent2400,
+        OrganicPalette.accent2300,
+        OrganicPalette.accent400,
+        Color(0xFFE2704A),
+      ]);
+    });
+
+    test('the hot row background is pale in light and deep at night', () {
+      // Regression: these were swapped, which would have rendered the light
+      // theme's best-guess row almost black.
+      expect(OrganicColors.light.hot, const Color(0xFFF7E3D3));
+      expect(OrganicColors.dark.hot, const Color(0xFF3A2B20));
+      expect(
+        OrganicColors.light.hot.computeLuminance(),
+        greaterThan(OrganicColors.dark.hot.computeLuminance()),
+        reason: 'hot is a background: light theme must be the lighter one',
+      );
     });
 
     test('closeness buckets deterministically, never interpolates', () {

@@ -141,20 +141,45 @@ holds every thread.
 - **no letter-spacing and no uppercase anywhere** in Arabic
 - Arabic-Indic numerals in the mock (`٧ خيوط`, `١#`)
 
-## Discrepancy to resolve
+## Authority: Siyaq Prototype
 
-The board's proximity ramp in this file differs from the one in
-`Siyaq Prototype.dc.html` recorded in `DESIGN_MCP_EXTRACTION.md`:
+`Siyaq Prototype.dc.html` is the single source of truth (decided 2026-07-30).
+`Siyaq Game Variants.dc.html` remains useful for the layout rationale, state
+matrix and the rejected alternatives, but where the two differ the prototype wins.
 
-| | p1 | p2 | p3 | p4 | p5 |
-|---|---|---|---|---|---|
-| Prototype (light) | neutral-600 | accent-2-400 | accent-2-500 | accent-400 | `#e2704a` |
-| **Game Variants** | neutral-400 | accent-2-300 | accent-2-500 | accent (`#c67139`) | accent-700 (`#8c491a`) |
+Reconciling against it corrected **two errors in the earlier extraction**, where
+the prototype's two theme blocks had been mis-paired:
 
-Game Variants is the gameplay-specific and more recent file, so the board should
-use its ramp. `OrganicColors.proximity` currently holds the prototype values;
-this needs an explicit decision before the board renders, and is **not** silently
-reconciled.
+| Token | Was recorded | Actually (prototype) |
+|---|---|---|
+| `--sy-hot` light | `#3a2b20` | **`#f7e3d3`** |
+| `--sy-hot` night | `#f7e3d3` | **`#3a2b20`** |
+| light ramp | neutral-600 · a2-400 · a2-500 · accent-400 · `#e2704a` | **neutral-400 · a2-300 · a2-500 · accent · `#a33f22`** |
+| night ramp | neutral-400 · a2-300 · a2-300 · accent · `#a33f22` | **neutral-600 · a2-400 · a2-300 · accent-400 · `#e2704a`** |
+
+`--sy-hot` is the **background** of the best-guess row, so the swap would have
+rendered the light theme's hot row almost black. Both are now pinned per theme by
+test.
+
+The two themes are **not** light/dark variants of one ramp — night peaks at
+`#e2704a`, light at the deeper `#a33f22`, each holding against its own ground.
+
+Also from the prototype, and not in Game Variants:
+
+- a **sixth band**, `solved` at score ≥ 100, stroke 6.0 — the heaviest line on the
+  board. It shares `touching`'s colour tier, so six bands map onto five ramp
+  colours via `rampIndex`.
+- the real bilingual band names, now in the localization tables:
+  Distant/بعيد · Adjacent/مجاور · Related/قريب · Near/وشيك · Touching/ملامس ·
+  Solved/محلولة
+- the font swap is keyed on **language**, not theme — confirming the script-based
+  typography layer.
+- night `--sy-e1`/`--sy-e2` are `rgba(0,0,0,.4)` / `rgba(0,0,0,.45)`, i.e. **not**
+  the Organic `--shadow-sm`/`--shadow-md` the light theme uses. `OrganicElevation`
+  currently models only the light pair; the night values are still to be added.
+
+`geom()` in the prototype is **identical** to Game Variants — same constants, same
+formulas — so the ported geometry needed no revision.
 
 ## Not yet extracted
 

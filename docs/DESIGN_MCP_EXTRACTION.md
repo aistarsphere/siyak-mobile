@@ -31,8 +31,9 @@ Variants.dc.html`, `Siyaq Prototype (offline).html`, `Siyaq Prototype
 standalone-src.dc.html`, `_ds_bundle.js`, `styles.css`, `support.js`,
 `_adherence.oxlintrc.json`, `screenshots/game.png`.
 
-`Siyaq Game Variants.dc.html` is likely to matter for Orbit and should be read
-before Orbit is implemented.
+`Siyaq Game Variants.dc.html` has since been read — see `docs/ORBIT_NASIJ_SPEC.md`.
+Its `geom()` is identical to the prototype's, and the prototype is the authority
+where they differ.
 
 ## Foundations — Organic design system
 
@@ -102,7 +103,7 @@ also swaps the type stack.
 | `--sy-muted` | `--color-neutral-600` | `#a19786` |
 | `--sy-line` | `--color-neutral-300` | `#3d342a` |
 | `--sy-gold` | `#d9a441` | `#e8b559` |
-| `--sy-hot` | `#3a2b20` | `#f7e3d3` |
+| `--sy-hot` (best-guess row **background**) | `#f7e3d3` | `#3a2b20` |
 | `--sy-indicator` | `#3a342c` | `#5a5046` |
 | `--sy-kb` (keyboard) | `#d6cbb8` | `#241e18` |
 | `--sy-display` | `Caprasimo` | **`Baloo Bhaijaan 2`** |
@@ -123,13 +124,16 @@ IBM Plex Sans Arabic / Inter. No substitution guesswork is required.
 Five semantic tiers, far → closest. This is the authoritative source for Phase
 10/13 colour mapping.
 
-| Tier | Light | Dark | Reads as |
+| Tier | Light | Night | Reads as |
 |---|---|---|---|
-| `--sy-p1` | `--color-neutral-600` | `--color-neutral-400` | far — neutral, cool |
-| `--sy-p2` | `--color-accent-2-400` | `--color-accent-2-300` | sage |
+| `--sy-p1` | `--color-neutral-400` | `--color-neutral-600` | far — neutral, cool |
+| `--sy-p2` | `--color-accent-2-300` | `--color-accent-2-400` | sage |
 | `--sy-p3` | `--color-accent-2-500` | `--color-accent-2-300` | deeper sage |
-| `--sy-p4` | `--color-accent-400` | `--color-accent` | terracotta warming |
-| `--sy-p5` | `#e2704a` | `#a33f22` | closest — strongest accent |
+| `--sy-p4` | `--color-accent` `#c67139` | `--color-accent-400` | terracotta warming |
+| `--sy-p5` | `#a33f22` | `#e2704a` | closest — strongest accent |
+
+The two themes are not light/dark variants of one ramp: each peaks on a different
+value so it holds against its own ground.
 
 Colour alone is never sufficient (brief Phase 13): tier must also drive position,
 line weight, scale and the accessible label.
@@ -181,16 +185,22 @@ screen by screen (brief Phase 22).
 | easings + durations | `OrganicMotion` (2 curves, 9 durations, ambient set flagged) |
 | Lucide @ 2.75 | documented; icon package decision still open |
 
+## Authority and corrections
+
+`Siyaq Prototype.dc.html` is the single source of truth (decided 2026-07-30). The
+`--sy-*` table above was corrected against it: `--sy-hot` and the whole proximity
+ramp had been mis-paired between the two theme blocks. See
+`docs/ORBIT_NASIJ_SPEC.md` for the before/after and the reasoning.
+
 ## Open items
 
-1. **Fonts are not in the repo.** Caprasimo, Figtree, Baloo Bhaijaan 2 and
-   Tajawal are all Google Fonts and none are bundled. Adoption needs the four
-   families added to `assets/fonts/` and `pubspec.yaml`. Current bundle already
-   carries IBM Plex Sans Arabic, Inter, Noto Naskh Arabic and DM Mono, so this is
-   a real size decision, not a formality.
-2. **Lucide icons** at stroke-width 2.75 have no exact Flutter equivalent in the
-   current icon set (Material rounded). Needs either a Lucide package or accepting
-   a documented deviation.
+1. ~~Fonts are not in the repo.~~ **Done.** All four ship in
+   `assets/fonts/organic/` under SIL OFL 1.1 with their licence texts, 604 KB
+   total, variable files where they exist.
+2. **Lucide stroke-width 2.75 is not rendered.** `SyIcon` wraps
+   `lucide_icons_flutter` (an icon font), whose glyphs carry a baked 2.0 stroke.
+   `strokeWidth` is carried as contract only, with `backendHonoursStrokeWidth`
+   pinned false by test. Delivering it needs an SVG backend.
 3. `Siyaq Game Variants.dc.html` and `styles.css` should be read before Orbit
    layout work — the variants file probably fixes the radial geometry.
 4. The prototype's `--color-accent` on `--sy-bg` is 3:1. Any body copy in accent

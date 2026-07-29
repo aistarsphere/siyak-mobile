@@ -52,6 +52,7 @@ dependencies:
   sign_in_with_apple: ^8.1.0
   # Short-SFX playback (AudioPool / low-latency). Exact-pinned per house rule.
   audioplayers: 6.8.1
+  lucide_icons_flutter: 3.1.15
 
 dev_dependencies:
   flutter_test:

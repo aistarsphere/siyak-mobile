@@ -115,16 +115,55 @@ void main() {
     });
   });
 
-  group('stroke width — the documented deviation', () {
+  group('stroke width', () {
     test('defaults to the design value', () {
       expect(SyIcon.designStrokeWidth, 2.75);
       expect(const SyIcon(icon: SyIcons.home).strokeWidth, 2.75);
     });
 
-    test('the backend is known not to honour it', () {
-      // Pins the deviation so it is a recorded fact rather than a forgotten one.
-      // Flip this to true only when the backend renders SVG.
-      expect(SyIcon.backendHonoursStrokeWidth, isFalse);
+    test('the backend does provide distinct strokes', () {
+      expect(SyIcon.backendHonoursStrokeWidth, isTrue);
+    });
+
+    test('the six steps are ordered and span Lucide\'s 1..3 range', () {
+      final steps = SyIconStroke.values;
+      expect(steps, hasLength(6));
+      for (var i = 1; i < steps.length; i++) {
+        expect(steps[i].approxStroke, greaterThan(steps[i - 1].approxStroke));
+      }
+      expect(steps.first.approxStroke, 1.0);
+      expect(steps.last.approxStroke, 3.0);
+    });
+
+    test('nearest() picks the closest step, and 2.75 lands on w500', () {
+      expect(SyIconStroke.nearest(2.75), SyIconStroke.w500);
+      expect(SyIconStroke.design, SyIconStroke.w500);
+      expect(SyIconStroke.nearest(1.0), SyIconStroke.w100);
+      expect(SyIconStroke.nearest(3.0), SyIconStroke.w600);
+      expect(SyIconStroke.nearest(-5), SyIconStroke.w100);
+      expect(SyIconStroke.nearest(99), SyIconStroke.w600);
+    });
+
+    test('the vocabulary is drawn from the design stroke build', () {
+      // Every glyph must come from one family, or the set would render at mixed
+      // thicknesses.
+      final families = <String?>{
+        SyIcons.back.fontFamily,
+        SyIcons.forward.fontFamily,
+        SyIcons.close.fontFamily,
+        SyIcons.home.fontFamily,
+        SyIcons.leaderboard.fontFamily,
+        SyIcons.profile.fontFamily,
+        SyIcons.settings.fontFamily,
+        SyIcons.hint.fontFamily,
+        SyIcons.language.fontFamily,
+        SyIcons.solved.fontFamily,
+        SyIcons.thread.fontFamily,
+        SyIcons.chevronDown.fontFamily,
+        SyIcons.chevronUp.fontFamily,
+      };
+      expect(families, hasLength(1));
+      expect(families.single, 'Lucide500');
     });
   });
 
@@ -147,7 +186,7 @@ void main() {
         'thread': SyIcons.thread,
       };
       for (final e in icons.entries) {
-        expect(e.value.fontFamily, 'Lucide', reason: e.key);
+        expect(e.value.fontFamily, startsWith('Lucide'), reason: e.key);
         expect(
           e.value.fontPackage,
           'lucide_icons_flutter',

@@ -108,6 +108,25 @@ abstract final class OrganicElevation {
     BoxShadow(color: Color(0x382E2B25), offset: Offset(0, 12), blurRadius: 32),
   ];
 
+  /// Night-theme `--sy-e1` / `--sy-e2`.
+  ///
+  /// The prototype does **not** reuse the light shadows here: on a dark ground it
+  /// switches to plain black at higher alpha, because an ink-tinted shadow simply
+  /// disappears. `styles.css` states the intent — "soft ink-tinted shadows on a
+  /// light theme, a hairline edge + ambient darkness on a dark one".
+  static const smNight = <BoxShadow>[
+    BoxShadow(color: Color(0x66000000), offset: Offset(0, 1), blurRadius: 3),
+  ];
+  static const mdNight = <BoxShadow>[
+    BoxShadow(color: Color(0x73000000), offset: Offset(0, 4), blurRadius: 16),
+  ];
+
+  /// Elevation for a brightness, so callers stop picking by hand.
+  static List<BoxShadow> small(Brightness b) =>
+      b == Brightness.dark ? smNight : sm;
+  static List<BoxShadow> medium(Brightness b) =>
+      b == Brightness.dark ? mdNight : md;
+
   /// `--sy-e3` — the bottom-sheet lift, which throws *upward*.
   static const sheetLight = <BoxShadow>[
     BoxShadow(color: Color(0x382E2B25), offset: Offset(0, -10), blurRadius: 34),

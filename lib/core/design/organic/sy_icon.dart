@@ -9,21 +9,18 @@
 /// actually uses, which keeps the dependency contained and makes the app's icon
 /// vocabulary reviewable in one place.
 ///
-/// ## Stroke width — a real, documented deviation
+/// ## Stroke width
 ///
-/// The backend today is `lucide_icons_flutter`, an **icon font**. Font glyphs
-/// carry their stroke baked in — Lucide's fonts are generated at the library
-/// default of 2.0 — so the design's 2.75 is **not** reproducible through it.
+/// The design asks for stroke-width **2.75**, and the backend can supply it: the
+/// package ships six separate Lucide builds (`Lucide100`…`Lucide600`), each the
+/// same codepoints at a different stroke. Thickness is therefore chosen by
+/// selecting a *variant IconData*, not by styling one glyph.
 ///
-/// [SyIcon.strokeWidth] therefore exists and is honoured by the *contract*, not
-/// yet by the pixels: it is recorded, exposed to tests, and will take effect the
-/// moment the backend becomes SVG-based (`flutter_svg` over Lucide's SVG source),
-/// which is the only faithful route. Call sites are already written against it,
-/// so that switch needs no sweep.
-///
-/// The glyph *shapes* are correct Lucide; only the stroke weight differs from the
-/// specified 2.75. That is the trade taken to avoid bundling and rasterising an
-/// SVG set in this milestone, and it is recorded rather than hidden.
+/// An earlier pass here mapped `strokeWidth` onto a font-weight variation to look
+/// as though it were doing something, and then recorded the whole thing as an
+/// unfixable deviation. Both were wrong. What remains true is that the steps are
+/// **discrete**: the design's 2.75 is served by the nearest one rather than
+/// exactly, and [SyIconStroke] documents the assumed scale.
 library;
 
 import 'package:flutter/widgets.dart';
@@ -34,29 +31,32 @@ import 'organic_tokens.dart';
 /// The icon vocabulary, named for what each glyph *means* in Siyaq rather than
 /// for its Lucide slug, so a backend swap or an icon substitution stays local.
 abstract final class SyIcons {
+  // Each entry names the *design* stroke step (see [SyIconStroke.design]), so a
+  // change of step is one edit here rather than a sweep of call sites.
+
   // ── Navigation ────────────────────────────────────────────────────────────
   /// Leading direction of travel. **Mirrors** under RTL — see [SyIcon.mirror].
-  static const back = LucideIcons.arrowLeft;
-  static const forward = LucideIcons.arrowRight;
-  static const close = LucideIcons.x;
-  static const chevronDown = LucideIcons.chevronDown;
-  static const chevronUp = LucideIcons.chevronUp;
+  static const back = LucideIcons.arrowLeft500;
+  static const forward = LucideIcons.arrowRight500;
+  static const close = LucideIcons.x500;
+  static const chevronDown = LucideIcons.chevronDown500;
+  static const chevronUp = LucideIcons.chevronUp500;
 
   // ── Destinations ──────────────────────────────────────────────────────────
-  static const home = LucideIcons.house;
-  static const leaderboard = LucideIcons.trophy;
-  static const profile = LucideIcons.user;
-  static const settings = LucideIcons.settings;
+  static const home = LucideIcons.house500;
+  static const leaderboard = LucideIcons.trophy500;
+  static const profile = LucideIcons.user500;
+  static const settings = LucideIcons.settings500;
 
   // ── Gameplay ──────────────────────────────────────────────────────────────
   /// The hint lamp. Prominent in the prototype's game header.
-  static const hint = LucideIcons.lightbulb;
+  static const hint = LucideIcons.lightbulb500;
 
   /// Submit a guess — the send affordance inside the composer pill. Mirrors.
-  static const submit = LucideIcons.arrowRight;
-  static const language = LucideIcons.globe;
-  static const solved = LucideIcons.check;
-  static const thread = LucideIcons.circle;
+  static const submit = LucideIcons.arrowRight500;
+  static const language = LucideIcons.globe500;
+  static const solved = LucideIcons.check500;
+  static const thread = LucideIcons.circle500;
 
   /// Icons whose meaning is directional, so they must flip in RTL. A tick or a
   /// lamp must not; flipping those is the classic mirroring bug.
@@ -93,9 +93,8 @@ class SyIcon extends StatelessWidget {
     this.mirror,
   }) : semanticLabel = null;
 
-  /// Stroke width the design specifies. See the library doc: recorded now,
-  /// pixel-accurate once the backend renders SVG.
-  static const designStrokeWidth = 2.75;
+  /// Stroke width the design specifies.
+  static const designStrokeWidth = SyIconStroke.designStrokeWidth;
 
   final IconData icon;
   final double size;
@@ -129,10 +128,8 @@ class SyIcon extends StatelessWidget {
       // Mirroring is handled below rather than by Icon's own textDirection, so
       // the decision stays in one auditable place and can be overridden per call.
       textDirection: TextDirection.ltr,
-      // [strokeWidth] is deliberately not applied: an icon font has its stroke
-      // baked into the glyph outlines and `Icon` exposes no axis to bend. Faking
-      // it with a weight variation would be theatre. The value is carried for the
-      // SVG backend that will honour it.
+      // Stroke is not styled here — it is baked into whichever `LucideNNN`
+      // family [icon] came from. [SyIcons] selects the design step centrally.
     );
 
     if (flip) {
@@ -147,11 +144,55 @@ class SyIcon extends StatelessWidget {
         : Semantics(label: semanticLabel, image: true, child: glyph);
   }
 
-  /// Whether the active backend can actually render [strokeWidth].
+  /// Whether the backend can render distinct stroke widths at all.
   ///
-  /// False today. Exposed so a test can assert the deviation is known rather than
-  /// forgotten, and so a debug overlay could surface it.
-  static const backendHonoursStrokeWidth = false;
+  /// True: the package ships six Lucide builds. The steps are discrete, so the
+  /// design's 2.75 is approximated by the nearest — see [SyIconStroke].
+  static const backendHonoursStrokeWidth = true;
+}
+
+/// The stroke steps the Lucide package provides.
+///
+/// Six builds of the same glyph set, `Lucide100`…`Lucide600`. The package does
+/// not publish what stroke each corresponds to, so the mapping below is an
+/// **assumption**: Lucide's own `stroke-width` range is 1–3 with a default of 2,
+/// spread linearly across the six steps. It is written down rather than buried so
+/// it can be corrected if upstream documents otherwise.
+///
+///   w100 ≈ 1.0 · w200 ≈ 1.4 · w300 ≈ 1.8 · w400 ≈ 2.2 · w500 ≈ 2.6 · w600 ≈ 3.0
+///
+/// The design's 2.75 falls between w500 and w600 and is nearer w500 (Δ0.15 vs
+/// Δ0.25), so [design] is w500.
+enum SyIconStroke {
+  w100(approxStroke: 1.0),
+  w200(approxStroke: 1.4),
+  w300(approxStroke: 1.8),
+  w400(approxStroke: 2.2),
+  w500(approxStroke: 2.6),
+  w600(approxStroke: 3.0);
+
+  const SyIconStroke({required this.approxStroke});
+
+  /// Assumed stroke width this build renders at.
+  final double approxStroke;
+
+  /// What the Organic system asks for.
+  static const designStrokeWidth = 2.75;
+
+  /// The step [SyIcons] uses.
+  static const design = w500;
+
+  /// The step closest to [target] under the assumed scale.
+  static SyIconStroke nearest(double target) {
+    var best = values.first;
+    for (final step in values) {
+      if ((step.approxStroke - target).abs() <
+          (best.approxStroke - target).abs()) {
+        best = step;
+      }
+    }
+    return best;
+  }
 }
 
 /// Icon sizes. The prototype draws interface icons at 18–19px inside 38px

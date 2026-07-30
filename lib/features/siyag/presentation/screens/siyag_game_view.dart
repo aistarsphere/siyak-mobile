@@ -552,7 +552,6 @@ class _Composer extends StatelessWidget {
           builder: (context, value, _) => TranslationAssist(
             text: value.text,
             gameLanguage: gameLanguage,
-            noCandidatesLabel: loc('noTranslations'),
             onPick: (word) {
               controller.text = word;
               controller.selection = TextSelection.collapsed(

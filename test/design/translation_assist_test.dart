@@ -1,211 +1,254 @@
+import 'dart:async';
+
 import 'package:context_game/core/design/siyaq_design.dart';
-import 'package:context_game/features/game/domain/translation/translation_service.dart';
+import 'package:context_game/features/game/domain/translation/translation_suggestion.dart';
+import 'package:context_game/features/game/domain/translation/translation_suggestion_repository.dart';
+import 'package:context_game/features/game/presentation/controllers/app_settings_controller.dart';
+import 'package:context_game/features/game/presentation/controllers/translation_suggestion_controller.dart';
 import 'package:context_game/features/game/presentation/widgets/translation_assist.dart';
 import 'package:context_game/features/v2/domain/entities/gameplay_language.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import '../helpers/gameplay_harness.dart';
+/// Widget behaviour of the Arabic → English panel.
+///
+/// The controller is injected so each visual state can be produced exactly,
+/// rather than by racing a real debounce.
+class _ManualRepository implements TranslationSuggestionRepository {
+  Completer<List<TranslationSuggestion>>? pending;
+  int calls = 0;
 
-/// Feature QA for the translation assistant: detection, candidates, explicit
-/// pick, dismissal, gating.
+  @override
+  Future<List<TranslationSuggestion>> suggest({
+    required String text,
+    required String sourceLanguage,
+    required String targetLanguage,
+    String? locale,
+  }) {
+    calls++;
+    return (pending = Completer<List<TranslationSuggestion>>()).future;
+  }
+}
+
+Future<Widget> _host(
+  TranslationSuggestionController controller, {
+  required String text,
+  String lang = 'en',
+  ValueChanged<String>? onPick,
+}) async {
+  SharedPreferences.setMockInitialValues({'siyaq.lang': lang});
+  final prefs = await SharedPreferences.getInstance();
+  return ProviderScope(
+    overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+    child: MaterialApp(
+      locale: Locale(lang),
+      supportedLocales: const [Locale('en'), Locale('ar')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      theme: SiyaqThemeData.dark(script: SiyaqScript.latin),
+      home: Scaffold(
+        body: Directionality(
+          textDirection: lang == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+          child: TranslationAssist(
+            text: text,
+            gameLanguage: GameplayLanguage.english,
+            controllerOverride: controller,
+            onPick: onPick ?? (_) {},
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+TranslationSuggestionController _controller(
+  TranslationSuggestionRepository repo, {
+  GameplayLanguage language = GameplayLanguage.english,
+}) => TranslationSuggestionController(
+  repository: repo,
+  gameLanguage: language,
+  debounce: const Duration(milliseconds: 1),
+);
+
 void main() {
-  group('script detection', () {
-    test('classifies pure scripts and rejects mixed/none', () {
-      expect(detectScript('سيارة'), DetectedScript.arabic);
-      expect(detectScript('car'), DetectedScript.latin);
-      expect(detectScript('carسيارة'), DetectedScript.mixed);
-      expect(detectScript('123 !?'), DetectedScript.none);
-      // Arabic punctuation/digits alone are not a word.
-      expect(detectScript('٤٢؟'), DetectedScript.none);
-    });
+  group('visual states', () {
+    testWidgets('loading shows progress without hiding the field', (t) async {
+      final repo = _ManualRepository();
+      final c = _controller(repo);
+      await t.pumpWidget(await _host(c, text: 'كتاب'));
+      await t.pump(const Duration(milliseconds: 5));
 
-    test('triggers only for the other supported script', () {
-      // English game, Arabic input → assist.
-      expect(isLikelyOtherLanguage('سيارة', GameplayLanguage.english), isTrue);
-      // English game, English input → no assist.
-      expect(isLikelyOtherLanguage('car', GameplayLanguage.english), isFalse);
-      // Arabic game, Latin input → assist.
-      expect(isLikelyOtherLanguage('car', GameplayLanguage.arabic), isTrue);
-      // Too short, digits, mixed → never.
-      expect(isLikelyOtherLanguage('س', GameplayLanguage.english), isFalse);
-      expect(isLikelyOtherLanguage('42', GameplayLanguage.arabic), isFalse);
-      expect(isLikelyOtherLanguage('carس', GameplayLanguage.arabic), isFalse);
-    });
-  });
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.text('Finding translations…'), findsOneWidget);
 
-  group('dev adapter', () {
-    const dev = DevTranslationAdapter();
-
-    test('serves both directions deterministically', () async {
-      final arToEn = await dev.suggest(
-        text: 'سيارة',
-        from: GameplayLanguage.arabic,
-        to: GameplayLanguage.english,
-      );
-      expect(arToEn.map((c) => c.word), ['car', 'vehicle', 'automobile']);
-      expect(arToEn.first.source, 'dev-fixture');
-
-      final enToAr = await dev.suggest(
-        text: 'Car',
-        from: GameplayLanguage.english,
-        to: GameplayLanguage.arabic,
-      );
-      expect(enToAr.map((c) => c.word), contains('سيارة'));
-    });
-
-    test('unknown input yields no candidates, not guesses', () async {
-      final none = await dev.suggest(
-        text: 'زرافة',
-        from: GameplayLanguage.arabic,
-        to: GameplayLanguage.english,
-      );
-      expect(none, isEmpty);
-    });
-  });
-
-  group('assist panel in gameplay', () {
-    testWidgets('typing the other script surfaces candidates', (t) async {
-      final controller = TextEditingController();
-      await t.pumpWidget(
-        buildGameplay(
-          uiLang: 'en',
-          gameLanguage: GameplayLanguage.english,
-          controller: controller,
-        ),
-      );
+      // Settle the in-flight request so the timeout timer does not outlive the
+      // test — a pending timer fails teardown, and it is the controller doing
+      // its job rather than a leak.
+      repo.pending!.complete(const []);
       await t.pumpAndSettle();
-      // (The header's language chip exists; candidate words do not yet.)
-      expect(find.text('car'), findsNothing);
-
-      await t.enterText(find.byType(TextField), 'سيارة');
-      await t.pumpAndSettle();
-
-      expect(find.text('car'), findsOneWidget);
-      expect(find.text('vehicle'), findsOneWidget);
-      expect(find.text('automobile'), findsOneWidget);
-      // Original input shown, visibly distinct (quoted).
-      expect(find.text('"سيارة"'), findsOneWidget);
     });
 
-    testWidgets('picking a candidate fills the composer, never submits', (
+    testWidgets('success renders one chip per sense, with its Arabic gloss', (
       t,
     ) async {
-      final controller = TextEditingController();
-      final submitted = <String>[];
-      await t.pumpWidget(
-        buildGameplay(
-          uiLang: 'en',
-          gameLanguage: GameplayLanguage.english,
-          controller: controller,
-          onSubmit: submitted.add,
+      final repo = _ManualRepository();
+      final c = _controller(repo);
+      await t.pumpWidget(await _host(c, text: 'ذهب'));
+      await t.pump(const Duration(milliseconds: 5));
+
+      repo.pending!.complete(const [
+        TranslationSuggestion(
+          text: 'gold',
+          sense: 'noun',
+          confidence: 0.94,
+          label: 'ذهب كمعدن',
         ),
-      );
+        TranslationSuggestion(text: 'went', sense: 'verb', confidence: 0.82),
+        TranslationSuggestion(text: 'go', sense: 'verb', confidence: 0.71),
+      ]);
       await t.pumpAndSettle();
 
-      await t.enterText(find.byType(TextField), 'سيارة');
-      await t.pumpAndSettle();
-      await t.tap(find.text('car'));
-      await t.pumpAndSettle();
-
-      expect(controller.text, 'car');
-      expect(submitted, isEmpty, reason: 'a pick must never auto-submit');
-      // Panel retires once the input matches the game language.
-      expect(find.text('vehicle'), findsNothing);
+      expect(find.text('gold'), findsOneWidget);
+      expect(find.text('went'), findsOneWidget);
+      expect(find.text('go'), findsOneWidget);
+      // The Arabic sense label distinguishes the ambiguous senses.
+      expect(find.text('ذهب كمعدن'), findsOneWidget);
+      // The source is echoed so the player can see what was detected.
+      expect(find.text('"ذهب"'), findsOneWidget);
     });
 
-    testWidgets('same-script input never shows the panel', (t) async {
-      final controller = TextEditingController();
-      await t.pumpWidget(
-        buildGameplay(
-          uiLang: 'en',
-          gameLanguage: GameplayLanguage.english,
-          controller: controller,
-        ),
-      );
-      await t.pumpAndSettle();
-
-      await t.enterText(find.byType(TextField), 'library');
-      await t.pumpAndSettle();
-
-      expect(find.byType(SiyaqTintedSurface), findsNothing);
-    });
-
-    testWidgets('unknown word states no-candidates instead of guessing', (
-      t,
-    ) async {
-      final controller = TextEditingController();
-      await t.pumpWidget(
-        buildGameplay(
-          uiLang: 'en',
-          gameLanguage: GameplayLanguage.english,
-          controller: controller,
-        ),
-      );
-      await t.pumpAndSettle();
-
-      await t.enterText(find.byType(TextField), 'زرافة');
+    testWidgets('empty states plainly rather than looking broken', (t) async {
+      final repo = _ManualRepository();
+      final c = _controller(repo);
+      await t.pumpWidget(await _host(c, text: 'كتاب'));
+      await t.pump(const Duration(milliseconds: 5));
+      repo.pending!.complete(const []);
       await t.pumpAndSettle();
 
       expect(find.text('No suggestions for this word'), findsOneWidget);
     });
 
-    testWidgets('dismiss hides the panel until the input changes', (t) async {
-      final controller = TextEditingController();
-      await t.pumpWidget(
-        buildGameplay(
-          uiLang: 'en',
-          gameLanguage: GameplayLanguage.english,
-          controller: controller,
-        ),
-      );
+    testWidgets('error offers retry and re-asks when tapped', (t) async {
+      final repo = _ManualRepository();
+      final c = _controller(repo);
+      await t.pumpWidget(await _host(c, text: 'كتاب'));
+      await t.pump(const Duration(milliseconds: 5));
+      repo.pending!.completeError(StateError('offline'));
       await t.pumpAndSettle();
 
-      await t.enterText(find.byType(TextField), 'سيارة');
+      expect(find.text("Couldn't load translations"), findsOneWidget);
+      expect(repo.calls, 1);
+
+      await t.tap(find.text('Try again'));
       await t.pumpAndSettle();
-      expect(find.text('car'), findsOneWidget);
+      expect(repo.calls, 2, reason: 'retry must actually re-request');
+    });
+  });
+
+  group('selection', () {
+    testWidgets('tapping a chip fills the composer and never submits', (
+      t,
+    ) async {
+      final repo = _ManualRepository();
+      final c = _controller(repo);
+      final picked = <String>[];
+      await t.pumpWidget(await _host(c, text: 'كتاب', onPick: picked.add));
+      await t.pump(const Duration(milliseconds: 5));
+      repo.pending!.complete(const [
+        TranslationSuggestion(text: 'book'),
+        TranslationSuggestion(text: 'volume'),
+      ]);
+      await t.pumpAndSettle();
+
+      await t.tap(find.text('book'));
+      await t.pumpAndSettle();
+
+      // Only the English word leaves the panel — never the Arabic source.
+      expect(picked, ['book']);
+      expect(picked.single, isNot('كتاب'));
+      // And the panel retires.
+      expect(find.text('volume'), findsNothing);
+    });
+
+    testWidgets('dismissing hides the panel', (t) async {
+      final repo = _ManualRepository();
+      final c = _controller(repo);
+      await t.pumpWidget(await _host(c, text: 'كتاب'));
+      await t.pump(const Duration(milliseconds: 5));
+      repo.pending!.complete(const [TranslationSuggestion(text: 'book')]);
+      await t.pumpAndSettle();
+      expect(find.text('book'), findsOneWidget);
 
       await t.tap(find.byIcon(SiyaqIcons.close));
       await t.pumpAndSettle();
-      expect(find.text('car'), findsNothing);
-
-      // A different word re-arms the assist.
-      await t.enterText(find.byType(TextField), 'كتاب');
-      await t.pumpAndSettle();
-      expect(find.text('book'), findsOneWidget);
+      expect(find.text('book'), findsNothing);
     });
 
-    testWidgets('disabled service (release gating) renders nothing', (t) async {
-      await t.pumpWidget(
-        ProviderScope(
-          overrides: [
-            translationServiceProvider.overrideWith((ref, language) => null),
-          ],
-          child: MaterialApp(
-            theme: SiyaqThemeData.dark(script: SiyaqScript.latin),
-            supportedLocales: const [Locale('en')],
-            localizationsDelegates: const [
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            home: Scaffold(
-              body: TranslationAssist(
-                text: 'سيارة',
-                gameLanguage: GameplayLanguage.english,
-                noCandidatesLabel: 'none',
-                onPick: (_) {},
-              ),
-            ),
-          ),
-        ),
-      );
+    testWidgets('a chip announces its word together with its sense', (t) async {
+      final repo = _ManualRepository();
+      final c = _controller(repo);
+      await t.pumpWidget(await _host(c, text: 'ذهب'));
+      await t.pump(const Duration(milliseconds: 5));
+      repo.pending!.complete(const [
+        TranslationSuggestion(text: 'gold', sense: 'noun', label: 'ذهب كمعدن'),
+      ]);
       await t.pumpAndSettle();
 
+      expect(
+        find.bySemanticsLabel('gold, noun, ذهب كمعدن'),
+        findsOneWidget,
+        reason: 'one node, not three fragments',
+      );
+    });
+  });
+
+  group('direction', () {
+    testWidgets('English suggestions stay LTR inside an Arabic UI', (t) async {
+      final repo = _ManualRepository();
+      final c = _controller(repo);
+      await t.pumpWidget(await _host(c, text: 'كتاب', lang: 'ar'));
+      await t.pump(const Duration(milliseconds: 5));
+      repo.pending!.complete(const [TranslationSuggestion(text: 'book')]);
+      await t.pumpAndSettle();
+
+      expect(
+        Directionality.of(t.element(find.text('book'))),
+        TextDirection.ltr,
+        reason: 'an English word must not be reordered by an RTL ancestor',
+      );
+      // The Arabic source echo runs RTL.
+      expect(
+        Directionality.of(t.element(find.text('"كتاب"'))),
+        TextDirection.rtl,
+      );
+    });
+  });
+
+  group('gating', () {
+    testWidgets('an Arabic game renders nothing at all', (t) async {
+      final repo = _ManualRepository();
+      final c = _controller(repo, language: GameplayLanguage.arabic);
+      await t.pumpWidget(await _host(c, text: 'كتاب'));
+      await t.pump(const Duration(milliseconds: 20));
+
+      expect(repo.calls, 0);
       expect(find.byType(SiyaqTintedSurface), findsNothing);
-      expect(find.byType(SiyaqChip), findsNothing);
+    });
+
+    testWidgets('English input in an English game renders nothing', (t) async {
+      final repo = _ManualRepository();
+      final c = _controller(repo);
+      await t.pumpWidget(await _host(c, text: 'book'));
+      await t.pump(const Duration(milliseconds: 20));
+
+      expect(repo.calls, 0);
+      expect(find.byType(SiyaqTintedSurface), findsNothing);
     });
   });
 }

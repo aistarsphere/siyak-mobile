@@ -51,8 +51,17 @@ sends, so the assistant could never have activated even after a service shipped.
 
 ## 2. Endpoint
 
+**Probed 2026-07-31: still absent.** This API answers POST on an unknown route
+with `405 Method Not Allowed` (an unknown route answers 404 on GET, and a real
+route returns 200), and every candidate path — `/api/v1/translate`,
+`/api/gameplay/translation-suggestions`, `/api/v1/gameplay/translation-suggestions`,
+`/api/v1/translation-suggestions`, `/api/v1/game/translate` — answered 405.
+
+The client is written against the path below; `RemoteTranslationSuggestionRepository`
+posts to `/gameplay/translation-suggestions` under the existing `…/api/v1` root.
+
 ```
-POST /api/v1/translate
+POST /api/v1/gameplay/translation-suggestions
 X-Installation-ID: <uuid>            (same auth model as the game endpoints)
 
 { "text": "سيارة", "from": "ar", "to": "en" }

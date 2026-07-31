@@ -78,6 +78,8 @@ const Map<String, String> stringsEn = {
   'langArabic': 'Arabic',
   'langEnglish': 'English',
   'chooseGameLang': 'Choose game language',
+  'langNoCategories': 'Not available in this language yet',
+  'langNoCategoriesBody': 'Pick another game language above to play now.',
   'gameLangLocked': 'Game language is locked for this session',
   'abandonGameTitle': 'Abandon current game?',
   'abandonGameBody':

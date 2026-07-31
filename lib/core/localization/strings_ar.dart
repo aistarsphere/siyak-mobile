@@ -78,6 +78,8 @@ const Map<String, String> stringsAr = {
   'langArabic': 'العربية',
   'langEnglish': 'الإنجليزية',
   'chooseGameLang': 'اختر لغة اللعب',
+  'langNoCategories': 'غير متاح بهذه اللغة بعد',
+  'langNoCategoriesBody': 'اختر لغة لعب أخرى من الأعلى للبدء الآن.',
   'gameLangLocked': 'لغة اللعب مثبّتة لهذه الجلسة',
   'abandonGameTitle': 'ترك اللعبة الحالية؟',
   'abandonGameBody': 'ستُفقد جلستك الحالية إذا بدأت بلغة مختلفة.',

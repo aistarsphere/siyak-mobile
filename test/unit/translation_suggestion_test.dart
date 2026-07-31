@@ -153,6 +153,38 @@ void main() {
       expect(parsed.single.label, 'ذهب كمعدن');
     });
 
+    test('accepts the deployed field names, not just the drafted ones', () {
+      // Live backend (2026-07-31) sends part_of_speech / sense_label /
+      // in_active_vocabulary. Reading only the drafted `sense` / `label` would
+      // render the words but silently drop every sense.
+      final parsed = RemoteTranslationSuggestionRepository.parse({
+        'suggestions': [
+          {
+            'text': 'gold',
+            'part_of_speech': 'noun',
+            'sense_label': 'ذهب كمعدن',
+            'confidence': 0.99,
+            'in_active_vocabulary': true,
+          },
+        ],
+      });
+      expect(parsed.single.sense, 'noun');
+      expect(parsed.single.label, 'ذهب كمعدن');
+      expect(parsed.single.inActiveVocabulary, isTrue);
+    });
+
+    test('a word the game does not know sinks below playable ones', () {
+      final parsed = RemoteTranslationSuggestionRepository.parse({
+        'suggestions': [
+          {'text': 'gild', 'confidence': 0.91, 'in_active_vocabulary': false},
+          {'text': 'gold', 'confidence': 0.85, 'in_active_vocabulary': true},
+        ],
+      });
+      // Confidence would have put `gild` first, but it would be rejected on
+      // submit — so the playable word leads. Neither is dropped.
+      expect(parsed.map((s) => s.text), ['gold', 'gild']);
+    });
+
     test('accepts a bare list of strings — the documented minimum', () {
       final parsed = RemoteTranslationSuggestionRepository.parse({
         'suggestions': ['gold', 'went'],

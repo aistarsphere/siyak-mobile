@@ -90,6 +90,43 @@ class SiyagPracticeSetupScreen extends ConsumerWidget {
                   SiyaqSpacing.sm,
                 ),
               ),
+              // The language control sits *outside* the async body on purpose.
+              // A language with no active release yields zero categories, and
+              // when that emptiness owned the whole body it also removed the one
+              // control that could switch to a language that does work — a dead
+              // end with Start permanently disabled.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  SiyaqSpacing.xl,
+                  SiyaqSpacing.sm,
+                  SiyaqSpacing.xl,
+                  0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _Label(loc('chooseGameLang')),
+                    const SizedBox(height: SiyaqSpacing.sm),
+                    SiyaqSegmentedControl<GameplayLanguage>(
+                      value: lang,
+                      accent: c.info,
+                      onChanged: (l) {
+                        ref.read(_practiceLangProvider.notifier).state = l;
+                        ref.read(_practiceCatProvider.notifier).state = null;
+                      },
+                      segments: [
+                        for (final l in GameplayLanguage.values)
+                          SiyaqSegment(
+                            value: l,
+                            label: loc(l.labelKey),
+                            semanticLabel:
+                                '${loc('gameLanguage')}: ${loc(l.labelKey)}',
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
               Expanded(
                 child: AnimatedSwitcher(
                   duration: context.motion.summaryIn,
@@ -105,8 +142,12 @@ class SiyagPracticeSetupScreen extends ConsumerWidget {
                     data: (info) {
                       final cats = info.playable;
                       if (cats.isEmpty) {
+                        // Keyed so AnimatedSwitcher actually crossfades when
+                        // the language changes between two empty results.
                         return SiyaqEmptyState(
-                          title: loc('emptyGeneric'),
+                          key: ValueKey('empty-${lang.code}'),
+                          title: loc('langNoCategories'),
+                          body: loc('langNoCategoriesBody'),
                           icon: SiyaqIcons.catGeneral,
                         );
                       }
@@ -121,28 +162,6 @@ class SiyagPracticeSetupScreen extends ConsumerWidget {
                           SiyaqSpacing.xxl,
                         ),
                         children: [
-                          _Label(loc('chooseGameLang')),
-                          const SizedBox(height: SiyaqSpacing.sm),
-                          SiyaqSegmentedControl<GameplayLanguage>(
-                            value: lang,
-                            accent: c.info,
-                            onChanged: (l) {
-                              ref.read(_practiceLangProvider.notifier).state =
-                                  l;
-                              ref.read(_practiceCatProvider.notifier).state =
-                                  null;
-                            },
-                            segments: [
-                              for (final l in GameplayLanguage.values)
-                                SiyaqSegment(
-                                  value: l,
-                                  label: loc(l.labelKey),
-                                  semanticLabel:
-                                      '${loc('gameLanguage')}: ${loc(l.labelKey)}',
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: SiyaqSpacing.xl),
                           _Label(loc('category')),
                           const SizedBox(height: SiyaqSpacing.sm),
                           Wrap(

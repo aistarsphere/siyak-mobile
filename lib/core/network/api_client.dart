@@ -69,19 +69,23 @@ class ApiClient {
         return const ApiException(ApiErrorType.network);
       case DioExceptionType.badResponse:
         final status = e.response?.statusCode ?? 0;
-        final detail = _extractDetail(e.response?.data);
+        final data = e.response?.data;
+        final body = data is Map<String, dynamic> ? data : null;
+        final detail = _extractDetail(data);
         // 400/422 = client-side validation (e.g. bad input) → badRequest.
         if (status == 400 || status == 422) {
           return ApiException(
             ApiErrorType.badRequest,
             detail: detail,
             statusCode: status,
+            body: body,
           );
         }
         return ApiException(
           ApiErrorType.server,
           detail: detail,
           statusCode: status,
+          body: body,
         );
       case DioExceptionType.cancel:
       case DioExceptionType.badCertificate:

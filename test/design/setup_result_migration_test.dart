@@ -6,8 +6,6 @@ import 'package:context_game/core/sound/sound_service.dart';
 import 'package:context_game/features/game/data/models/modes_info.dart';
 import 'package:context_game/features/game/presentation/controllers/app_settings_controller.dart';
 import 'package:context_game/features/game/presentation/controllers/providers.dart';
-import 'package:context_game/features/v2/domain/entities/gameplay_language.dart';
-import 'package:context_game/features/siyag/presentation/screens/siyag_practice_setup_screen.dart';
 import 'package:context_game/features/siyag/presentation/screens/siyag_result_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -40,7 +38,6 @@ Future<Widget> _app({
   Brightness brightness = Brightness.dark,
   String lang = 'ar',
   List<CategoryInfo>? categories = _cats,
-  Map<String, List<CategoryInfo>>? perLanguage,
   bool loading = false,
   double textScale = 1.0,
 }) async {
@@ -51,12 +48,6 @@ Future<Widget> _app({
     if (loading) {
       return modesByLanguageProvider.overrideWith(
         (ref, language) => Completer<ModesInfo>().future,
-      );
-    }
-    if (perLanguage != null) {
-      return modesByLanguageProvider.overrideWith(
-        (ref, language) =>
-            ModesInfo(language: language, categories: perLanguage[language]!),
       );
     }
     if (categories == null) {
@@ -101,112 +92,8 @@ Future<Widget> _app({
 }
 
 void main() {
-  group('Practice setup', () {
-    testWidgets('renders language, category tiles and difficulty on the DS', (
-      t,
-    ) async {
-      await t.pumpWidget(
-        await _app(lang: 'en', child: const SiyagPracticeSetupScreen()),
-      );
-      await t.pumpAndSettle();
-
-      expect(find.byType(SiyaqScreenHeader), findsOneWidget);
-      expect(find.byType(SiyaqSegmentedControl<dynamic>), findsNothing);
-      expect(find.byType(SiyaqSelectTile), findsNWidgets(2));
-      expect(find.text('General'), findsOneWidget);
-      expect(
-        t
-            .widget<SiyaqButton>(find.widgetWithText(SiyaqButton, 'Start game'))
-            .onPressed,
-        isNotNull,
-      );
-    });
-
-    testWidgets(
-      'a language with no active release still lets you switch to one that has',
-      (t) async {
-        // Observed on a device: Arabic reported NO_ACTIVE_RELEASE, so the
-        // catalogue was empty, the empty state took over the whole body, and it
-        // took the language control with it — leaving no way to reach English,
-        // which was playable, and Start disabled forever.
-        await t.pumpWidget(
-          await _app(
-            lang: 'ar',
-            perLanguage: const {'ar': [], 'en': _cats},
-            child: const SiyagPracticeSetupScreen(),
-          ),
-        );
-        await t.pumpAndSettle();
-
-        expect(find.byType(SiyaqEmptyState), findsOneWidget);
-        final control = find.byType(SiyaqSegmentedControl<GameplayLanguage>);
-        expect(
-          control,
-          findsOneWidget,
-          reason: 'the escape hatch must outlive the empty catalogue',
-        );
-        expect(
-          t
-              .widget<SiyaqButton>(
-                find.widgetWithText(SiyaqButton, 'ابدأ اللعب'),
-              )
-              .onPressed,
-          isNull,
-        );
-
-        await t.tap(
-          find.descendant(of: control, matching: find.text('الإنجليزية')),
-        );
-        await t.pumpAndSettle();
-
-        expect(find.byType(SiyaqSelectTile), findsNWidgets(2));
-        expect(
-          t
-              .widget<SiyaqButton>(
-                find.widgetWithText(SiyaqButton, 'ابدأ اللعب'),
-              )
-              .onPressed,
-          isNotNull,
-          reason: 'switching to a playable language must enable Start',
-        );
-      },
-    );
-
-    testWidgets('catalogue error offers retry — previously a dead end', (
-      t,
-    ) async {
-      await t.pumpWidget(
-        await _app(
-          lang: 'en',
-          categories: null,
-          child: const SiyagPracticeSetupScreen(),
-        ),
-      );
-      await t.pumpAndSettle();
-
-      expect(find.byType(SiyaqEmptyState), findsOneWidget);
-      expect(find.text('Retry'), findsOneWidget);
-      // Start disabled with no catalogue.
-      expect(
-        t
-            .widget<SiyaqButton>(find.widgetWithText(SiyaqButton, 'Start game'))
-            .onPressed,
-        isNull,
-      );
-    });
-
-    testWidgets('holds the loader while the catalogue is pending', (t) async {
-      await t.pumpWidget(
-        await _app(
-          lang: 'en',
-          loading: true,
-          child: const SiyagPracticeSetupScreen(),
-        ),
-      );
-      await t.pump();
-      expect(find.byType(SiyaqLoader), findsOneWidget);
-    });
-  });
+  // The Practice-setup coverage now lives in language_availability_ui_test.dart,
+  // which exercises the same screen against the Language Availability Contract.
 
   group('Result', () {
     Widget result({bool showLeaderboard = true}) => SiyagResultScreen(

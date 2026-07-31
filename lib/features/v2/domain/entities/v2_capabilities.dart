@@ -87,12 +87,12 @@ class V2Capabilities {
 
   /// Per-language release state, keyed by language code.
   ///
-  /// **Deliberately not used to gate gameplay.** Production currently reports
-  /// `en` as `NO_ACTIVE_RELEASE` while `/game/languages` marks English ready and
-  /// `POST /game/new-game` serves an English release successfully — the two
-  /// surfaces disagree. Blocking play on this flag would break a working mode,
-  /// so it is exposed for diagnostics and left out of the gameplay path until
-  /// the backend reconciles them.
+  /// Diagnostics only. The two surfaces used to disagree — capabilities called
+  /// English `NO_ACTIVE_RELEASE` while `/game/languages` marked it ready — and
+  /// they now agree, but readiness still has exactly one owner:
+  /// `GET /game/languages` via `LanguageAvailability.available`. Two things
+  /// deciding whether a language is playable is how they drifted apart in the
+  /// first place.
   final Map<String, LanguageReleaseState> languageReleases;
 
   LanguageReleaseState? releaseFor(String languageCode) =>

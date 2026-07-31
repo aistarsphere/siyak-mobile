@@ -1,110 +1,117 @@
-# Language Availability Contract v1 — deployment status
+# Language Availability Contract v1 — implementation notes
 
-Probed live against `https://siyak-api.aljoodnet.info/api/v1` on 2026-07-31.
-Mobile implementation is **paused** until the gaps below close, so the client is
-not written against a shape that is about to change.
+Contract v1 is **live** and **implemented on the client**. Verified against
+`https://siyak-api.aljoodnet.info/api/v1` on 2026-07-31.
 
-## Summary
+## What the server sends
 
-| Contract surface | Status |
+`GET /game/languages`:
+
+```json
+{
+  "contract_version": "1.0.0",
+  "default_language": "en",
+  "languages": [
+    {"code":"ar","display_name":"العربية","supported":true,"available":false,
+     "state":"NO_ACTIVE_RELEASE","message_key":"language_ar_no_active_release",
+     "active_release":null,"categories":{"available_count":0,"available":[]},
+     "name":"Arabic","native_name":"العربية","dir":"rtl","ready":false},
+    {"code":"en","display_name":"English","supported":true,"available":true,
+     "state":"ACTIVE_MANAGED","active_release":{"release_id":"siyak-en-reference-v1-candidate-1",
+       "ranking_mode":"precomputed_neighbors","word_count":20000,
+       "secret_count":829,"runtime_loaded":true},
+     "categories":{"available_count":1,"available":["general"]},
+     "name":"English","native_name":"English","dir":"ltr","ready":true}
+  ]
+}
+```
+
+The pre-contract fields (`name`, `native_name`, `dir`, `ready`) are still there.
+That is what makes the rollout non-breaking, and the client still reads `ready`
+as a fallback so an older server keeps working.
+
+Typed start failures, all live:
+
+```
+POST /game/new-game {"language":"ar","category":"general"}  → 503
+  code NO_ACTIVE_RELEASE, language, message_key, retryable:true,
+  available_languages:["en"]
+
+POST /game/new-game {"language":"en","category":"animals"}  → 409
+  code NO_PLAYABLE_SECRETS_FOR_CATEGORY, language, category, message_key,
+  retryable:false, available_categories:["general"],
+  details.remedy "choose_another_category"
+
+POST /game/new-game {"category":"general"}                  → 200
+  resolves to the configured default (en). Never Arabic.
+```
+
+`LANGUAGE_REQUIRED` is not emitted today because a default is always available.
+The client understands it anyway, so it will not need a change when it appears.
+
+## Client shape
+
+| Layer | File |
 |---|---|
-| `GET /game/languages` returns the v1 body | ✗ still pre-contract |
-| Per-language availability + state, somewhere | ✓ in `GET /capabilities` |
-| `NO_ACTIVE_RELEASE` typed error | ✓ live |
-| `NO_PLAYABLE_SECRETS_FOR_CATEGORY` typed error | ✓ live |
-| `LANGUAGE_REQUIRED` typed error | ✗ falls back to `VALIDATION_ERROR` |
-| Omitted language never defaults to Arabic | ✓ satisfied |
+| Models + states | `lib/features/game/domain/languages/language_availability.dart` |
+| Typed failures | `lib/features/game/domain/languages/game_start_failure.dart` |
+| Repository port | `lib/features/game/domain/languages/language_availability_repository.dart` |
+| Remote + cache | `lib/features/game/data/remote_language_availability_repository.dart` |
+| Controllers | `lib/features/game/presentation/controllers/language_availability_controller.dart` |
+| UI | `lib/features/siyag/presentation/screens/siyag_practice_setup_screen.dart` |
 
-## 1. `GET /game/languages` — the one real gap
+Three decisions worth knowing:
 
-Returned today:
+**`available` is the only readiness flag.** `state` is the *reason* and never
+gates play. `capabilities_contract.languages.<code>` also reports availability,
+and it is deliberately not consulted — two sources deciding playability is how
+they drifted apart before.
 
-```json
-{"languages":[
-  {"code":"ar","name":"Arabic","native_name":"العربية","dir":"rtl","ready":false},
-  {"code":"en","name":"English","native_name":"English","dir":"ltr","ready":true}
-]}
-```
+**A reason is never inferred.** On a pre-contract server `ready:false` decodes to
+`state: UNKNOWN`, and the UI says "temporarily unavailable" rather than claiming
+"no active word release", which it has not been told.
 
-Missing versus the contract: `contract_version`, `default_language`, and per
-language `supported`, `available`, `state`, `message_key`, `active_release`,
-`categories.available_count`.
+**The server's `message_key` is carried but not used to pick copy.** Localisation
+stays client-side; honouring the key would let the backend choose the app's
+words. It is kept for support and logging.
 
-Only `ready` carries availability. A client can map `ready → available`, but
-**not** `state` — and `state` is what decides whether the UI may say "no active
-word release" rather than a vague "unavailable". Inferring the reason from
-`ready:false` would be inventing it.
+## Selection rules
 
-`dir` and `native_name` are extras the contract does not list; keeping them is
-useful — please don't drop them, the selector renders `native_name`.
+Automatic selection runs **only** when the player has not chosen:
 
-## 2. Availability already exists — in `/capabilities`
+1. a saved language that is still supported — honoured *even when unavailable*,
+   because it was their choice once;
+2. otherwise the server default, when available;
+3. otherwise the first available language;
+4. otherwise the default (or first supported), so the selection is deterministic
+   even when nothing can be played.
 
-`capabilities_contract.languages.<code>` is already contract-shaped:
+After an explicit choice, nothing re-derives it — not a refresh, not a typed
+error, not an app restart.
 
-```json
-"ar": {"available": false, "state": "NO_ACTIVE_RELEASE",
-       "release_unavailable_reason": "NO_ACTIVE_RELEASE",
-       "active_release": null, "release_components": []},
-"en": {"available": true,  "state": "ACTIVE_MANAGED-equivalent",
-       "release_id": "siyak-en-reference-v1-candidate-1",
-       "active_release": {"release_id": "...", "ranking_mode": "precomputed_neighbors",
-                          "word_count": 20000, "secret_count": 829,
-                          "runtime_loaded": true}}
-```
+## Device evidence
 
-`active_release` matches the contract field-for-field. So the availability
-service exists; `/game/languages` simply is not reading from it yet. That is
-exactly the "must derive from the same language-availability service" clause.
+Xiaomi `25010PN30G`, Android 16, arm64-v8a, device `2ba15772`, debug build,
+app data cleared first. Screenshots in the session scratchpad under `shots/lang/`.
 
-**Note:** the disagreement documented in `v2_capabilities.dart` — capabilities
-reporting `en` as `NO_ACTIVE_RELEASE` while `/game/languages` marked it ready —
-is **resolved**. Both now agree (`ar` unavailable, `en` available), and
-`POST /game/new-game` behaves consistently with both. The stale warning comment
-in that file should come out when the client work resumes.
+| # | What it shows |
+|---|---|
+| 02 | Fresh install, **Arabic UI** — English auto-selected because Arabic is unavailable; both options visible; Arabic marked; only English's playable category listed |
+| 03 | Arabic explicitly selected — stays selected, contract copy verbatim, "اختيار English" + retry, Play disabled *with* its reason |
+| 04 | After a full restart — still Arabic. Never auto-switched |
+| 06 | "اختيار English" → Start → a real English game |
 
-## 3. Typed errors — two of three live
+Scenario C (`NO_PLAYABLE_SECRETS_FOR_CATEGORY`) is covered by widget tests rather
+than on-device: the client only ever offers categories the catalogue marks
+playable, so the error cannot be provoked through the UI without tampering. The
+handling exists for the case where the server's category list and its secrets
+disagree.
 
-`POST /game/new-game`, no auth header needed to reproduce:
+## Tests
 
-```
-{"language":"ar","category":"general"}  → 503
-{"error":"release_unavailable","code":"NO_ACTIVE_RELEASE","language":"ar","retryable":true}
-
-{"language":"en","category":"animals"}  → 409
-{"error":"no_playable_secrets_for_category","code":"NO_PLAYABLE_SECRETS_FOR_CATEGORY",
- "details":{"language":"en","category":"animals","retryable":false,
-            "remedy":"choose_another_category"}}
-
-{"category":"general"}                  → 422 VALIDATION_ERROR (field required)
-{"language":"en","category":"zzz"}      → 400 VALIDATION_ERROR (unknown category)
-```
-
-The two availability errors are correctly typed and correctly *distinct*, which
-is contract rule 8. Two smaller gaps:
-
-- **`LANGUAGE_REQUIRED` is not implemented.** Omitting `language` yields a
-  generic `VALIDATION_ERROR`. This *does* satisfy the important half of the rule
-  — it does not silently fall back to Arabic — but a client cannot tell this
-  case apart from any other validation failure.
-- **`message_key` and `available_languages` / `available_categories` are absent**
-  from both error bodies. Without `available_languages`, the "Choose English"
-  action has to be derived from the language catalogue rather than from the
-  error itself. Workable, but it is contract text that isn't shipped.
-
-## 4. Current production state (for reference, not to be hard-coded)
-
-- `ar`: no active release; all 7 categories `playable: false`, `word_count: 0`.
-- `en`: `siyak-en-reference-v1-candidate-1`; only `general` playable
-  (20 000 words / 829 secrets), the other 6 categories empty.
-
-So both acceptance scenarios A and C are reproducible against production right
-now: Arabic is the unavailable-language case, and English + `animals` is the
-empty-category case.
-
-## What the client will do once `/game/languages` ships v1
-
-Read the v1 body as the single source of truth, keep `ready` as a fallback for
-older servers, and treat `available` as readiness with `state` as the reason.
-Until then the selector fix shipped in `fix/translation-live-alignment` keeps
-both languages reachable, which was the user-visible dead end.
+- `test/unit/language_availability_test.dart` — 18 contract tests over the
+  **real** captured bodies: v1 parsing, pre-contract fallback, unknown states,
+  cache round-trip, every selection rule, and each typed failure.
+- `test/design/language_availability_ui_test.dart` — 16 widget tests: scenarios
+  A–D, both-unavailable, duplicate-tap prevention, explicit-language submission,
+  untyped-failure recovery, cache resilience, RTL/LTR.

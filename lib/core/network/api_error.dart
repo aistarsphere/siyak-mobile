@@ -16,13 +16,21 @@ enum ApiErrorType {
 }
 
 class ApiException implements Exception {
-  const ApiException(this.type, {this.detail, this.statusCode});
+  const ApiException(this.type, {this.detail, this.statusCode, this.body});
 
   final ApiErrorType type;
 
   /// Server-provided message (FastAPI `detail` field), when available.
   final String? detail;
   final int? statusCode;
+
+  /// The decoded error body, kept whole.
+  ///
+  /// This API answers some failures with a *typed* payload — a `code` such as
+  /// `NO_ACTIVE_RELEASE` plus the data needed to recover from it. Collapsing
+  /// that to [detail] threw the type away and left the UI guessing from an HTTP
+  /// status, so callers that understand a code can read it here.
+  final Map<String, dynamic>? body;
 
   bool get isInvalidWord => type == ApiErrorType.badRequest;
 

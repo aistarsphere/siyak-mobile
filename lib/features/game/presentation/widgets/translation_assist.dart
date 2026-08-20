@@ -235,20 +235,29 @@ class _TranslationAssistState extends ConsumerState<TranslationAssist> {
     crossAxisAlignment: CrossAxisAlignment.start,
     mainAxisSize: MainAxisSize.min,
     children: [
-      Wrap(
-        spacing: SiyaqSpacing.sm,
-        runSpacing: SiyaqSpacing.sm,
-        children: [
-          for (final s in state.visible)
-            _SuggestionChip(
-              suggestion: s,
-              accent: c.info,
-              onTap: () {
-                controller.select(s);
-                widget.onPick(s.text);
-              },
-            ),
-        ],
+      // Hard height cap. The live backend's sense labels can be long
+      // enumerations rather than the short glosses the contract implied, which
+      // on a physical device grew the panel over the composer and overflowed the
+      // screen. The panel may scroll; it may never cover the input.
+      ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 132),
+        child: SingleChildScrollView(
+          child: Wrap(
+            spacing: SiyaqSpacing.sm,
+            runSpacing: SiyaqSpacing.sm,
+            children: [
+              for (final s in state.visible)
+                _SuggestionChip(
+                  suggestion: s,
+                  accent: c.info,
+                  onTap: () {
+                    controller.select(s);
+                    widget.onPick(s.text);
+                  },
+                ),
+            ],
+          ),
+        ),
       ),
       if (state.hasMore) ...[
         const SizedBox(height: SiyaqSpacing.xs),
@@ -289,6 +298,9 @@ class _SuggestionChip extends StatelessWidget {
       builder: (context, state) => Container(
         constraints: const BoxConstraints(
           minHeight: SiyaqSpacing.minTouchTarget,
+          // Bounded so one verbose gloss cannot make a chip span the row and
+          // force every suggestion onto its own line.
+          maxWidth: 190,
         ),
         padding: const EdgeInsets.symmetric(
           horizontal: SiyaqSpacing.md,
@@ -301,6 +313,7 @@ class _SuggestionChip extends StatelessWidget {
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // The English word always reads LTR, whatever the surrounding UI.
             Directionality(
@@ -323,6 +336,7 @@ class _SuggestionChip extends StatelessWidget {
                   script: SiyaqScript.arabic,
                   color: c.textMuted,
                   maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
           ],

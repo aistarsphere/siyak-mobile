@@ -151,6 +151,44 @@ void main() {
     });
   });
 
+  group('layout', () {
+    testWidgets('long live sense labels neither overflow nor cover the composer', (
+      t,
+    ) async {
+      // Reproduces a defect only a physical device exposed: the deployed
+      // lexicon returns a whole enumeration as `sense_label`, not the short
+      // gloss the drafted contract implied. Each chip then spanned the row, the
+      // panel grew past the composer, and the frame overflowed by 128px.
+      const gloss = 'letter, note, paper, piece of writing, message — اسم';
+      final repo = _ManualRepository();
+      final c = _controller(repo);
+      await t.pumpWidget(await _host(c, text: 'كتاب'));
+      await t.pump(const Duration(milliseconds: 5));
+      repo.pending!.complete(const [
+        TranslationSuggestion(text: 'book', label: gloss),
+        TranslationSuggestion(text: 'letter', label: gloss),
+        TranslationSuggestion(text: 'paper', label: gloss),
+        TranslationSuggestion(text: 'message', label: gloss),
+        TranslationSuggestion(text: 'note', label: gloss),
+        TranslationSuggestion(text: 'record', label: gloss),
+      ]);
+      await t.pumpAndSettle();
+
+      expect(t.takeException(), isNull, reason: 'no RenderFlex overflow');
+
+      // The panel must stay small enough to sit above a composer and keyboard.
+      final panel = t.getSize(find.byType(TranslationAssist));
+      expect(
+        panel.height,
+        lessThan(240),
+        reason: 'a verbose backend must not grow the panel over the input',
+      );
+      // Every suggestion is still reachable, by scrolling if need be.
+      expect(find.text('book'), findsOneWidget);
+      expect(find.text('record'), findsOneWidget);
+    });
+  });
+
   group('selection', () {
     testWidgets('tapping a chip fills the composer and never submits', (
       t,

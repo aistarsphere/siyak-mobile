@@ -26,6 +26,7 @@ class TranslationSuggestion {
     this.sense,
     this.confidence,
     this.label,
+    this.inActiveVocabulary,
   });
 
   /// The English word to submit. One word wherever possible.
@@ -42,16 +43,35 @@ class TranslationSuggestion {
   /// RTL beside the LTR English word.
   final String? label;
 
+  /// Whether the word exists in the active gameplay vocabulary.
+  ///
+  /// Sent by the live backend as `in_active_vocabulary`. A translation the game
+  /// will reject is a worse suggestion than one it accepts, so this orders the
+  /// list — it never hides anything, because the player may still want the word
+  /// they meant. Null when the backend does not say.
+  final bool? inActiveVocabulary;
+
+  /// Decodes one suggestion.
+  ///
+  /// Accepts both spellings of the optional fields. The deployed backend sends
+  /// `part_of_speech` and `sense_label`; the drafted contract used `sense` and
+  /// `label`. Reading either means neither side has to break to agree, and a
+  /// mismatch degrades to a bare word rather than silently dropping the sense.
   factory TranslationSuggestion.fromJson(Map<String, dynamic> json) {
-    final raw = json['text'];
+    String? str(String a, String b) =>
+        (json[a] as Object?)?.toString() ?? (json[b] as Object?)?.toString();
     return TranslationSuggestion(
-      text: (raw ?? '').toString().trim(),
-      sense: (json['sense'] as Object?)?.toString(),
+      text: (json['text'] ?? '').toString().trim(),
+      sense: str('part_of_speech', 'sense'),
       confidence: switch (json['confidence']) {
         final num n => n.toDouble(),
         _ => null,
       },
-      label: (json['label'] as Object?)?.toString(),
+      label: str('sense_label', 'label'),
+      inActiveVocabulary: switch (json['in_active_vocabulary']) {
+        final bool b => b,
+        _ => null,
+      },
     );
   }
 
@@ -63,10 +83,12 @@ class TranslationSuggestion {
       other.text == text &&
       other.sense == sense &&
       other.confidence == confidence &&
-      other.label == label;
+      other.label == label &&
+      other.inActiveVocabulary == inActiveVocabulary;
 
   @override
-  int get hashCode => Object.hash(text, sense, confidence, label);
+  int get hashCode =>
+      Object.hash(text, sense, confidence, label, inActiveVocabulary);
 
   @override
   String toString() => 'TranslationSuggestion($text)';
@@ -230,6 +252,12 @@ abstract final class TranslationGate {
     if (scored == out.length && out.length > 1) {
       out.sort((a, b) => b.confidence!.compareTo(a.confidence!));
     }
-    return out.length > limit ? out.sublist(0, limit) : out;
+    // A word the game does not know would be rejected on submit, so it sinks
+    // below the playable ones. Stable, so the ranking above survives within each
+    // group, and nothing is removed — the player may still mean that word.
+    final known = out.where((s) => s.inActiveVocabulary != false).toList();
+    final unknown = out.where((s) => s.inActiveVocabulary == false).toList();
+    final ordered = [...known, ...unknown];
+    return ordered.length > limit ? ordered.sublist(0, limit) : ordered;
   }
 }
